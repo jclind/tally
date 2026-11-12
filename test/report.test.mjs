@@ -109,3 +109,34 @@ test("payouts land in the week the work happened", () => {
   assert.equal(p.weeks["2026-10-19"].feast, 67.54, "Feast pays a week late");
   assert.equal(p.weeks["2026-10-12"], undefined, "the partial first week is left out");
 });
+
+test("a past month's summary covers the whole month and compares to the month before it", () => {
+  const db = fixture();
+  r.setBudget(db, { category: "GAS", monthly: 25 });
+  const s = r.summary(db, "2026-11-04", "2026-10");
+  assert.equal(s.current, false);
+  assert.equal(s.day, 31, "a past month counts every day");
+  assert.equal(s.spent, 30);
+  assert.deepEqual(s.budgets.map((b) => [b.category, b.spent]), [["GAS", 30]]);
+  assert.ok(s.recent.every((t) => t.date.startsWith("2026-10")), "recent activity is that month's");
+  const now = r.summary(db, "2026-11-04");
+  assert.equal(now.current, true);
+  assert.equal(now.spent, 40 + 60, "this month runs through today only");
+  assert.ok(now.unset.some((b) => b.category === "GROCERIES"), "categories without a budget come back as unset");
+});
+
+test("daily balances: cards count against net worth, and a second sync the same day replaces the first", () => {
+  const db = fixture();
+  r.recordBalances(db, "2026-11-01");
+  db.exec("UPDATE accounts SET current = 1500 WHERE account_id = 'chk'");
+  r.recordBalances(db, "2026-11-02");
+  db.exec("UPDATE accounts SET current = 1600 WHERE account_id = 'chk'");
+  r.recordBalances(db, "2026-11-02");
+  const h = r.netWorthHistory(db, 30, "2026-11-02");
+  assert.deepEqual(h.map((x) => [x.date, x.total]), [["2026-11-01", 1000 - 250 + 5000], ["2026-11-02", 1600 - 250 + 5000]]);
+});
+
+test("only YYYY-MM is a month", () => {
+  assert.ok(r.isMonth("2026-11"));
+  for (const m of ["2026-13", "2026-1", "x", "", null, "2026-11-01"]) assert.ok(!r.isMonth(m), String(m));
+});

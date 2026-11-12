@@ -1,7 +1,7 @@
 # tally
 
 A Mint-style money app for the owner. Plaid links their bank, card, and brokerage accounts, and the data lives in
-SQLite at `data/tally.db` on the server. Pages: Overview, Transactions, Spending, Budgets, Recurring, Accounts.
+SQLite at `data/tally.db` on the server. Pages: Overview, Transactions, Spending, Budgets, Bills, Accounts.
 
 ## Rules
 
@@ -29,6 +29,22 @@ All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's 
 - A recurring stream is a transfer, not a bill, when its name says payment, pmt, transfer, xfer, or autopay.
   Plaid's category alone isn't trusted there (it calls Railway's hosting bill a transfer).
 - Plaid sends some merchant names as empty strings. Treat `''` as missing (`nullif`).
+- Net worth history is the `balances` table: one row per account per day, written on every sync. A sync that
+  fails keeps the account's last known balance, so the line doesn't dip. History starts 2026-11-12.
+- `?month=YYYY-MM` on the summary, spending, and budgets endpoints shows that month whole. The current month
+  runs through today, and "last month" is compared through the same day.
+
+## Design
+
+The owner picked the look on 2026-11-12, from the Mint research (round G on the design notes): a teal band
+across the top of every page holding the page's main number, white cards overlapping it on a mint tint, and
+side cards on the right. Keep it light. Colors and sizes are the variables at the top of `public/app.css`.
+
+- Mint `#00CDA9` marks progress and money in. Pink `#F877A5` marks spending and over budget, and over budget
+  always says "over" in `#B4234D` text.
+- Category colors follow the category, never its rank (`CAT_COLOR` in `public/app.js`). The seven hues passed
+  the colorblind check as neighbors in that order; every other category is gray "Other". Don't add an eighth.
+- Text on the teal band is solid white (4.5:1). Don't fade it with opacity.
 
 ## Daily job
 

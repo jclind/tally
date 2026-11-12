@@ -191,6 +191,7 @@ async function syncItem(itemId) {
   }
   try { out.holdings = await syncHoldings(item); }
   catch (e) { (NOT_SUPPORTED.has(e.code) ? out.notes : errors).push(`holdings ${e.code}: ${e.message}`); }
+  report.recordBalances(db);
   db.prepare("UPDATE items SET last_sync = ?, last_error = ?, tx_status = ? WHERE item_id = ?")
     .run(now(), errors.join("\n") || null, out.transactions?.status ?? null, itemId);
   for (const e of errors) console.error(now(), "sync", item.institution_name, e);
@@ -250,15 +251,21 @@ const send = (res, code, body, type = "application/json") => {
 const STATIC = { "/": ["index.html", "text/html; charset=utf-8"], "/app.js": ["app.js", "text/javascript"], "/app.css": ["app.css", "text/css"] };
 const BIG_CHARGE = Number(process.env.TALLY_BIG_CHARGE || 200);
 
+// ?month=YYYY-MM, never later than this month. Anything else means this month.
+function pickMonth(q) {
+  const now = report.monthOf(report.localDate()), m = q.get("month");
+  return report.isMonth(m) && m <= now ? m : now;
+}
+
 const routes = {
   "GET /api/status": () => status(),
-  "GET /api/summary": () => report.summary(db),
+  "GET /api/summary": (_b, _res, q) => report.summary(db, report.localDate(), pickMonth(q)),
   "GET /api/transactions": (_b, _res, q) => report.transactions(db, Object.fromEntries(q)),
   "GET /api/spending": (_b, _res, q) => {
-    const month = q.get("month") || report.monthOf(report.localDate());
+    const month = pickMonth(q);
     return { month, categories: report.byCategory(db, month), history: report.history(db, 12, report.monthOf(report.localDate())) };
   },
-  "GET /api/budgets": () => ({ month: report.monthOf(report.localDate()), budgets: report.budgets(db, report.monthOf(report.localDate())) }),
+  "GET /api/budgets": (_b, _res, q) => { const month = pickMonth(q); return { month, budgets: report.budgets(db, month) }; },
   "GET /api/recurring": () => report.recurring(db).map((r) => ({ ...r, monthly: report.monthlyCost(r) })),
   "GET /api/meta": () => ({ labels: report.LABELS, notSpending: report.NOT_SPENDING,
     accounts: db.prepare("SELECT account_id, name, mask, type FROM accounts ORDER BY type, name").all() }),
