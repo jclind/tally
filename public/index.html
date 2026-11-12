@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tally link test</title>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<style>
+  :root { --bg: #f6f5f1; --card: #fff; --ink: #1d1d1b; --mute: #6b6a65; --line: #e3e1da; --good: #1f7a4d; --bad: #b3261e; --warn: #8a5a00; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #171716; --card: #20201e; --ink: #ecebe6; --mute: #9b9a94; --line: #33332f; --good: #5cc28f; --bad: #f2867d; --warn: #e0b45c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--mute); margin: 0 0 20px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  button:disabled { opacity: .5; cursor: default; }
+  .slots { margin-left: auto; color: var(--mute); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 17px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .meta { color: var(--mute); font-size: 13px; }
+  .ok { color: var(--good); } .err { color: var(--bad); white-space: pre-wrap; } .note { color: var(--warn); white-space: pre-wrap; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+  td, th { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); }
+  th { color: var(--mute); font-weight: 500; font-size: 12px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .msg { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); margin-bottom: 16px; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>tally link test</h1>
+  <p class="sub">Link each institution once. Plaid's Trial plan allows 10 connections for life, and deleting one doesn't give the slot back.</p>
+  <div id="msg"></div>
+  <div class="bar">
+    <button class="primary" id="bank">Link a bank or card</button>
+    <button id="brokerage">Link a brokerage</button>
+    <button id="syncall">Sync all</button>
+    <span class="slots" id="slots"></span>
+  </div>
+  <div id="items"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const money = (n) => n == null ? "" : n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let state = null;
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.code ? `${j.code}: ${j.error}` : j.error);
+  return j;
+}
+function say(text, cls = "") { $("msg").innerHTML = text ? `<div class="msg ${cls}">${esc(text)}</div>` : ""; }
+
+async function load() {
+  state = await api("/api/status");
+  $("slots").textContent = `${state.used} of ${state.cap} connections used`;
+  for (const id of ["bank", "brokerage"]) $(id).disabled = !state.keys || state.used >= state.cap;
+  if (!state.keys) say(`No Plaid keys yet. Put PLAID_CLIENT_ID and PLAID_SECRET in ${state.keysPath}, then reload.`, "err");
+  $("items").innerHTML = state.items.map(card).join("") || `<p class="meta">Nothing linked yet.</p>`;
+  for (const b of document.querySelectorAll("[data-sync]")) b.onclick = () => sync(b.dataset.sync, b);
+  for (const b of document.querySelectorAll("[data-fix]")) b.onclick = () => link({ itemId: b.dataset.fix });
+}
+
+function card(it) {
+  const tx = it.tx.n ? `${it.tx.n} transactions, ${it.tx.first} to ${it.tx.last}${it.tx.pending ? `, ${it.tx.pending} pending` : ""}` : "no transactions yet";
+  const hold = it.holdings.n ? `, ${it.holdings.n} holdings worth ${money(it.holdings.value)}` : "";
+  const broken = /ITEM_LOGIN_REQUIRED|PENDING_EXPIRATION|PENDING_DISCONNECT/.test(it.last_error ?? "");
+  return `<div class="card">
+    <h2>${esc(it.institution_name ?? "Unknown institution")} <span class="meta">${esc(it.kind ?? "")}</span></h2>
+    <div class="meta">${tx}${hold}. Linked ${esc(it.created_at.slice(0, 10))}, last sync ${esc(it.last_sync?.replace("T", " ").slice(0, 16) ?? "never")}${it.tx_status ? `, status ${esc(it.tx_status)}` : ""}</div>
+    ${it.last_error ? `<div class="err">${esc(it.last_error)}</div>` : `<div class="ok">Working</div>`}
+    <div class="wrap"><table><tr><th>Account</th><th>Type</th><th class="num">Balance</th><th class="num">Available</th></tr>
+      ${it.accounts.map((a) => `<tr><td>${esc(a.name)} ${a.mask ? `<span class="meta">…${esc(a.mask)}</span>` : ""}</td><td>${esc(a.type)} ${esc(a.subtype ?? "")}</td><td class="num">${money(a.current)}</td><td class="num">${money(a.available)}</td></tr>`).join("")}
+    </table></div>
+    ${it.recent.length ? `<div class="wrap"><table><tr><th>Date</th><th>Recent transactions</th><th>Category</th><th class="num">Amount</th></tr>
+      ${it.recent.map((t) => `<tr><td>${esc(t.date)}</td><td>${esc(t.who)}${t.pending ? ` <span class="meta">pending</span>` : ""}</td><td class="meta">${esc(t.category ?? "")}</td><td class="num">${money(-t.amount)}</td></tr>`).join("")}
+    </table></div>` : ""}
+    <div class="row"><button data-sync="${esc(it.item_id)}">Sync</button>${broken ? `<button class="primary" data-fix="${esc(it.item_id)}">Fix connection</button>` : ""}</div>
+  </div>`;
+}
+
+async function sync(itemId, btn) {
+  if (btn) btn.disabled = true;
+  say("Syncing…");
+  try {
+    const { results } = await api("/api/sync", itemId ? { item_id: itemId } : {});
+    const errs = results.flatMap((r) => r.errors);
+    say(errs.length ? `Sync finished with errors:\n${errs.join("\n")}` : "Sync finished.", errs.length ? "err" : "ok");
+  } catch (e) { say(e.message, "err"); }
+  await load();
+}
+
+// Fixing a connection uses update mode on the same Item, which keeps its slot.
+async function link({ kind, itemId }) {
+  say("");
+  try {
+    const { link_token } = await api("/api/link-token", itemId ? { itemId } : { kind });
+    Plaid.create({
+      token: link_token,
+      onSuccess: async (public_token, meta) => {
+        if (itemId) { say("Connection fixed. Syncing…"); return sync(itemId); }
+        const dupe = state.items.find((i) => i.institution_name === meta.institution?.name);
+        say(`Linked ${meta.institution?.name ?? "institution"}. Pulling data…${dupe ? " (This institution was already linked, so this used a second slot.)" : ""}`);
+        try { await api("/api/exchange", { public_token, institution: meta.institution, kind }); say(`Linked ${meta.institution?.name}.`, "ok"); }
+        catch (e) { say(e.message, "err"); }
+        await load();
+      },
+      onExit: (err) => { if (err) say(`${err.error_code ?? ""}: ${err.display_message ?? err.error_message ?? "Link closed"}`, "err"); },
+    }).open();
+  } catch (e) { say(e.message, "err"); }
+}
+
+$("bank").onclick = () => link({ kind: "bank" });
+$("brokerage").onclick = () => link({ kind: "brokerage" });
+$("syncall").onclick = () => sync(null, $("syncall"));
+load().catch((e) => say(e.message, "err"));
+</script>
+</body>
+</html>
