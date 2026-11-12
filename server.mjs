@@ -51,11 +51,19 @@ const now = () => new Date().toISOString();
 async function plaid(path, body) {
   const k = loadKeys();
   if (!k) throw Object.assign(new Error(`No Plaid keys in ${KEYS}`), { code: "NO_KEYS" });
-  const res = await fetch(k.host + path, {
+  const req = () => fetch(k.host + path, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ client_id: k.id, secret: k.secret, ...body }),
   });
+  // A dropped connection ("fetch failed") gets one retry after 2 seconds, then is reported as NETWORK_ERROR.
+  let res;
+  try { res = await req(); }
+  catch {
+    await new Promise((r) => setTimeout(r, 2000));
+    try { res = await req(); }
+    catch (e) { throw Object.assign(new Error(`couldn't reach Plaid (${e.cause?.code ?? e.message})`), { code: "NETWORK_ERROR" }); }
+  }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     const e = new Error(json.error_message || `Plaid ${path} returned ${res.status}`);
@@ -162,6 +170,7 @@ async function syncItem(itemId) {
   catch (e) { (NOT_SUPPORTED.has(e.code) ? out.notes : errors).push(`holdings ${e.code}: ${e.message}`); }
   db.prepare("UPDATE items SET last_sync = ?, last_error = ?, tx_status = ? WHERE item_id = ?")
     .run(now(), errors.join("\n") || null, out.transactions?.status ?? null, itemId);
+  for (const e of errors) console.error(now(), "sync", item.institution_name, e);
   out.errors = errors;
   return out;
 }

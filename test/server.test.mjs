@@ -34,6 +34,7 @@ before(async () => {
     let s = ""; req.on("data", (c) => (s += c)); req.on("end", () => {
       const body = JSON.parse(s); calls.push({ path: req.url, body });
       const out = plaidReplies[req.url]?.(body) ?? { status: 404, error_code: "NOPE" };
+      if (out.drop) return req.socket.destroy();
       res.writeHead(out.status ?? 200, { "content-type": "application/json" }); res.end(JSON.stringify(out));
     });
   });
@@ -82,6 +83,15 @@ test("a later sync applies modified and removed", async () => {
   assert.equal(it.tx.n, 2);
   assert.ok(it.recent.some((t) => t.amount === 11));
   assert.equal(calls.filter((c) => c.path === "/transactions/sync").at(-1).body.cursor, "c2");
+});
+
+test("a dropped connection is retried once", async () => {
+  let drops = 1;
+  const real = plaidReplies["/accounts/get"];
+  plaidReplies["/accounts/get"] = () => (drops-- > 0 ? { drop: true } : real());
+  const { results } = await post("/api/sync", {});
+  plaidReplies["/accounts/get"] = real;
+  assert.deepEqual(results[0].errors, []);
 });
 
 test("POST from another origin is refused", async () => {
