@@ -178,10 +178,13 @@ function status() {
   return { keys: !!k, env: k?.env ?? null, keysPath: KEYS, used: items.length, cap: ITEM_CAP, items };
 }
 
-// Loopback Host and same-origin POSTs only, so another site in the browser can't drive this page.
+// Loopback Host, or a host named in TALLY_HOSTS (the tailscale serve address), and same-origin POSTs only,
+// so another site in the browser can't drive this page and a rebound DNS name can't reach it.
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+const EXTRA_HOSTS = new Set((process.env.TALLY_HOSTS ?? "").split(",").map((h) => h.trim()).filter(Boolean));
 function allowed(req) {
-  if (!LOOPBACK.test(req.headers.host ?? "")) return false;
+  const host = req.headers.host ?? "";
+  if (!LOOPBACK.test(host) && !EXTRA_HOSTS.has(host)) return false;
   if (req.method === "GET") return true;
   const origin = req.headers.origin;
   try { return !!origin && new URL(origin).host === req.headers.host; } catch { return false; }
