@@ -185,7 +185,11 @@ h2 + .erow { margin-top: 6px; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; max-width: none !important; margin-bottom: 26px; }
 .filters input, .filters select { background: #fff; color: var(--ink); border: 0; border-radius: 8px; padding: 9px 12px; min-width: 0; }
 .filters input[type=search] { flex: 1 1 240px; }
-.filters select { flex: 0 1 auto; max-width: 220px; }
+.filters select { flex: 0 1 auto; max-width: 240px; cursor: pointer; text-overflow: ellipsis;
+  /* The browser's own arrow sits against the edge, so draw ours with room on the right. */
+  appearance: none; -webkit-appearance: none; padding-right: 40px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23006B68' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 16px; }
+.filters select:hover { background-color: #F4FBF9; }
 table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
 .tx th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 13px; padding: 4px 10px 10px; }
 .tx td { padding: 10px; border-top: 1px solid var(--line); vertical-align: middle; }
