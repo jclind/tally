@@ -1,7 +1,7 @@
 # tally
 
 A Mint-style money app for the owner. Plaid links their bank, card, and brokerage accounts, and the data lives in
-SQLite at `data/tally.db` on the server. Step 1, now, is a link test page. The full app comes after it works.
+SQLite at `data/tally.db` on the server. Pages: Overview, Transactions, Spending, Budgets, Recurring, Accounts.
 
 ## Rules
 
@@ -17,3 +17,22 @@ SQLite at `data/tally.db` on the server. Step 1, now, is a link test page. The f
   Never turn on Tailscale Funnel for tally: it has no login.
 - Tests run against a fake Plaid server (`npm test`). They never use real keys.
 - Node built-ins only (`node:sqlite`, `node:http`, `fetch`). Add a dependency only with a reason.
+
+## Money rules
+
+All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's sign: positive is money out.
+
+- Category order: a single-transaction override, then a merchant rule, then Plaid's category. Plaid's
+  transfers and card payments become `TRANSFER`; gas and groceries get their own categories.
+- Spending is depository and credit accounts only, minus `TRANSFER` and `INCOME`. Refunds lower it.
+  Income is `INCOME` on depository accounts.
+- A recurring stream is a transfer, not a bill, when its name says payment, pmt, transfer, xfer, or autopay.
+  Plaid's category alone isn't trusted there (it calls Railway's hosting bill a transfer).
+- Plaid sends some merchant names as empty strings. Treat `''` as missing (`nullif`).
+
+## Daily job
+
+`bin/daily.mjs`, agent `local.tally-daily` at 7:00: syncs everything through `POST /api/daily`, writes
+`data/tally-snapshot.db` for the nightly backup, and posts new alerts (broken connection weekly, charge of
+$200 or more, a budget gone over) to Discord. The webhook is `DISCORD_WEBHOOK_URL` in
+`~/.config/tally/discord.env`. Alerts are marked sent only after Discord accepts the post.

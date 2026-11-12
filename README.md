@@ -9,3 +9,5 @@ on the tailnet, or http://localhost:3400 on the server. Keys go in `~/.config/ta
     PLAID_SECRET=...
 
 Test: `npm test`.
+
+Daily: `launchd/local.tally-daily.plist` runs `bin/daily.mjs` at 7:00.

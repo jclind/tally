@@ -2,11 +2,12 @@
 // Step 1 is a link test: link each institution once, pull accounts, transactions, and holdings, and show what came back.
 // Node built-ins only. Listens on 127.0.0.1, so it is reached over an ssh tunnel.
 import http from "node:http";
-import { readFileSync, mkdirSync, chmodSync, existsSync } from "node:fs";
+import { readFileSync, mkdirSync, chmodSync, existsSync, rmSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { homedir } from "node:os";
+import * as report from "./lib/report.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.TALLY_PORT || 3400);
@@ -45,6 +46,7 @@ db.exec(`
     account_id TEXT NOT NULL, security_id TEXT NOT NULL, item_id TEXT NOT NULL, name TEXT, ticker TEXT, type TEXT,
     quantity REAL, value REAL, cost_basis REAL, updated_at TEXT, PRIMARY KEY (account_id, security_id));
 `);
+report.setupViews(db);
 
 const now = () => new Date().toISOString();
 
@@ -154,8 +156,25 @@ async function syncHoldings(item) {
   return r.holdings.length;
 }
 
+// Plaid's recurring streams: subscriptions, bills, and paychecks, with the next expected date.
+async function syncRecurring(item) {
+  const r = await plaid("/transactions/recurring/get", { access_token: item.access_token });
+  db.exec("BEGIN");
+  try {
+    db.prepare("DELETE FROM recurring WHERE item_id = ?").run(item.item_id);
+    const st = db.prepare(`INSERT OR REPLACE INTO recurring VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    for (const [dir, list] of [["outflow", r.outflow_streams ?? []], ["inflow", r.inflow_streams ?? []]]) {
+      for (const x of list) st.run(x.stream_id, item.item_id, x.account_id ?? null, dir, x.description ?? null, x.merchant_name ?? null,
+        x.personal_finance_category?.primary ?? null, x.frequency ?? null, x.average_amount?.amount ?? null, x.last_amount?.amount ?? null,
+        x.first_date ?? null, x.last_date ?? null, x.predicted_next_date ?? null, x.is_active ? 1 : 0, x.status ?? null, now());
+    }
+    db.exec("COMMIT");
+  } catch (e) { db.exec("ROLLBACK"); throw e; }
+  return (r.outflow_streams?.length ?? 0) + (r.inflow_streams?.length ?? 0);
+}
+
 // Not-supported errors are expected (a card has no holdings, some brokerages have no transactions), so they are noted, not failures.
-const NOT_SUPPORTED = new Set(["PRODUCTS_NOT_SUPPORTED", "NO_INVESTMENT_ACCOUNTS", "NO_INVESTMENT_AUTH_ACCOUNTS", "PRODUCT_NOT_ENABLED", "INVALID_PRODUCT", "ADDITIONAL_CONSENT_REQUIRED"]);
+const NOT_SUPPORTED = new Set(["PRODUCT_NOT_READY", "PRODUCTS_NOT_SUPPORTED", "NO_INVESTMENT_ACCOUNTS", "NO_INVESTMENT_AUTH_ACCOUNTS", "PRODUCT_NOT_ENABLED", "INVALID_PRODUCT", "ADDITIONAL_CONSENT_REQUIRED"]);
 
 async function syncItem(itemId) {
   const item = db.prepare("SELECT * FROM items WHERE item_id = ?").get(itemId);
@@ -166,6 +185,10 @@ async function syncItem(itemId) {
   } catch (e) { errors.push(`${e.code}: ${e.message}`); }
   try { out.transactions = await syncTransactions(item); }
   catch (e) { (NOT_SUPPORTED.has(e.code) ? out.notes : errors).push(`transactions ${e.code}: ${e.message}`); }
+  if (out.transactions) {
+    try { out.recurring = await syncRecurring(item); }
+    catch (e) { (NOT_SUPPORTED.has(e.code) ? out.notes : errors).push(`recurring ${e.code}: ${e.message}`); }
+  }
   try { out.holdings = await syncHoldings(item); }
   catch (e) { (NOT_SUPPORTED.has(e.code) ? out.notes : errors).push(`holdings ${e.code}: ${e.message}`); }
   db.prepare("UPDATE items SET last_sync = ?, last_error = ?, tx_status = ? WHERE item_id = ?")
@@ -173,6 +196,21 @@ async function syncItem(itemId) {
   for (const e of errors) console.error(now(), "sync", item.institution_name, e);
   out.errors = errors;
   return out;
+}
+
+// A clean copy for the nightly backup, so a restore never depends on catching the live file mid-write.
+function snapshot() {
+  const tmp = join(DATA, "tally-snapshot.tmp.db");
+  rmSync(tmp, { force: true });
+  db.exec(`VACUUM INTO '${tmp.replaceAll("'", "''")}'`);
+  chmodSync(tmp, 0o600);
+  renameSync(tmp, join(DATA, "tally-snapshot.db"));
+}
+
+async function syncAll() {
+  const results = [];
+  for (const { item_id } of db.prepare("SELECT item_id FROM items").all()) results.push(await syncItem(item_id));
+  return results;
 }
 
 function status() {
@@ -209,26 +247,47 @@ const send = (res, code, body, type = "application/json") => {
   res.end(type === "application/json" ? JSON.stringify(body) : body);
 };
 
+const STATIC = { "/": ["index.html", "text/html; charset=utf-8"], "/app.js": ["app.js", "text/javascript"], "/app.css": ["app.css", "text/css"] };
+const BIG_CHARGE = Number(process.env.TALLY_BIG_CHARGE || 200);
+
 const routes = {
-  "GET /": (_q, res) => send(res, 200, readFileSync(join(ROOT, "public/index.html")), "text/html; charset=utf-8"),
   "GET /api/status": () => status(),
+  "GET /api/summary": () => report.summary(db),
+  "GET /api/transactions": (_b, _res, q) => report.transactions(db, Object.fromEntries(q)),
+  "GET /api/spending": (_b, _res, q) => {
+    const month = q.get("month") || report.monthOf(report.localDate());
+    return { month, categories: report.byCategory(db, month), history: report.history(db, 12, report.monthOf(report.localDate())) };
+  },
+  "GET /api/budgets": () => ({ month: report.monthOf(report.localDate()), budgets: report.budgets(db, report.monthOf(report.localDate())) }),
+  "GET /api/recurring": () => report.recurring(db).map((r) => ({ ...r, monthly: report.monthlyCost(r) })),
+  "GET /api/meta": () => ({ labels: report.LABELS, notSpending: report.NOT_SPENDING,
+    accounts: db.prepare("SELECT account_id, name, mask, type FROM accounts ORDER BY type, name").all() }),
+  "POST /api/category": (body) => report.setCategory(db, body),
+  "POST /api/budget": (body) => report.setBudget(db, body),
+  // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.
+  "POST /api/daily": async () => {
+    const results = await syncAll();
+    snapshot();
+    return { alerts: report.dailyAlerts(db, { bigCharge: BIG_CHARGE }), errors: results.flatMap((r) => r.errors) };
+  },
+  "POST /api/alerts-sent": (body) => { report.markSent(db, body.keys ?? []); return { ok: true }; },
   "POST /api/link-token": async (body) => ({ link_token: (await linkToken(body)).link_token }),
   "POST /api/exchange": (body) => exchange(body),
-  "POST /api/sync": async (body) => {
-    const ids = body.item_id ? [body.item_id] : db.prepare("SELECT item_id FROM items").all().map((r) => r.item_id);
-    const results = [];
-    for (const id of ids) results.push(await syncItem(id));
-    return { results };
-  },
+  "POST /api/sync": async (body) => ({ results: body.item_id ? [await syncItem(body.item_id)] : await syncAll() }),
 };
 
 const server = http.createServer(async (req, res) => {
   if (!allowed(req)) return send(res, 403, { error: "localhost only" });
-  const route = routes[`${req.method} ${new URL(req.url, "http://x").pathname}`];
+  const url = new URL(req.url, "http://x");
+  if (req.method === "GET" && STATIC[url.pathname]) {
+    const [file, type] = STATIC[url.pathname];
+    return send(res, 200, readFileSync(join(ROOT, "public", file)), type);
+  }
+  const route = routes[`${req.method} ${url.pathname}`];
   if (!route) return send(res, 404, { error: "not found" });
   try {
     const body = req.method === "POST" ? await readBody(req) : {};
-    const out = await route(body, res);
+    const out = await route(body, res, url.searchParams);
     if (!res.headersSent) send(res, 200, out);
   } catch (e) {
     console.error(now(), req.method, req.url, e.code ?? "", e.message);

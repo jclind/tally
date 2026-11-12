@@ -27,6 +27,8 @@ const plaidReplies = {
     return { added: [], modified: [tx("t1", 11)], removed: [{ transaction_id: "t2" }], next_cursor: "c3", has_more: false };
   },
   "/investments/holdings/get": () => ({ status: 400, error_code: "PRODUCTS_NOT_SUPPORTED", error_message: "not supported" }),
+  "/transactions/recurring/get": () => ({ outflow_streams: [{ stream_id: "s1", account_id: "acc1", merchant_name: "Netflix", frequency: "MONTHLY",
+    average_amount: { amount: 15.49 }, predicted_next_date: "2026-11-20", is_active: true, personal_finance_category: { primary: "ENTERTAINMENT" } }], inflow_streams: [] }),
 };
 
 before(async () => {
