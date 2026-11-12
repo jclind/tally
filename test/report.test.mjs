@@ -87,3 +87,25 @@ test("an empty merchant name falls back to the description, and payments aren't 
   assert.deepEqual(up.map((x) => x.who), ["Railway"]);
   assert.equal(r.recurring(db).find((x) => x.stream_id === "s1").who, "BIG BANK ONLINE PMT");
 });
+
+test("payouts land in the week the work happened", () => {
+  const db = fixture();
+  db.exec(`INSERT INTO items (item_id, institution_name, created_at) VALUES ('dd', 'Courier Card', '2026-11-01'), ('ue', 'Rides Pay', '2026-11-01');
+    INSERT INTO accounts (account_id, item_id, name, type) VALUES ('ddc', 'dd', 'Courier', 'depository'), ('uec', 'ue', 'Rides', 'depository');`);
+  const add = db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, raw) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)");
+  add.run("d0", "dd", "ddc", "2026-10-18", "Courier Payout", null, -1, "INCOME", "{}");
+  add.run("d1", "dd", "ddc", "2026-10-26", "Courier Payout", null, -108.4, "INCOME", "{}"); // Monday: Sunday's dash
+  add.run("d2", "dd", "ddc", "2026-10-27", "Courier Payout", null, -28.6, "INCOME", "{}");
+  add.run("u0", "ue", "uec", "2026-10-18", "Delivery", null, -1, "TRANSFER_IN", JSON.stringify({ datetime: "2026-10-18T15:00:00Z" }));
+  add.run("u1", "ue", "uec", "2026-10-26", "Delivery", null, -10, "TRANSFER_IN", JSON.stringify({ datetime: "2026-10-26T06:30:00Z" })); // 2:30am Monday Eastern
+  add.run("u2", "ue", "uec", "2026-10-26", "Miscellaneous", null, -5, "TRANSFER_IN", JSON.stringify({ datetime: "2026-10-26T09:30:00Z" })); // 5:30am Monday
+  add.run("u3", "ue", "uec", "2026-10-27", "Account unload to ACH", null, -50, "TRANSFER_OUT", "{}");
+  add.run("g1", "i1", "chk", "2026-10-28", "FEAST", "Feast", -67.54, "INCOME", "{}");
+  const p = r.payouts(db);
+  assert.equal(p.weeks["2026-10-19"].courier, 108.4);
+  assert.equal(p.weeks["2026-10-26"].courier, 28.6);
+  assert.equal(p.weeks["2026-10-19"].rides, 10, "before 4am Monday is last week");
+  assert.equal(p.weeks["2026-10-26"].rides, 5);
+  assert.equal(p.weeks["2026-10-19"].feast, 67.54, "Feast pays a week late");
+  assert.equal(p.weeks["2026-10-12"], undefined, "the partial first week is left out");
+});

@@ -262,6 +262,8 @@ const routes = {
   "GET /api/recurring": () => report.recurring(db).map((r) => ({ ...r, monthly: report.monthlyCost(r) })),
   "GET /api/meta": () => ({ labels: report.LABELS, notSpending: report.NOT_SPENDING,
     accounts: db.prepare("SELECT account_id, name, mask, type FROM accounts ORDER BY type, name").all() }),
+  // Read by another local app on this machine.
+  "GET /api/payouts": () => report.payouts(db),
   "POST /api/category": (body) => report.setCategory(db, body),
   "POST /api/budget": (body) => report.setBudget(db, body),
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.
