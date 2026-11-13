@@ -87,19 +87,23 @@
 
     <section id="install">
       <h2><span class="step">2</span>Install tally</h2>
-      <p>Swap in your client_id and Sandbox secret, then run this. There's no npm install step.</p>
+      <p>Download it. There's no npm install step.</p>
       <div class="code"><pre><code>git clone https://github.com/jclind/tally.git
-cd tally
-mkdir -p ~/.config/tally
+cd tally</code></pre></div>
+      <h3 id="keys">Add your keys</h3>
+      <p>Swap in your client_id and Sandbox secret, then run this. It writes <code>~/.config/tally/plaid.env</code>, readable only by you.</p>
+      <div class="code"><pre><code>mkdir -p ~/.config/tally
 cat &gt; ~/.config/tally/plaid.env &lt;&lt;'EOF'
 PLAID_CLIENT_ID=your-client-id
 PLAID_SECRET=your-sandbox-secret
 PLAID_ENV=sandbox
 EOF
 chmod 600 ~/.config/tally/plaid.env</code></pre></div>
-      <p>Then start it:</p>
+      <h3 id="start">Start it and check it works</h3>
       <div class="code"><pre><code>npm start</code></pre></div>
-      <p>The log line should end in <code>(keys found)</code>. Open <a href="http://localhost:3400">localhost:3400</a>.</p>
+      <p>After a timestamp, tally prints:</p>
+      <div class="output"><span class="olabel">Output</span><pre><samp>tally on http://localhost:3400 (keys found)</samp></pre></div>
+      <p>If it says <code>(keys missing)</code>, see <a href="#help">Troubleshooting</a>. Otherwise open <a href="http://localhost:3400">localhost:3400</a>.</p>
     </section>
 
     <section id="link">
