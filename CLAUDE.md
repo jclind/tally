@@ -92,6 +92,21 @@ A design council (Opus and Codex reviewing, Muse for four rounds, Fable judging 
   numerals hung in the gutter with one left edge for every heading; the guide's only boxes are pink warnings;
   Backups comes right after Keep it running.
 
+A second council on 2026-11-13 (4 rounds, Opus and Codex, Muse for one) measured the install guide against ten
+published install guides (Obsidian, Homebrew, Ghost, Next.js, Tailwind, Resend, Sentry, GitBook, Immich, Actual
+Budget). Its record and corrected benchmark are in `.council/site-ref/` (`STANDARDS.md`). What it settled:
+
+- Step 2 has three parts: download, "Add your keys", and "Start and check it", each with an anchor. What a command
+  prints goes in an `.output` block labeled "Expected output", on the page surface with no Copy button.
+- Only code that isn't a terminal command gets a label (`data-label`): a file's path, or "Service environment".
+  Terminal blocks stay unlabeled.
+- Wherever Mac and Linux split, the platform comes first: an "On a Mac" / "On Linux" h3, or a bold lead-in.
+- The outline has sub-entries for keys, start, and update, and tracks the current place by scroll position.
+- Judge's calls: every guide h2 is 28px (24px on phones); desktop sub-headings 20px (18px on phones); Using tally
+  terms and Troubleshooting answers 17px bold, and each Troubleshooting answer is a linkable `h3.q`; no card grids;
+  phone step numerals stay inline; on phones a one-line command that overflows takes Copy in a row above, and the
+  Copy row is a 32px button with a 44px tap area.
+
 ## Daily job
 
 `bin/daily.mjs`, run at 7:00 by the agent `bin/install-mac.sh` installs: syncs everything through `POST /api/daily`,
