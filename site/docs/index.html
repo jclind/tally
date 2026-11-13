@@ -81,9 +81,9 @@
     <section id="before">
       <h2>Before you start</h2>
       <ul>
-        <li><b>A Mac or Linux computer.</b> Not Windows.</li>
+        <li><b>A Mac or Linux computer.</b> Windows may work under WSL2, but nobody has tested it.</li>
         <li><b>Node 24 or newer, and git.</b> Check Node with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or, on a Mac, <code>brew install node</code>.</li>
-        <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
+        <li><b>A US bank.</b> tally only links US banks for now.</li>
       </ul>
     </section>
 
@@ -135,7 +135,7 @@ PLAID_SECRET=your-production-secret
 PLAID_ENV=production</code></pre></div>
       <p>Start tally again with <code>npm start</code>. In Settings, <b>Your setup</b> should now say production.</p>
       <p>Then link your banks from <b>Accounts</b> the same way.</p>
-      <div class="note warn"><b>The Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back. If a bank stops syncing, <a href="#bank-error">use Fix connection</a> on the Accounts page instead of linking it again.</div>
+      <div class="note warn"><b>The free Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back, and tally stops at 10 unless you raise the limit in Settings for a paid plan. If a bank stops syncing, <a href="#bank-error">use Fix connection</a> on the Accounts page instead of linking it again.</div>
     </section>
     </div>
 
@@ -145,14 +145,14 @@ PLAID_ENV=production</code></pre></div>
       <h3>On a Mac</h3>
       <p>Stop tally (Ctrl+C) first. One script then starts it at login, restarts it if it stops, and runs the daily sync at 7:00, or when the Mac wakes if it was asleep then:</p>
       <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
-      <p>The log is <code>tally.log</code> in the tally folder.</p>
+      <p>The log is <code>tally.log</code> in the tally folder. For another sync time or port, add <code>--at 06:30</code> or <code>--port 3500</code>.</p>
       <h3>On Linux</h3>
       <p>Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
     </section>
 
     <section id="backup">
       <h2>Backups and updates</h2>
-      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs.</p>
+      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. tally writes the snapshot after every full sync, and it's safe to copy while tally runs.</p>
       <p>The snapshot holds your Plaid access tokens. Without it you'd <a href="#real">link every bank again</a>.</p>
       <h3 id="update">Update tally</h3>
       <p><b>On a Mac</b>, from your tally folder, pull the new code and restart tally:</p>
@@ -167,16 +167,21 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <ol>
         <li>Install Tailscale on the computer and your phone, and sign in to both with the same account.</li>
         <li>In Tailscale's admin console, under <b>DNS</b>, turn on MagicDNS and HTTPS certificates.</li>
-        <li>On the computer, serve tally on port 8400:
-          <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400</code></pre></div>
+        <li>On the computer, serve tally over HTTPS:
+          <div class="code"><pre><code>tailscale serve --bg 3400</code></pre></div>
+          If port 443 is already in use on this computer, add <code>--https=8400</code> before <code>3400</code>, and put <code>:8400</code> after the address in the next step.
         </li>
         <li>Tell tally its new address. <code>tailscale serve status</code> prints the full address. <b>On a Mac</b>:
-          <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
+          <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net</code></pre></div>
           <b>On Linux</b>, add this environment variable to the service you set up, then restart it:
-          <div class="code" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
+          <div class="code" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net</code></pre></div>
         </li>
       </ol>
-      <p>Open <code class="long"><span>https://your-computer.</span><wbr><span>your-tailnet.ts.net:8400</span></code> on your phone and add it to your home screen.</p>
+      <p>Open <code class="long"><span>https://your-computer.</span><wbr><span>your-tailnet.ts.net</span></code> on your phone and add it to your home screen.</p>
+      <h3 id="other-ways">Other ways in</h3>
+      <p><b>From another computer</b>, an ssh tunnel needs nothing set up in tally. Run this there, then open <code>localhost:3400</code>:</p>
+      <div class="code"><pre><code>ssh -L 3400:127.0.0.1:3400 your-computer</code></pre></div>
+      <p><b>A reverse proxy with its own login</b>, like Caddy with a password or Cloudflare Tunnel with Access, also works. Add its address to <code>TALLY_HOSTS</code>, and have it pass the original Host header. That puts tally on the internet behind the proxy's login, so only do it if you trust that setup.</p>
       <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
     </section>
 
@@ -213,11 +218,11 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h3 class="q" id="bank-error">A bank shows an error on the Accounts page</h3>
       <p>Its sign-in expired or changed. Click <b>Fix connection</b> and sign in again.</p>
       <h3 class="q" id="wont-connect">A bank won't connect</h3>
-      <p>Some large banks sign you in on their own site (OAuth). Check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first.</p>
+      <p>Some large banks sign you in on their own site (OAuth). Check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first. Link from the computer's own browser, not from your phone.</p>
       <h3 class="q" id="history">A bank has only a few months of history</h3>
       <p>That's what the bank gives Plaid. Some send two years, some about 90 days.</p>
       <h3 class="q" id="phone-load">The page won't load on my phone</h3>
-      <p>Run <code>tailscale serve status</code> on the computer, and make sure the address you passed to <code>--host</code> matches it exactly, port included.</p>
+      <p>Run <code>tailscale serve status</code> on the computer, and make sure the address you passed to <code>--host</code> matches it, with <code>:8400</code> only if you served on 8400. <code>tally.log</code> names any address tally refused.</p>
       <h3 class="q" id="other">Something else</h3>
       <p>Open an issue on <a href="https://github.com/jclind/tally/issues">GitHub</a> with the lines from <code>tally.log</code>. Leave out anything with your account details.</p>
     </section>

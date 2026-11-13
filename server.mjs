@@ -18,7 +18,6 @@ const DATA = process.env.TALLY_DATA || join(ROOT, "data");
 const PAYOUTS = process.env.TALLY_PAYOUTS || join(homedir(), ".config/tally/payouts.mjs");
 const payoutSources = existsSync(PAYOUTS) ? (await import(pathToFileURL(PAYOUTS).href)).default(report) : {};
 // Plaid's Trial plan allows 10 Items for life. Removing one does not give the slot back.
-const ITEM_CAP = 10;
 
 function loadKeys() {
   if (!existsSync(KEYS)) return null;
@@ -103,10 +102,11 @@ async function linkToken({ kind, itemId }) {
     if (!it) throw new Error("No such item");
     return plaid("/link/token/create", { ...base, access_token: it.access_token });
   }
-  if (itemCount() >= ITEM_CAP) throw new Error(`All ${ITEM_CAP} Plaid Trial connections are used.`);
+  const cap = Number(settings().itemCap);
+  if (itemCount() >= cap) throw new Error(`All ${cap} connections are used. Raise the limit in Settings only if your Plaid plan allows more.`);
   const products = kind === "brokerage"
     ? { products: ["investments"], optional_products: ["transactions"] }
-    : { products: ["transactions"], optional_products: ["investments", "liabilities"] };
+    : { products: ["transactions"], optional_products: ["investments"] };
   return plaid("/link/token/create", { ...base, ...products, transactions: { days_requested: 730 } });
 }
 
@@ -247,9 +247,11 @@ function snapshot() {
   renameSync(tmp, join(DATA, "tally-snapshot.db"));
 }
 
+// Every full sync ends with a fresh snapshot, so a backup exists without the daily job.
 async function syncAll() {
   const results = [];
   for (const { item_id } of db.prepare("SELECT item_id FROM items").all()) results.push(await syncItem(item_id));
+  try { snapshot(); } catch (e) { console.error(now(), "snapshot", e.message); }
   return results;
 }
 
@@ -262,6 +264,8 @@ const SETTINGS = {
   // Sync when tally starts or the page is opened, if the data is older than this many hours. "off" leaves it to the
   // daily job and the Sync button, for a computer that's always on.
   autoSync: { def: "12", ok: (v) => ["off", "1", "6", "12", "24"].includes(v) },
+  // Plaid connections tally will link. The free Trial plan allows 10 for good; a paid plan can raise it.
+  itemCap: { def: String(Number(process.env.TALLY_ITEM_CAP || 10)), ok: (v) => /^[1-9]\d{0,3}$/.test(v) },
   // The daily alert for one charge this big or bigger, in dollars.
   bigCharge: { def: String(Number(process.env.TALLY_BIG_CHARGE || 200)), ok: (v) => /^[1-9]\d{0,6}$/.test(v) },
   // Discord alerts are opt-in. A setup from before the setting, with a webhook file, keeps posting.
@@ -321,16 +325,21 @@ function status() {
     it.holdings = db.prepare("SELECT count(*) n, sum(value) value FROM holdings WHERE item_id = ?").get(it.item_id);
   }
   const k = loadKeys();
-  return { keys: !!k, env: k?.env ?? null, keysPath: KEYS, used: items.length, cap: ITEM_CAP, items };
+  return { keys: !!k, env: k?.env ?? null, keysPath: KEYS, used: items.length, cap: Number(settings().itemCap), items };
 }
 
 // Loopback Host, or a host named in TALLY_HOSTS (the tailscale serve address), and same-origin POSTs only,
 // so another site in the browser can't drive this page and a rebound DNS name can't reach it.
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 const EXTRA_HOSTS = new Set((process.env.TALLY_HOSTS ?? "").split(",").map((h) => h.trim()).filter(Boolean));
+const refused = new Set();
 function allowed(req) {
   const host = req.headers.host ?? "";
-  if (!LOOPBACK.test(host) && !EXTRA_HOSTS.has(host)) return false;
+  if (!LOOPBACK.test(host) && !EXTRA_HOSTS.has(host)) {
+    // Said once per name, since a phone that can't load the page usually means a missing TALLY_HOSTS entry.
+    if (!refused.has(host) && refused.size < 20) { refused.add(host); console.error(now(), `refused a request for ${JSON.stringify(host)}; to allow it, add it to TALLY_HOSTS`); }
+    return false;
+  }
   if (req.method === "GET") return true;
   const origin = req.headers.origin;
   try { return !!origin && new URL(origin).host === req.headers.host; } catch { return false; }
@@ -374,7 +383,6 @@ const routes = {
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.
   "POST /api/daily": async () => {
     const results = await syncAllOnce();
-    snapshot();
     const set = settings(), on = set.alerts === "on";
     return { alerts: on ? report.dailyAlerts(db, { bigCharge: Number(set.bigCharge) }) : [], webhook: on ? webhook() : null, errors: results.flatMap((r) => r.errors) };
   },

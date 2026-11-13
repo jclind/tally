@@ -720,8 +720,13 @@ PAGES.settings = async () => {
     <div class="card sets"><h2>Syncing</h2>
       <div class="setrow stacked"><label for="autosync">Sync when you open tally</label>
         <select id="autosync" data-key="autoSync">${SYNC_CHOICES.map(([v, t]) => `<option value="${v}"${v === set.autoSync ? " selected" : ""}>${t}</option>`).join("")}</select>
-        <div class="hint">tally also syncs when it starts, and every morning at 7:00 if the daily job is installed.</div></div>
+        <div class="hint">tally also syncs when it starts, and every morning if the daily job is installed.</div></div>
       <div class="ok" data-for="autoSync" role="status"></div></div>
+    <div class="card sets"><h2>Plaid</h2>
+      <div class="setrow plain"><div><label for="itemcap">Connection limit</label>
+        <div class="hint">Plaid's free Trial plan allows 10, and removing one doesn't give its slot back. Raise this only if your plan allows more.</div></div>
+        <span class="amtin"><span class="fld"><input id="itemcap" data-key="itemCap" inputmode="numeric" value="${esc(set.itemCap)}"></span></span></div>
+      <div class="ok" data-for="itemCap" role="status"></div></div>
     <div class="card sets"><h2>Discord alerts</h2>
       <div class="setrow plain"><div><label for="alerts">Post alerts to Discord</label>
         <div class="hint">With the daily sync: a big charge, a budget that goes over, or a bank that stops syncing.</div></div>
@@ -749,10 +754,10 @@ PAGES.settings = async () => {
     try { if (v === "system") localStorage.removeItem("tally-appearance"); else localStorage.setItem("tally-appearance", v); } catch {}
     if (v === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v;
   });
-  const BAD = { bigCharge: "Use a whole dollar amount, like 200.", discordWebhook: "That isn't a Discord webhook URL. It starts with https://discord.com/api/webhooks/." };
+  const BAD = { bigCharge: "Use a whole dollar amount, like 200.", itemCap: "Use a whole number, like 10.", discordWebhook: "That isn't a Discord webhook URL. It starts with https://discord.com/api/webhooks/." };
   for (const el of $page.querySelectorAll("[data-key]")) el.addEventListener("change", async () => {
     const key = el.dataset.key, ok = $page.querySelector(`.ok[data-for="${key}"]`);
-    const value = el.type === "checkbox" ? (el.checked ? "on" : "off") : key === "bigCharge" ? el.value.replace(/[$,\s]/g, "") : el.value.trim();
+    const value = el.type === "checkbox" ? (el.checked ? "on" : "off") : key === "bigCharge" || key === "itemCap" ? el.value.replace(/[$,\s]/g, "") : el.value.trim();
     if (key === "discordWebhook" && !value) return;
     try {
       await api("/api/settings", { [key]: value });

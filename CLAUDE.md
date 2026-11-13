@@ -109,8 +109,7 @@ Budget). Its record and corrected benchmark are in `.council/site-ref/` (`STANDA
 
 ## Daily job
 
-`bin/daily.mjs`, run at 7:00 by the agent `bin/install-mac.sh` installs: syncs everything through `POST /api/daily`,
-writes `data/tally-snapshot.db` for backups, and posts new alerts (broken connection weekly, a charge at or over the alert amount
+`bin/daily.mjs`, run at 7:00 by the agent `bin/install-mac.sh` installs: syncs everything through `POST /api/daily` and posts new alerts (broken connection weekly, a charge at or over the alert amount
 dated in the last 10 days, a budget gone over) to Discord when alerts are on in Settings. The webhook comes from
 Settings, or `DISCORD_WEBHOOK_URL` in `~/.config/tally/discord.env` from before the setting. Long posts are split into several messages, and each message's alerts are marked
 sent only after Discord accepts that message.
@@ -121,7 +120,9 @@ One full sync runs at a time (`syncAllOnce`). Besides the daily job and the Sync
 when the page opens or its tab comes back, if any connection is older than the `autoSync` setting or last failed to
 reach Plaid; automatic syncs run at most every 10 minutes. Settings live in the `settings` table, each with a default
 and a check in `SETTINGS` in `server.mjs`, and show on the Settings page (`#/settings`, the gear in the top bar).
-Discord alerts are opt-in (`alerts`, off unless an old `discord.env` exists). The webhook pasted there is stored in
+Every full sync (`syncAll`) ends by writing `data/tally-snapshot.db` for backups, so a backup exists without the
+daily job. The connection limit is the `itemCap` setting (default 10, or `TALLY_ITEM_CAP`), shown on Settings.
+A request for a Host outside loopback and `TALLY_HOSTS` is logged once per name. Discord alerts are opt-in (`alerts`, off unless an old `discord.env` exists). The webhook pasted there is stored in
 `settings` and never returned by `GET /api/settings`; `POST /api/daily` hands it to `bin/daily.mjs` with the alerts.
 
 ## Gig payouts
