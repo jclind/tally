@@ -1,11 +1,13 @@
 // Screenshots for the site, from tally running on made-up data. Never point this at real accounts.
-// Usage: node site/tools/shoot.mjs <base url> <out dir>. Desktop is 1280x800, phone 390x844, both at 2x.
+// Usage: node site/tools/shoot.mjs <base url> <out dir> [dark]. Desktop is 1280x800, phone 390x844, both at 2x.
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const [BASE, out] = process.argv.slice(2);
+const [BASE, out, mode] = process.argv.slice(2);
+// "dark" as a third argument shoots the dark theme and names each file name-dark.png.
+const suffix = mode === "dark" ? "-dark" : "";
 mkdirSync(out, { recursive: true });
 const SHOTS = [
   ["home", "#/", "desk"], ["spending", "#/spending", "desk"], ["budgets", "#/budgets", "desk"],
@@ -32,6 +34,7 @@ ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id &
 const cdp = (method, params = {}) => new Promise((ok, bad) => { const i = ++id; pending.set(i, (m) => m.error ? bad(new Error(method + ": " + m.error.message)) : ok(m.result)); ws.send(JSON.stringify({ id: i, method, params })); });
 
 await cdp("Page.enable");
+if (suffix) await cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "dark" }] });
 for (const [name, hash, kind, y0 = 0] of SHOTS) {
   const phone = kind === "phone";
   const width = phone ? 390 : 1280, scale = 2;
@@ -42,7 +45,7 @@ for (const [name, hash, kind, y0 = 0] of SHOTS) {
   await wait(300);
   const height = phone ? 844 : 800;
   const shot = await cdp("Page.captureScreenshot", { format: "png" });
-  writeFileSync(join(out, name + ".png"), Buffer.from(shot.data, "base64"));
+  writeFileSync(join(out, name + suffix + ".png"), Buffer.from(shot.data, "base64"));
   console.log(name, `${width}x${height}@${scale}x`);
 }
 ws.close(); chrome.kill();

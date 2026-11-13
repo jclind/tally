@@ -109,7 +109,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <h2><span class="step">3</span>Link an account</h2>
       <p>Open <b>Accounts</b> and choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments. Plaid's window opens.</p>
       <p>In sandbox, pick any bank and sign in with the test login <code>user_good</code> and password <code>pass_good</code>. tally pulls in Plaid's made-up accounts and transactions so you can look around.</p>
-      <picture><source media="(max-width: 760px)" srcset="/img/phone-accounts.png" width="780" height="1688"><img class="shot" src="/img/accounts.png" width="2560" height="1600" alt="The Accounts page with linked connections and the Link a bank or card button." loading="lazy"></picture>
+      <picture><source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/phone-accounts-dark.png" width="780" height="1688"><source media="(max-width: 760px)" srcset="/img/phone-accounts.png" width="780" height="1688"><source media="(prefers-color-scheme: dark)" srcset="/img/accounts-dark.png" width="2560" height="1600"><img class="shot" src="/img/accounts.png" width="2560" height="1600" alt="The Accounts page with linked connections and the Link a bank or card button." loading="lazy"></picture>
     </section>
 
     <section id="real">
@@ -146,7 +146,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
 bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
       <p>Open <code>https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
       <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
-      <img class="shot" src="/img/phone-budgets.png" width="780" height="1688" alt="tally's Budgets page on a phone." loading="lazy" style="max-width:300px">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="/img/phone-budgets-dark.png" width="780" height="1688"><img class="shot" src="/img/phone-budgets.png" width="780" height="1688" alt="tally's Budgets page on a phone." loading="lazy" style="max-width:300px"></picture>
     </section>
 
     <section id="alerts">
@@ -178,7 +178,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h2>Using tally</h2>
       <h3>Budgets</h3>
       <p>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</p>
-      <picture><source media="(max-width: 760px)" srcset="/img/phone-budgets.png" width="780" height="1688"><img class="shot" src="/img/budgets.png" width="2560" height="1600" alt="The Budgets page." loading="lazy"></picture>
+      <picture><source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/phone-budgets-dark.png" width="780" height="1688"><source media="(max-width: 760px)" srcset="/img/phone-budgets.png" width="780" height="1688"><source media="(prefers-color-scheme: dark)" srcset="/img/budgets-dark.png" width="2560" height="1600"><img class="shot" src="/img/budgets.png" width="2560" height="1600" alt="The Budgets page." loading="lazy"></picture>
       <h3>Fix a category</h3>
       <p>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</p>
       <h3>Search</h3>

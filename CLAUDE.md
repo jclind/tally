@@ -54,6 +54,11 @@ side cards on the right. Keep it light. Colors and sizes are the variables at th
 - Category colors follow the category, never its rank (`CAT_COLOR` in `public/app.js`). The seven hues passed
   the colorblind check as neighbors in that order; every other category is gray "Other". Don't add an eighth.
 - Text on the teal band is solid white (4.5:1). Don't fade it with opacity.
+- Dark mode (picked 2026-11-13, "Slate"): neutral charcoal page and cards under the same full-strength teal band. It
+  follows the device; Appearance on the Settings page overrides it per browser (`localStorage` `tally-appearance`,
+  applied by a script in `index.html` before the stylesheet paints). Every color is a variable at the top of
+  `public/app.css`, and the dark values are in two blocks there that must match. New colors go in as variables with a
+  dark value, never as a literal. The site (`site/style.css`) uses the same palette and swaps in `-dark` screenshots.
 
 A design council (Muse, Opus, and Codex reviewing, Fable judging splits) polished this on 2026-11-12 over 8 rounds.
 The rules it settled:

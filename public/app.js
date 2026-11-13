@@ -269,7 +269,7 @@ function netWorthCard(nw, hist) {
     const pts = hist.map((h, i) => [(i / (hist.length - 1)) * W, H - 4 - ((h.total - min) / span) * (H - 8)]);
     const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
     const change = hist.at(-1).total - hist[0].total;
-    line = `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Net worth since ${shortDate(hist[0].date)}"><path d="${d}L${W},${H}L0,${H}Z" fill="#E5FAF5"/><path d="${d}" fill="none" stroke="#1B8382" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+    line = `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Net worth since ${shortDate(hist[0].date)}"><path d="${d}L${W},${H}L0,${H}Z" style="fill:var(--spark)"/><path d="${d}" fill="none" style="stroke:var(--teal)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
       <div class="kv"><span>${change >= 0 ? "Up" : "Down"} since ${shortDate(hist[0].date)}</span><b class="num">${money(Math.abs(change))}</b></div>`;
   }
   return `<div class="card c-nw"><h2>Net worth <a href="#/accounts">All accounts</a></h2><div class="nw num">${money(nw.total)}</div>
@@ -310,7 +310,7 @@ PAGES.overview = async (q) => {
   const net = s.income - s.spent, mx = Math.max(s.income, s.spent, 1);
   const cash = `<div class="card c-cash"><h2>Cash flow</h2>
     <div class="sub"><b class="num">${money(Math.abs(net))}</b> more ${net < 0 ? "out than in" : "in than out"}${s.current ? " so far" : ""}</div>
-    <div class="cfr">${[["Earned", s.income, "#00CDA9"], ["Spent", s.spent, "#F877A5"]].map(([k, v, c]) => `<div class="lab"><span>${k}</span><b class="num">${money(v)}</b></div><div class="t"><i style="width:${(v / mx) * 100}%;background:${c}"></i></div>`).join("")}</div>
+    <div class="cfr">${[["Earned", s.income, "var(--mint)"], ["Spent", s.spent, "var(--pink)"]].map(([k, v, c]) => `<div class="lab"><span>${k}</span><b class="num">${money(v)}</b></div><div class="t"><i style="width:${(v / mx) * 100}%;background:${c}"></i></div>`).join("")}</div>
     <div class="note">${s.current ? `Last month by this day you'd spent <b class="num">${money(s.spentLastMonthSoFar)}</b>.` : `${pm} came to <b class="num">${money(s.spentLastMonth)}</b> in all.`}</div></div>`;
 
   // Summary cards on Home show whole dollars; the Activity list keeps cents.
@@ -710,7 +710,13 @@ PAGES.settings = async () => {
   const on = set.alerts === "on";
   const hookLine = set.webhook === "file" ? "Using the webhook in ~/.config/tally/discord.env. Paste one here to replace it."
     : set.webhook === "settings" ? "A webhook is saved. Paste a new one to replace it." : "";
+  let look = "system";
+  try { look = localStorage.getItem("tally-appearance") || "system"; } catch {}
   $page.innerHTML = `<div class="layout"><div class="stack">
+    <div class="card sets"><h2>Appearance</h2>
+      <div class="setrow stacked"><label for="look">Theme</label>
+        <select id="look">${[["system", "Match this device"], ["light", "Light"], ["dark", "Dark"]].map(([v, t]) => `<option value="${v}"${v === look ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <div class="hint">Each browser keeps its own choice.</div></div></div>
     <div class="card sets"><h2>Syncing</h2>
       <div class="setrow stacked"><label for="autosync">Sync when you open tally</label>
         <select id="autosync" data-key="autoSync">${SYNC_CHOICES.map(([v, t]) => `<option value="${v}"${v === set.autoSync ? " selected" : ""}>${t}</option>`).join("")}</select>
@@ -737,6 +743,12 @@ PAGES.settings = async () => {
       <div class="row"><span class="w"><b>Keys</b><small class="path">${path(set.keysPath)}</small></span></div>
       <div class="row"><span class="w"><b>Data</b><small class="path">${path(set.dataPath)}</small></span></div>
     </div></div></aside></div>`;
+  // Appearance lives in this browser, not the database, so a phone and a laptop can differ.
+  document.getElementById("look").addEventListener("change", (e) => {
+    const v = e.target.value;
+    try { if (v === "system") localStorage.removeItem("tally-appearance"); else localStorage.setItem("tally-appearance", v); } catch {}
+    if (v === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v;
+  });
   const BAD = { bigCharge: "Use a whole dollar amount, like 200.", discordWebhook: "That isn't a Discord webhook URL. It starts with https://discord.com/api/webhooks/." };
   for (const el of $page.querySelectorAll("[data-key]")) el.addEventListener("change", async () => {
     const key = el.dataset.key, ok = $page.querySelector(`.ok[data-for="${key}"]`);
