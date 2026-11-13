@@ -3,7 +3,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -190,4 +190,19 @@ test("settings save and check their values, and sync on open runs only when it's
   daily = await post("/api/daily", {});
   assert.equal(daily.webhook, hook);
   assert.ok(Array.isArray(daily.alerts));
+});
+
+test("sandbox keys keep their data in sandbox.db, apart from tally.db", async () => {
+  const sdir = mkdtempSync(join(tmpdir(), "tally-sandbox-"));
+  writeFileSync(join(sdir, "plaid.env"), `PLAID_CLIENT_ID=cid\nPLAID_SECRET=sec\nPLAID_ENV=sandbox\nPLAID_HOST=http://127.0.0.1:${fake.address().port}\n`);
+  const port = 35000 + Math.floor(Math.random() * 1000), sbase = `http://localhost:${port}`;
+  const s = spawn(process.execPath, [join(root, "server.mjs")], { env: { ...process.env, TALLY_PORT: String(port), TALLY_KEYS: join(sdir, "plaid.env"), TALLY_DATA: join(sdir, "data"), TALLY_DISCORD: join(sdir, "discord.env"), TALLY_PAYOUTS: join(sdir, "payouts.mjs") }, stdio: "pipe" });
+  try {
+    let set;
+    for (let i = 0; i < 50 && !set; i++) set = await fetch(sbase + "/api/settings").then((r) => r.json(), () => null) ?? await new Promise((r) => setTimeout(r, 100));
+    assert.equal(set.plaidEnv, "sandbox");
+    assert.match(set.dataPath, /sandbox\.db$/);
+    assert.ok(existsSync(join(sdir, "data", "sandbox.db")));
+    assert.ok(!existsSync(join(sdir, "data", "tally.db")), "sandbox never creates the real data file");
+  } finally { s.kill(); rmSync(sdir, { recursive: true, force: true }); }
 });

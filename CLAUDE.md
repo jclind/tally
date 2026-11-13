@@ -1,7 +1,9 @@
 # tally
 
 A Mint-style money app you run yourself. Plaid links your bank, card, and brokerage accounts, and the data lives in
-SQLite at `data/tally.db` on your machine. Pages: Home, Activity, Spending, Budgets, Bills, Accounts.
+SQLite at `data/tally.db` on your machine (`data/sandbox.db` when the keys say `PLAID_ENV=sandbox`, so Plaid's test bank
+never mixes with real banks). Pages: Home, Activity, Spending, Budgets, Bills, Accounts. Home with nothing linked is a
+start screen: the link buttons, or where the keys go when tally can't find them.
 The install guide is https://tally.jesselind.com. Its source is `site/`, published with `site/publish.sh`; its screenshots are crops of tally running on made-up data (`site/tools/shoot.mjs`, with the list in `site/tools/shots.json`). A gitignored `CLAUDE.local.md` holds rules for one person's setup.
 
 ## Rules
@@ -101,6 +103,9 @@ A design council (Opus and Codex reviewing, Muse for four rounds, Fable judging 
   device; `site/theme.js` sets `data-theme` on the root before the page draws, and the stylesheet's dark tokens hang
   off `[data-theme="dark"]`, never off a `prefers-color-scheme` query. The script also points each screenshot's
   dark-twin `<source>` at the mode in use, so a new screenshot needs only the usual `<picture>` markup.
+- Setup goes straight to production keys in three steps (get keys, install, link your banks). Plaid's test bank is an
+  optional section after the steps, since a connection only counts once a bank links, and wrong keys fail before
+  Plaid's window opens.
 - The guide opens, under Before you start, with a copyable prompt for a coding agent. It keeps the Plaid keys out of
   the chat and asks before anything that runs at login; keep both if the prompt changes.
 
@@ -132,7 +137,7 @@ One full sync runs at a time (`syncAllOnce`). Besides the daily job and the Sync
 when the page opens or its tab comes back, if any connection is older than the `autoSync` setting or last failed to
 reach Plaid; automatic syncs run at most every 10 minutes. Settings live in the `settings` table, each with a default
 and a check in `SETTINGS` in `server.mjs`, and show on the Settings page (`#/settings`, the gear in the top bar).
-Every full sync (`syncAll`) ends by writing `data/tally-snapshot.db` for backups, so a backup exists without the
+Every full sync (`syncAll`) ends by writing `data/tally-snapshot.db` (`sandbox-snapshot.db` on sandbox keys) for backups, so a backup exists without the
 daily job. The connection limit is the `itemCap` setting (default 10, or `TALLY_ITEM_CAP`), shown on Settings.
 A request for a Host outside loopback and `TALLY_HOSTS` is logged once per name. Discord alerts are opt-in (`alerts`, off unless an old `discord.env` exists). The webhook pasted there is stored in
 `settings` and never returned by `GET /api/settings`; `POST /api/daily` hands it to `bin/daily.mjs` with the alerts.

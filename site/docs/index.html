@@ -30,7 +30,7 @@
   </header>
   <div class="wrap docs-band">
     <h1>Install guide</h1>
-    <p class="lede">Set tally up on Plaid's test bank first, then connect your real banks.</p>
+    <p class="lede">Get Plaid keys, install tally, and link your banks. To look around first, <a href="#sandbox">try Plaid's test bank</a>.</p>
   </div>
 </div>
 
@@ -43,8 +43,8 @@
         <option value="#install">2 Install tally</option>
         <option value="#keys">Add your keys</option>
         <option value="#start">Start and check it</option>
-        <option value="#link">3 Link an account</option>
-        <option value="#real">4 Switch to your real banks</option>
+        <option value="#link">3 Link your banks</option>
+        <option value="#sandbox">Try the test bank</option>
       </optgroup>
       <optgroup label="Running it">
         <option value="#background">Keep it running</option>
@@ -65,8 +65,8 @@
       <a href="#install">2 Install tally</a>
       <a class="sub" href="#keys">Add your keys</a>
       <a class="sub" href="#start">Start and check it</a>
-      <a href="#link">3 Link an account</a>
-      <a href="#real">4 Switch to your real banks</a>
+      <a href="#link">3 Link your banks</a>
+      <a href="#sandbox">Try the test bank</a>
       <p class="grp">Running it</p>
       <a href="#background">Keep it running</a>
       <a href="#backup">Backups and updates</a>
@@ -88,7 +88,7 @@
         <li><b>A US bank.</b> tally only links US banks for now.</li>
       </ul>
       <p>Using a coding agent? Open it in an empty folder and paste this:</p>
-      <div class="code prompt" data-label="Prompt for your agent"><pre><code>Help me install tally (https://github.com/jclind/tally) on this computer by following https://tally.jesselind.com/docs/ step by step. If you can't open that page, the same guide is site/docs/index.html in the repo. Start with Plaid's sandbox keys, as the guide says. Never ask me to paste my Plaid keys into this chat: tell me which file to put them in, and I'll do it. Ask me before installing anything that runs at login.</code></pre></div>
+      <div class="code prompt" data-label="Prompt for your agent"><pre><code>Help me install tally (https://github.com/jclind/tally) on this computer by following https://tally.jesselind.com/docs/ step by step. If you can't open that page, the same guide is site/docs/index.html in the repo. Never ask me to paste my Plaid keys into this chat: tell me which file to put them in, and I'll do it. Ask me before installing anything that runs at login.</code></pre></div>
     </section>
 
     <div class="steps">
@@ -97,7 +97,7 @@
       <ol>
         <li><a href="https://dashboard.plaid.com/signup">Create a Plaid account</a> and verify your email.</li>
         <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. Plaid offers it to teams created on or after April 15, 2026. For an older team, check the plans on your dashboard.</li>
-        <li>Go to <b>Developers → Keys</b>. Copy your <b>client_id</b> and your <b>Sandbox</b> secret. You'll use the Production secret in step 4.</li>
+        <li>Go to <b>Developers → Keys</b>. Copy your <b>client_id</b> and your <b>Production</b> secret.</li>
       </ol>
       <div class="note warn"><b>Don't apply for full Production access.</b> Plaid ends the free Trial once you submit a Production application, and you can't go back.</div>
     </section>
@@ -108,12 +108,12 @@
       <div class="code"><pre><code>git clone https://github.com/jclind/tally.git
 cd tally</code></pre></div>
       <h3 id="keys">Add your keys</h3>
-      <p>Swap in your client_id and Sandbox secret, then run this. It writes <code>~/.config/tally/plaid.env</code>, readable only by you.</p>
+      <p>Swap in your client_id and Production secret, then run this. It writes <code>~/.config/tally/plaid.env</code>, readable only by you.</p>
       <div class="code"><pre><code>mkdir -p ~/.config/tally
 cat &gt; ~/.config/tally/plaid.env &lt;&lt;'EOF'
 PLAID_CLIENT_ID=your-client-id
-PLAID_SECRET=your-sandbox-secret
-PLAID_ENV=sandbox
+PLAID_SECRET=your-production-secret
+PLAID_ENV=production
 EOF
 chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <h3 id="start">Start and check it</h3>
@@ -123,26 +123,21 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
     </section>
 
     <section id="link">
-      <h2><span class="step">3</span>Link an account</h2>
-      <p>Open <b>Accounts</b> and choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments.</p>
-      <p>In sandbox, pick any bank and sign in with the test login <code>user_good</code> and password <code>pass_good</code>. tally loads test accounts and transactions.</p>
-      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-one-dark.png"><img src="/img/c-conn-one.png" width="896" height="590" alt="The Connections card on the Accounts page: one sandbox bank linked, 1 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
-    </section>
-
-    <section id="real">
-      <h2><span class="step">4</span>Switch to your real banks</h2>
-      <p>Stop tally (Ctrl+C) and set the sandbox data aside:</p>
-      <div class="code"><pre><code>mv data data-sandbox</code></pre></div>
-      <p>Edit the keys file so it holds your Production secret:</p>
-      <div class="code" data-label="~/.config/tally/plaid.env"><pre><code>PLAID_CLIENT_ID=your-client-id
-PLAID_SECRET=your-production-secret
-PLAID_ENV=production</code></pre></div>
-      <p>Start tally again with <code>npm start</code>. In Settings, <b>Your setup</b> should now say production.</p>
-      <p>Then link your banks from <b>Accounts</b> the same way.</p>
+      <h2><span class="step">3</span>Link your banks</h2>
+      <p>Choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments, and sign in to your bank. Link more later from <b>Accounts</b>.</p>
+      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-one-dark.png"><img src="/img/c-conn-one.png" width="896" height="590" alt="The Connections card on the Accounts page: one bank linked, 1 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
       <div class="note warn"><b>The free Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back, and tally stops at 10 unless you raise the limit in Settings for a paid plan. If a bank stops syncing, <a href="#bank-error">use Fix connection</a> on the Accounts page instead of linking it again.</div>
     </section>
     </div>
 
+    <section id="sandbox">
+      <h2>Try Plaid's test bank first<span class="opt">Optional</span></h2>
+      <p>To look around before you link a real bank, put your <b>Sandbox</b> secret in the keys file instead, and restart tally:</p>
+      <div class="code" data-label="~/.config/tally/plaid.env"><pre><code>PLAID_CLIENT_ID=your-client-id
+PLAID_SECRET=your-sandbox-secret
+PLAID_ENV=sandbox</code></pre></div>
+      <p>Pick any bank and sign in with <code>user_good</code> and password <code>pass_good</code>. Test data goes in <code>data/sandbox.db</code>, apart from your real data, and uses none of your 10 connections. To switch back, put the Production lines back and restart.</p>
+    </section>
 
     <section id="background">
       <h2>Keep it running</h2>
@@ -157,7 +152,7 @@ PLAID_ENV=production</code></pre></div>
     <section id="backup">
       <h2>Backups and updates</h2>
       <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. tally writes the snapshot after every full sync, and it's safe to copy while tally runs.</p>
-      <p>The snapshot holds your Plaid access tokens. Without it you'd <a href="#real">link every bank again</a>.</p>
+      <p>The snapshot holds your Plaid access tokens. Without it you'd <a href="#link">link every bank again</a>.</p>
       <h3 id="update">Update tally</h3>
       <p><b>On a Mac</b>, from your tally folder, pull the new code and restart tally:</p>
       <div class="code"><pre><code>git pull

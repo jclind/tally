@@ -30,7 +30,10 @@ function loadKeys() {
 }
 
 mkdirSync(DATA, { recursive: true, mode: 0o700 });
-const dbPath = join(DATA, "tally.db");
+// Plaid's test bank never shares a file with real banks: sandbox keys open data/sandbox.db, production keys data/tally.db.
+// Switching is a keys edit and a restart, with nothing to move.
+const dbName = loadKeys()?.env === "sandbox" ? "sandbox" : "tally";
+const dbPath = join(DATA, `${dbName}.db`);
 const db = new DatabaseSync(dbPath);
 chmodSync(dbPath, 0o600);
 db.exec(`
@@ -240,11 +243,11 @@ async function syncItem(itemId) {
 
 // A clean copy for the nightly backup, so a restore never depends on catching the live file mid-write.
 function snapshot() {
-  const tmp = join(DATA, "tally-snapshot.tmp.db");
+  const tmp = join(DATA, `${dbName}-snapshot.tmp.db`);
   rmSync(tmp, { force: true });
   db.exec(`VACUUM INTO '${tmp.replaceAll("'", "''")}'`);
   chmodSync(tmp, 0o600);
-  renameSync(tmp, join(DATA, "tally-snapshot.db"));
+  renameSync(tmp, join(DATA, `${dbName}-snapshot.db`));
 }
 
 // Every full sync ends with a fresh snapshot, so a backup exists without the daily job.
@@ -288,7 +291,7 @@ function webhook() {
 function publicSettings() {
   const { discordWebhook, ...rest } = settings();
   const k = loadKeys();
-  return { ...rest, webhook: discordWebhook ? "settings" : webhook() ? "file" : null, plaidEnv: k?.env ?? null, keysPath: KEYS, dataPath: DATA };
+  return { ...rest, webhook: discordWebhook ? "settings" : webhook() ? "file" : null, plaidEnv: k?.env ?? null, keysPath: KEYS, dataPath: dbPath };
 }
 function saveSettings(body) {
   const set = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value");

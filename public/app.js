@@ -302,8 +302,9 @@ function comingUpCard(bills) {
 const PAGES = {};
 PAGES.overview = async (q) => {
   const month = q.get("month") ?? "", g = GEN;
-  const s = await api(`/api/summary${month ? `?month=${month}` : ""}`);
+  const [s, st] = await Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/status")]);
   if (stale(g)) return;
+  if (!st.items.length) return startScreen(st);
   const m = monthName(s.month), pm = monthName(shiftMonth(s.month, -1));
   $hero.innerHTML = budgetHero(s, "overview");
 
@@ -647,6 +648,20 @@ PAGES.bills = async () => {
       ${ended.length ? `<div class="card"><h2>Stopped charging</h2><div style="margin-top:8px">${ended.map((r) => billRow(r)).join("")}</div></div>` : ""}
     </div><aside class="side stack"><div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
 };
+
+// ---------- first run: nothing linked yet ----------
+// Home before the first link is one card: the link buttons, or where the keys go when tally can't find them.
+function startScreen(st) {
+  $hero.innerHTML = `<div class="big">${st.keys ? "Link your first bank" : "Add your Plaid keys"}</div>`;
+  $page.innerHTML = `<div id="msg"></div><div class="card start">${st.keys
+    ? `<div class="actions"><button class="btn primary" id="bank">Link a bank or card</button><button class="btn" id="brokerage">Link a brokerage</button></div>
+      <div class="hint">${st.env === "sandbox" ? "These are sandbox keys: pick any bank and sign in with <b>user_good</b> and <b>pass_good</b>." : `Each link uses one of your ${st.cap} connections for good.`}</div>`
+    : `<p>tally reads them from <code class="path">${path(st.keysPath)}</code>. <a href="https://tally.jesselind.com/docs/#keys">The install guide</a> shows what goes in it. Restart tally after you add them.</p>`}</div>`;
+  if (!st.keys) return;
+  const msg = (t, bad) => { document.getElementById("msg").innerHTML = t ? `<div class="notice ${bad ? "bad" : ""}">${esc(t)}</div>` : ""; };
+  document.getElementById("bank").onclick = () => link({ kind: "bank" }, msg);
+  document.getElementById("brokerage").onclick = () => link({ kind: "brokerage" }, msg);
+}
 
 // ---------- accounts and connections ----------
 PAGES.accounts = async () => {

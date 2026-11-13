@@ -13,12 +13,13 @@ You need Node 24 or newer and your own Plaid keys (https://dashboard.plaid.com/s
     git clone https://github.com/jclind/tally.git
     cd tally
     mkdir -p ~/.config/tally
-    printf 'PLAID_CLIENT_ID=...\nPLAID_SECRET=...\nPLAID_ENV=sandbox\n' > ~/.config/tally/plaid.env
+    printf 'PLAID_CLIENT_ID=...\nPLAID_SECRET=...\nPLAID_ENV=production\n' > ~/.config/tally/plaid.env
     chmod 600 ~/.config/tally/plaid.env
     npm start
 
-Open http://localhost:3400 and link an account from the Accounts page. With `PLAID_ENV=sandbox`, Plaid's test bank
-works with `user_good` / `pass_good`. Change it to `production` for your real accounts.
+Open http://localhost:3400 and link your first bank. To try Plaid's test bank first, use your Sandbox secret and
+`PLAID_ENV=sandbox`, and sign in with `user_good` / `pass_good`. Sandbox data goes in `data/sandbox.db`, so it
+never mixes with your real banks.
 
 On a Mac, `bin/install-mac.sh` keeps tally running in the background and syncs every morning at 7:00.
 

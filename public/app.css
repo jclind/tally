@@ -443,3 +443,9 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; table-layout
   .fsel.open select { max-width: none; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+/* First run: one card holding the link buttons, as wide as the buttons need. */
+.card.start { max-width: 560px; }
+.card.start .actions { margin-top: 0; }
+.card.start .hint { margin-top: 12px; }
+.card.start p { margin: 0; }
+.card.start code { overflow-wrap: anywhere; }
