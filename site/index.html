@@ -67,7 +67,7 @@
         </figure>
         <figure class="tile t4">
           <h3>Reconnect a bank without a new connection.</h3>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1096" alt="Connections: Harbor Credit Union needs a new sign-in and shows a Fix connection button; the other three banks synced." loading="lazy"></picture>
+          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1078" alt="Connections: Harbor Credit Union needs a new sign-in and shows a Fix connection button; the other three banks synced." loading="lazy"></picture>
         </figure>
       </div>
       <div class="col">
@@ -76,7 +76,7 @@
           <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-coming-dark.png"><img src="/img/c-coming.png" width="896" height="766" alt="Coming up: 9 bills at $1,543 a month, with Verizon due Nov 14, Planet Fitness Nov 17, Comcast Nov 18, and Geico Nov 22." loading="lazy"></picture>
         </figure>
         <figure class="tile t3">
-          <h3>Recategorize one charge, or the whole merchant.</h3>
+          <h3>Recategorize a charge or a merchant's charges.</h3>
           <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-activity-dark.png"><img src="/img/c-activity.png" width="896" height="1078" alt="Activity: the category picker open on a Blue Bottle Coffee charge, with Every Blue Bottle Coffee transaction ticked." loading="lazy"></picture>
         </figure>
       </div>
@@ -115,5 +115,11 @@ npm start
     <span class="flinks"><a href="/docs/">Install guide</a><a href="https://github.com/jclind/tally">GitHub</a></span>
   </div>
 </footer>
+<script>
+  // The terminal takes keyboard focus only when a line is too wide for it.
+  const term = document.querySelector(".term");
+  const fit = () => { if (term.scrollWidth > term.clientWidth + 1) term.tabIndex = 0; else term.removeAttribute("tabindex"); };
+  addEventListener("load", fit); addEventListener("resize", fit);
+</script>
 </body>
 </html>

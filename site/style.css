@@ -26,6 +26,7 @@
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 html, body { margin: 0; background: var(--page); color: var(--ink); }
 body { font: 17px/27px var(--font); -webkit-font-smoothing: antialiased; }
 a { color: var(--deep); text-decoration: none; font-weight: 600; }
@@ -47,7 +48,7 @@ p, li, dd { text-wrap: pretty; }
 .top { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 22px; font-weight: 700; }
 .brand:hover { text-decoration: none; }
-.top nav { display: flex; align-items: center; gap: 4px; }
+.top nav { display: flex; align-items: center; gap: 4px; margin-right: -14px; }
 .top nav a { color: #fff; font-size: 15px; padding: 8px 14px; border-radius: 8px; white-space: nowrap; }
 .top nav a:hover { background: rgba(0, 0, 0, .12); text-decoration: none; }
 .top nav a.on { background: rgba(0, 0, 0, .16); }
@@ -93,6 +94,7 @@ p, li, dd { text-wrap: pretty; }
 .term-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 72px; align-items: end; margin-top: 48px; }
 .term-col .term { min-width: 0; margin: 0; }
 .term-col .btn { justify-self: start; }
+.term:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .term { background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); outline: 1px solid var(--edge); }
 .term .c { color: #8FB3AC; }
 .term .out { color: #7FE3CF; }
@@ -133,7 +135,7 @@ article h3 { font-size: 18px; margin: 28px 0 6px; }
 .done { margin: 0 0 48px; padding: 0 0 40px; border-bottom: 1px solid var(--line); color: var(--ink); font-weight: 600; }
 .opt { font-size: 14px; font-weight: 600; color: var(--ink2); margin-left: 8px; letter-spacing: 0; }
 
-code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 2px 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 1px 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 article :not(pre) > code { white-space: nowrap; }
 /* Copy gets its own column, so it never sits on top of the code. */
 .code { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; margin: 14px 0 18px; border-radius: 12px; overflow: hidden; background: var(--term); outline: 1px solid var(--edge); }
@@ -150,7 +152,6 @@ pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 /* Term lists use the same bold label as the h3s elsewhere in the guide, with no rules. */
 dl.faq dt { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 24px; }
 dl.faq dt:first-child { margin-top: 0; }
-dl.faq .shot { margin: 20px 0 8px; }
 dl.faq dd { margin: 6px 0 0; color: var(--body); }
 
 /* ---------- smaller screens ---------- */
@@ -164,7 +165,9 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
 @media (max-width: 760px) {
   body { font-size: 16px; line-height: 26px; }
   .wrap { padding-left: 16px; padding-right: 16px; }
+  .top nav { margin-right: -10px; }
   .top nav a { padding: 8px 10px; }
+  .reqs dd { max-width: none; }
   /* GitHub shows as its icon on phones, so all three links fit. */
   .top nav a.gh span { display: none; }
   .hero { padding-top: 32px; }
@@ -182,7 +185,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .code.scrolls pre { padding-top: 0; }
   .tour .col { display: contents; }
   .tour .tile + .tile { margin-top: 0; }
-  .t2 { order: 1; } .t3 { order: 2; } .t1 { order: 3; } .t4 { order: 4; }
+  .t2 { order: 1; } .t3 { order: 2; } .t4 { order: 3; }
   .tile h3 { font-size: 20px; }
   .tile picture { margin-top: 12px; }
   .term { font-size: 12px; line-height: 21px; padding: 12px 16px; }
@@ -192,7 +195,6 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .code.one pre { padding: 13px 16px; }
   .code.one.scrolls { grid-template-columns: minmax(0, 1fr) auto; }
   .code.one.scrolls .bar { order: 2; display: block; padding: 0 8px 0 0; }
-  .code.one.scrolls pre { padding: 13px 16px; }
   .docs-band { padding-top: 24px; padding-bottom: 32px; }
   .docs-band h1 { font-size: 32px; }
   .docs { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 0; padding-bottom: 72px; }
@@ -212,6 +214,8 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .code:not(.one) pre { padding-top: 0; }
   /* Commands keep their real line breaks and scroll sideways; a wrapped URL reads like a second command. */
   pre { font-size: 13px; line-height: 22px; padding: 12px 16px 14px; }
+  /* Multi-line blocks match the homepage terminal, so the clone line fits a 390px phone. */
+  .code:not(.one) pre { font-size: 12px; line-height: 21px; }
   pre:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
   article code.long { white-space: normal; overflow-wrap: anywhere; }
   .code.scrolls { grid-template-columns: minmax(0, 1fr); }
@@ -225,5 +229,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
 @media (max-width: 370px) {
   .brand { font-size: 20px; gap: 8px; }
   .brand svg { width: 28px; height: 28px; }
-  .top nav a { padding: 8px 7px; font-size: 14px; }
+  .top { gap: 8px; }
+  .top nav { margin-right: -5px; }
+  .top nav a { padding: 8px 5px; font-size: 14px; }
 }

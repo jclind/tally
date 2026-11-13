@@ -79,7 +79,7 @@
       <h2><span class="step">1</span>Get Plaid keys</h2>
       <ol>
         <li><a href="https://dashboard.plaid.com/signup">Create a Plaid account</a> and verify your email.</li>
-        <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. Plaid offers it to teams created on or after April 15, 2026; if yours is older, check the plans on your dashboard home page.</li>
+        <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. Plaid offers it to teams created on or after April 15, 2026. For an older team, check the plans on your dashboard.</li>
         <li>Go to <b>Developers → Keys</b>. Copy your <b>client_id</b> and your <b>Sandbox</b> secret. You'll use the Production secret in step 4.</li>
       </ol>
       <div class="note warn"><b>Don't apply for full Production access.</b> Plaid ends the free Trial once you submit a Production application, and you can't go back.</div>
@@ -153,13 +153,13 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
         <li>On the computer, serve tally on port 8400:
           <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400</code></pre></div>
         </li>
-        <li>Tell tally its new address. On a Mac:
+        <li>Tell tally its new address. <code>tailscale status</code> shows your computer's name. On a Mac:
           <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
           On Linux, add this environment variable to the service you set up, then restart it:
           <div class="code"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
         </li>
       </ol>
-      <p>Open <code class="long">https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
+      <p>Open <code class="long">https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen.</p>
       <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
     </section>
 
@@ -232,7 +232,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     bar.append(b);
     box.prepend(bar);
   }
-  // A command too wide for the box moves Copy above it and fades at the right edge, so it reads as scrollable.
+  // A command too wide for its box fades at the right edge, so it reads as scrollable.
   // Measured twice: moving Copy above the command widens the box, and the command may then fit.
   const atEnd = (pre) => pre.parentElement.classList.toggle("end", pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2);
   const markScroll = () => {

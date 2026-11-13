@@ -40,7 +40,8 @@
   {
    "card": "Connections",
    "pad": 0,
-   "js": "(() => { const c=[...document.querySelectorAll('.card h2')].find(h=>h.textContent.trim().startsWith('Connections')).closest('.card'); [...c.querySelectorAll('*')].filter(e=>e.children.length===0 && /Each link uses/.test(e.textContent)).forEach(e=>e.remove()); c.querySelectorAll('.err').forEach(e=>e.remove()); return 1; })()"
+   "js": "(() => { const c=[...document.querySelectorAll('.card h2')].find(h=>h.textContent.trim().startsWith('Connections')).closest('.card'); [...c.querySelectorAll('*')].filter(e=>e.children.length===0 && /Each link uses/.test(e.textContent)).forEach(e=>e.remove()); c.querySelectorAll('.err').forEach(e=>e.remove()); return 1; })()",
+   "maxH": 539
   }
  ],
  [
