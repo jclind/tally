@@ -1,10 +1,9 @@
-// tally: links the owner's bank, card, and brokerage accounts through Plaid and keeps their data in SQLite on the server.
-// Step 1 is a link test: link each institution once, pull accounts, transactions, and holdings, and show what came back.
-// Node built-ins only. Listens on 127.0.0.1, so it is reached over an ssh tunnel.
+// tally: links your bank, card, and brokerage accounts through Plaid and keeps their data in SQLite on your machine.
+// Node built-ins only. Listens on 127.0.0.1; reach it from other devices through tailscale serve or an ssh tunnel.
 import http from "node:http";
 import { readFileSync, mkdirSync, chmodSync, existsSync, rmSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { homedir } from "node:os";
 import * as report from "./lib/report.mjs";
@@ -13,6 +12,9 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.TALLY_PORT || 3400);
 const KEYS = process.env.TALLY_KEYS || join(homedir(), ".config/tally/plaid.env");
 const DATA = process.env.TALLY_DATA || join(ROOT, "data");
+// Gig payout rules, off unless the file exists. See payouts() in lib/report.mjs.
+const PAYOUTS = process.env.TALLY_PAYOUTS || join(homedir(), ".config/tally/payouts.mjs");
+const payoutSources = existsSync(PAYOUTS) ? (await import(pathToFileURL(PAYOUTS).href)).default(report) : {};
 // Plaid's Trial plan allows 10 Items for life. Removing one does not give the slot back.
 const ITEM_CAP = 10;
 
@@ -304,8 +306,8 @@ const routes = {
   "GET /api/recurring": () => report.recurring(db).map((r) => ({ ...r, monthly: report.monthlyCost(r) })),
   "GET /api/meta": () => ({ labels: report.LABELS, notSpending: report.NOT_SPENDING,
     accounts: db.prepare("SELECT account_id, name, mask, type FROM accounts ORDER BY type, name").all() }),
-  // Read by another local app on this machine.
-  "GET /api/payouts": () => report.payouts(db),
+  // Weekly gig payouts, for another app on the same machine. Empty without a payouts file.
+  "GET /api/payouts": () => report.payouts(db, payoutSources),
   "POST /api/category": (body) => report.setCategory(db, body),
   "POST /api/budget": (body) => report.setBudget(db, body),
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.

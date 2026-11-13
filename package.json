@@ -6,5 +6,9 @@
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT",
+  "description": "A self-hosted money app: Plaid-linked accounts, budgets, and spending, in SQLite on your machine."
 }

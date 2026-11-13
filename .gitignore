@@ -1,3 +1,5 @@
 data/
 *.log
 .env*
+CLAUDE.local.md
+.council/

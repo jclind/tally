@@ -20,7 +20,7 @@ function fixture() {
   add.run("t2", "card", "2026-11-04", "KROGER", "Kroger", 60, "FOOD_AND_DRINK", "FOOD_AND_DRINK_GROCERIES");
   add.run("t3", "chk", "2026-11-05", "CARD PAYMENT", null, 300, "LOAN_PAYMENTS", "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT");
   add.run("t4", "card", "2026-11-05", "PAYMENT THANK YOU", null, -300, "TRANSFER_IN", "TRANSFER_IN_ACCOUNT_TRANSFER");
-  add.run("t5", "chk", "2026-11-06", "COURIER ACH", "Courier", -500, "INCOME", "INCOME_WAGES");
+  add.run("t5", "chk", "2026-11-06", "ACME PAYROLL", "Acme", -500, "INCOME", "INCOME_WAGES");
   add.run("t6", "card", "2026-11-07", "AMAZON REFUND", "Amazon", -20, "GENERAL_MERCHANDISE", "GENERAL_MERCHANDISE_ONLINE");
   add.run("t7", "card", "2026-11-08", "AMAZON", "Amazon", 250, "GENERAL_MERCHANDISE", "GENERAL_MERCHANDISE_ONLINE");
   add.run("t8", "card", "2026-10-10", "SHELL 9", "Shell", 30, "TRANSPORTATION", "TRANSPORTATION_GAS");
@@ -82,7 +82,7 @@ test("an empty merchant name falls back to the description, and payments aren't 
   const st = db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, frequency, average_amount, predicted_next_date, is_active) VALUES (?, 'i1', 'outflow', ?, ?, ?, 'MONTHLY', ?, '2026-11-20', 1)");
   st.run("s1", "BIG BANK ONLINE PMT", "", "LOAN_PAYMENTS", 205);
   st.run("s2", "RAILWAY", "Railway", "TRANSFER_OUT", 5.25);
-  st.run("s3", "Bank FUNDS TRANSFER DB", null, "TRANSFER_OUT", 100);
+  st.run("s3", "BANK FUNDS TRANSFER DB", null, "TRANSFER_OUT", 100);
   const up = r.upcoming(db, "2026-11-12", 14);
   assert.deepEqual(up.map((x) => x.who), ["Railway"]);
   assert.equal(r.recurring(db).find((x) => x.stream_id === "s1").who, "BIG BANK ONLINE PMT");
@@ -90,18 +90,25 @@ test("an empty merchant name falls back to the description, and payments aren't 
 
 test("payouts land in the week the work happened", () => {
   const db = fixture();
+  // Made-up gig platforms, each paying on its own schedule, the way a payouts file describes them.
+  const sources = {
+    courier: { institution: "Courier Card", match: (t) => /^courier payout/i.test(t.name), workDate: (t) => r.addDays(t.date, -1) },
+    rides: { institution: "Rides Pay", match: (t) => /^(delivery|miscellaneous)$/i.test(t.name), workDate: (t) => (t.datetime ? r.easternDate(t.datetime, 4) : t.date) },
+    feast: { institution: null, match: (t) => /feast/i.test(`${t.merchant_name ?? ""} ${t.name}`) && t.category === "INCOME", workDate: (t) => r.addDays(t.date, -7) },
+  };
   db.exec(`INSERT INTO items (item_id, institution_name, created_at) VALUES ('dd', 'Courier Card', '2026-11-01'), ('ue', 'Rides Pay', '2026-11-01');
     INSERT INTO accounts (account_id, item_id, name, type) VALUES ('ddc', 'dd', 'Courier', 'depository'), ('uec', 'ue', 'Rides', 'depository');`);
   const add = db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, raw) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)");
   add.run("d0", "dd", "ddc", "2026-10-18", "Courier Payout", null, -1, "INCOME", "{}");
-  add.run("d1", "dd", "ddc", "2026-10-26", "Courier Payout", null, -108.4, "INCOME", "{}"); // Monday: Sunday's dash
+  add.run("d1", "dd", "ddc", "2026-10-26", "Courier Payout", null, -108.4, "INCOME", "{}"); // Monday: Sunday's work
   add.run("d2", "dd", "ddc", "2026-10-27", "Courier Payout", null, -28.6, "INCOME", "{}");
   add.run("u0", "ue", "uec", "2026-10-18", "Delivery", null, -1, "TRANSFER_IN", JSON.stringify({ datetime: "2026-10-18T15:00:00Z" }));
   add.run("u1", "ue", "uec", "2026-10-26", "Delivery", null, -10, "TRANSFER_IN", JSON.stringify({ datetime: "2026-10-26T06:30:00Z" })); // 2:30am Monday Eastern
   add.run("u2", "ue", "uec", "2026-10-26", "Miscellaneous", null, -5, "TRANSFER_IN", JSON.stringify({ datetime: "2026-10-26T09:30:00Z" })); // 5:30am Monday
   add.run("u3", "ue", "uec", "2026-10-27", "Account unload to ACH", null, -50, "TRANSFER_OUT", "{}");
   add.run("g1", "i1", "chk", "2026-10-28", "FEAST", "Feast", -67.54, "INCOME", "{}");
-  const p = r.payouts(db);
+  const p = r.payouts(db, sources);
+  assert.deepEqual(r.payouts(db), { sources: {}, weeks: {} }, "off without a payouts file");
   assert.equal(p.weeks["2026-10-19"].courier, 108.4);
   assert.equal(p.weeks["2026-10-26"].courier, 28.6);
   assert.equal(p.weeks["2026-10-19"].rides, 10, "before 4am Monday is last week");
