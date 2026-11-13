@@ -14,7 +14,7 @@ const SHOTS = [
   ["activity", "#/transactions", "desk"], ["bills", "#/bills", "desk"], ["accounts", "#/accounts", "desk"],
   ["phone-home", "#/", "phone", 0], ["phone-budgets", "#/budgets", "phone", 0], ["phone-activity", "#/transactions", "phone", 0], ["phone-spending", "#/spending", "phone", 0], ["phone-accounts", "#/accounts", "phone", 0],
 ];
-const PORT = 9334;
+const PORT = Number(process.env.SHOOT_PORT || 9334);
 const profile = mkdtempSync(join(tmpdir(), "council-chrome-"));
 const chrome = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   ["--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, "--no-first-run", "--hide-scrollbars", "about:blank"], { stdio: "ignore" });
@@ -34,7 +34,9 @@ ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id &
 const cdp = (method, params = {}) => new Promise((ok, bad) => { const i = ++id; pending.set(i, (m) => m.error ? bad(new Error(method + ": " + m.error.message)) : ok(m.result)); ws.send(JSON.stringify({ id: i, method, params })); });
 
 await cdp("Page.enable");
-if (suffix) await cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "dark" }] });
+// Always set the scheme: headless Chrome otherwise follows the Mac's own appearance, and a Mac in dark mode
+// once turned every light screenshot dark.
+await cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: suffix ? "dark" : "light" }] });
 for (const [name, hash, kind, y0 = 0] of SHOTS) {
   const phone = kind === "phone";
   const width = phone ? 390 : 1280, scale = 2;
