@@ -6,7 +6,8 @@
 <title>Install guide · tally</title>
 <meta name="description" content="Set up tally: get free Plaid keys, install it, link your accounts, and keep it running.">
 <meta property="og:title" content="tally install guide">
-<meta property="og:image" content="https://tally.jesselind.com/img/home.png">
+<meta property="og:description" content="Get free Plaid keys, install tally on a Mac or Linux computer, link your accounts, and keep it running.">
+<meta property="og:image" content="https://tally.jesselind.com/img/hero-home.png">
 <meta name="theme-color" content="#1B8382">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2300CDA9'/%3E%3Cg stroke='%23fff' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M10 9v14M14 9v14M18 9v14M22 9v14'/%3E%3Cpath d='M7.5 20.5 24.5 11.5'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -67,14 +68,14 @@
     <section id="before">
       <h2>Before you start</h2>
       <ul>
-        <li><b>A Mac or Linux computer.</b> It doesn't have to stay on. tally syncs when it starts and when you open it, if the data is older than a setting you choose. A Mac is easiest, because a script runs it in the background. Linux works with any process manager.</li>
-        <li><b>Not Windows, for now.</b> tally is plain Node, so <code>npm start</code> may work there, but nobody has tried it, and this guide's commands and background script are for Mac and Linux.</li>
+        <li><b>A Mac or Linux computer.</b> Not Windows. It doesn't have to stay on, since tally syncs when it starts and when you open it.</li>
         <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
         <li><b>git</b>, to download tally and update it later.</li>
         <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
       </ul>
     </section>
 
+    <div class="steps">
     <section id="plaid">
       <h2><span class="step">1</span>Get Plaid keys</h2>
       <p>Plaid is the service that connects to your bank. tally talks to it with your own keys, so your data goes from Plaid to your computer with no tally server in between.</p>
@@ -109,7 +110,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <h2><span class="step">3</span>Link an account</h2>
       <p>Open <b>Accounts</b> and choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments. Plaid's window opens.</p>
       <p>In sandbox, pick any bank and sign in with the test login <code>user_good</code> and password <code>pass_good</code>. tally pulls in Plaid's made-up accounts and transactions so you can look around.</p>
-      <picture><source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/phone-accounts-dark.png" width="780" height="1688"><source media="(max-width: 760px)" srcset="/img/phone-accounts.png" width="780" height="1688"><source media="(prefers-color-scheme: dark)" srcset="/img/accounts-dark.png" width="2560" height="1600"><img class="shot" src="/img/accounts.png" width="2560" height="1600" alt="The Accounts page with linked connections and the Link a bank or card button." loading="lazy"></picture>
+      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1176" alt="The Connections card on the Accounts page: linked banks, 4 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
     </section>
 
     <section id="real">
@@ -121,6 +122,10 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <div class="note warn"><b>The Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back. If a bank stops syncing, use <b>Fix connection</b> on the Accounts page instead of linking it again. tally shows how many you've used.</div>
       <p>Some large banks sign you in on their own site (OAuth). If one won't connect, check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first.</p>
     </section>
+    </div>
+    <p class="done">That's it. tally now syncs your real accounts.</p>
+
+    <p class="part">Running it</p>
 
     <section id="background">
       <h2>Keep it running</h2>
@@ -135,7 +140,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
     </section>
 
     <section id="phone">
-      <h2>Use it on your phone</h2>
+      <h2>Use it on your phone<span class="opt">Optional</span></h2>
       <p>tally has no login, so it only listens on your computer. <a href="https://tailscale.com">Tailscale</a> lets your phone reach it over your tailnet without exposing it to the internet.</p>
       <ol>
         <li>Install Tailscale on the computer and your phone, and sign in to both with the same account.</li>
@@ -144,14 +149,14 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       </ol>
       <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400
 bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
+      <p>On Linux, start tally with <code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code> set instead of running the script.</p>
       <p>Open <code>https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
       <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
-      <picture><source media="(prefers-color-scheme: dark)" srcset="/img/phone-budgets-dark.png" width="780" height="1688"><img class="shot" src="/img/phone-budgets.png" width="780" height="1688" alt="tally's Budgets page on a phone." loading="lazy" style="max-width:300px"></picture>
     </section>
 
     <section id="alerts">
-      <h2>Discord alerts</h2>
-      <p>Optional, and off until you turn them on. With alerts on, the 7:00 job posts to a Discord channel for these:</p>
+      <h2>Discord alerts<span class="opt">Optional</span></h2>
+      <p>Alerts are off until you turn them on. Then the 7:00 job posts to a Discord channel for these:</p>
       <ul>
         <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
         <li>a budget that went over</li>
@@ -166,19 +171,22 @@ bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></d
 
     <section id="backup">
       <h2>Backups and updates</h2>
-      <h3>Back up two folders</h3>
-      <p>Your accounts, transactions, settings, and the Plaid access tokens live in <code>data/tally.db</code>. Your Plaid keys are in <code>~/.config/tally/</code>, so back up both. Lose the database and you'd link every bank again, using up more of your 10 connections.</p>
-      <p>The daily job writes a snapshot to <code>data/tally-snapshot.db</code> with SQLite's <code>VACUUM INTO</code>, so it's safe to copy while tally runs. Copy that file and <code>~/.config/tally/</code> somewhere else, encrypted, on a schedule.</p>
+      <h3>What to back up</h3>
+      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot from the live database with SQLite's <code>VACUUM INTO</code>, so it's safe to copy while tally runs.</p>
+      <p>The database holds your accounts, transactions, settings, and the Plaid access tokens. Lose it and you'd link every bank again, using up more of your 10 connections.</p>
       <h3>Update tally</h3>
+      <p>Pull the new code, then restart tally. On a Mac:</p>
       <div class="code"><pre><code>git pull
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
+      <p>On Linux, run <code>git pull</code> and restart the service you set up.</p>
     </section>
 
+    <p class="part">Everyday</p>
     <section id="using">
       <h2>Using tally</h2>
       <h3>Budgets</h3>
       <p>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</p>
-      <picture><source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/phone-budgets-dark.png" width="780" height="1688"><source media="(max-width: 760px)" srcset="/img/phone-budgets.png" width="780" height="1688"><source media="(prefers-color-scheme: dark)" srcset="/img/budgets-dark.png" width="2560" height="1600"><img class="shot" src="/img/budgets.png" width="2560" height="1600" alt="The Budgets page." loading="lazy"></picture>
+      <picture class="shot cut"><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="760" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; the others are under." loading="lazy"></picture>
       <h3>Fix a category</h3>
       <p>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</p>
       <h3>Search</h3>
@@ -217,6 +225,8 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
 <script>
   // Copy buttons on code blocks, the phone's section menu, and the sidebar's current section.
   for (const box of document.querySelectorAll(".code")) {
+    const bar = document.createElement("div");
+    bar.className = "bar";
     const b = document.createElement("button");
     b.className = "copybtn"; b.type = "button"; b.textContent = "Copy";
     b.addEventListener("click", async () => {
@@ -224,7 +234,8 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; } catch { b.textContent = "Select and copy"; }
       setTimeout(() => (b.textContent = "Copy"), 1600);
     });
-    box.append(b);
+    bar.append(b);
+    box.prepend(bar);
   }
   const jump = document.querySelector(".jump");
   jump.addEventListener("change", () => document.querySelector(jump.value)?.scrollIntoView());

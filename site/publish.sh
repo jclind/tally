@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 SITE=33e9a58c-3777-4396-93c8-7442d89b7d88
 URL=https://tally.jesselind.com
 netlify deploy --prod --no-build --dir . --site "$SITE" >/dev/null
-for p in / /docs/ /style.css /img/home.png; do
+for p in / /docs/ /style.css /img/hero-home.png; do
   code=$(curl -s -o /dev/null -w '%{http_code}' "$URL$p")
   [ "$code" = 200 ] || { echo "published, but $URL$p answered $code" >&2; exit 1; }
 done
