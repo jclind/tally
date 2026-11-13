@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// The 7:00 job: sync every bank, write the backup snapshot, and post new alerts to Discord.
+// The 7:00 job: sync every bank, write the backup snapshot, and post new alerts to Discord when they're turned on.
 // A quiet day posts nothing. Alerts are marked sent only after Discord accepts the post, so a failed post retries tomorrow.
-// The webhook is DISCORD_WEBHOOK_URL in ~/.config/tally/discord.env. Without it, alerts go to the log only.
+// tally sends the webhook with the alerts (Settings, or the old discord.env). If tally itself is down, the file is the
+// only place left to find one.
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -36,7 +37,7 @@ try {
 log(`${result.alerts.length} new alerts, ${result.errors.length} sync errors`);
 if (!result.alerts.length) process.exit(0);
 
-const hook = webhook();
+const hook = result.webhook ?? webhook();
 // Discord takes 2,000 characters a message. Alerts go out in as many messages as they need, and each message's
 // alerts are marked sent only after Discord accepts that message, so nothing is marked sent that wasn't posted.
 const LIMIT = 1900;

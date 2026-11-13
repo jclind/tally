@@ -40,7 +40,7 @@
       <option value="#real">4. Switch to your real banks</option>
       <option value="#background">Keep it running</option>
       <option value="#phone">Use it on your phone</option>
-      <option value="#alerts">Daily alerts</option>
+      <option value="#alerts">Discord alerts</option>
       <option value="#backup">Backups and updates</option>
       <option value="#using">Using tally</option>
       <option value="#help">Troubleshooting</option>
@@ -55,7 +55,7 @@
       <h4>Running it</h4>
       <a href="#background">Keep it running</a>
       <a href="#phone">Use it on your phone</a>
-      <a href="#alerts">Daily alerts</a>
+      <a href="#alerts">Discord alerts</a>
       <a href="#backup">Backups and updates</a>
       <h4>Everyday</h4>
       <a href="#using">Using tally</a>
@@ -68,6 +68,7 @@
       <h2>Before you start</h2>
       <ul>
         <li><b>A Mac or Linux computer.</b> It doesn't have to stay on. tally syncs when it starts and when you open it, if the data is older than a setting you choose. A Mac is easiest, because a script runs it in the background. Linux works with any process manager.</li>
+        <li><b>Not Windows, for now.</b> tally is plain Node, so <code>npm start</code> may work there, but nobody has tried it, and this guide's commands and background script are for Mac and Linux.</li>
         <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
         <li><b>git</b>, to download tally and update it later.</li>
         <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
@@ -128,7 +129,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <p>It installs two launchd agents, <code>local.tally</code> and <code>local.tally-daily</code>, pointing at this folder. The log is <code>tally.log</code> in the same folder. To restart tally after a change:</p>
       <div class="code"><pre><code>launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h3>On a laptop</h3>
-      <p>tally syncs when it starts (at login, with the script) and when you open the page or switch back to its tab, if the data is older than <b>Sync when you open tally</b> on the Accounts page. The default is 12 hours. If the Mac is asleep at 7:00, launchd runs the daily sync when it wakes.</p>
+      <p>tally syncs when it starts (at login, with the script) and when you open the page or switch back to its tab, if the data is older than <b>Sync when you open tally</b> in Settings. The default is 12 hours. If the Mac is asleep at 7:00, launchd runs the daily sync when it wakes.</p>
       <h3>On Linux</h3>
       <p>Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
     </section>
@@ -149,23 +150,24 @@ bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></d
     </section>
 
     <section id="alerts">
-      <h2>Daily alerts</h2>
-      <p>The 7:00 job syncs every account. If you give it a Discord webhook, it also posts to Discord for these:</p>
+      <h2>Discord alerts</h2>
+      <p>Optional, and off until you turn them on. With alerts on, the 7:00 job posts to a Discord channel for these:</p>
       <ul>
         <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
         <li>a budget that went over</li>
         <li>a bank that stopped syncing (once a week until it's fixed)</li>
       </ul>
-      <p>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy the URL into a file:</p>
-      <div class="code"><pre><code>echo 'DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...' &gt; ~/.config/tally/discord.env
-chmod 600 ~/.config/tally/discord.env</code></pre></div>
-      <p>If nothing matches, it posts nothing. Without the file, alerts go to the log only.</p>
+      <ol>
+        <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
+        <li>In tally, open Settings (the gear at the top), turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
+      </ol>
+      <p>If nothing matches, it posts nothing. The URL is saved in tally's database and the page never shows it again.</p>
     </section>
 
     <section id="backup">
       <h2>Backups and updates</h2>
       <h3>Back up two folders</h3>
-      <p>Your accounts, transactions, settings, and the Plaid access tokens live in <code>data/tally.db</code>. Your Plaid keys and Discord webhook are in <code>~/.config/tally/</code>, so back up both. Lose the database and you'd link every bank again, using up more of your 10 connections.</p>
+      <p>Your accounts, transactions, settings, and the Plaid access tokens live in <code>data/tally.db</code>. Your Plaid keys are in <code>~/.config/tally/</code>, so back up both. Lose the database and you'd link every bank again, using up more of your 10 connections.</p>
       <p>The daily job writes a snapshot to <code>data/tally-snapshot.db</code> with SQLite's <code>VACUUM INTO</code>, so it's safe to copy while tally runs. Copy that file and <code>~/.config/tally/</code> somewhere else, encrypted, on a schedule.</p>
       <h3>Update tally</h3>
       <div class="code"><pre><code>git pull
@@ -184,7 +186,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h3>Look back</h3>
       <p>The month name at the top of Home, Spending, and Budgets is a menu. Pick a past month to see all of it.</p>
       <h3>Settings</h3>
-      <p>The Settings card at the bottom of Accounts has two choices. <b>Sync when you open tally</b> sets how old the data can get before opening tally syncs it: 1, 6, or 12 hours, a day, or never. <b>Alert for one charge of</b> sets the amount for the Discord alert.</p>
+      <p>The gear at the top opens Settings. <b>Sync when you open tally</b> sets how old the data can get before opening tally syncs it: 1, 6, or 12 hours, a day, or never. <b>Discord alerts</b> turns alerts on and holds the webhook and the charge amount. <b>Your setup</b> shows whether Plaid is in sandbox or production, and where the keys and data live.</p>
     </section>
 
     <section id="help">

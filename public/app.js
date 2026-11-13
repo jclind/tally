@@ -93,6 +93,9 @@ async function render() {
     a.classList.toggle("on", a.dataset.page === page);
     if (a.dataset.page === page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
+  const gear = document.getElementById("gear");
+  gear.classList.toggle("on", page === "settings");
+  if (page === "settings") gear.setAttribute("aria-current", "page"); else gear.removeAttribute("aria-current");
   closePicker(); closeMenu();
   const g = GEN;
   try {
@@ -648,7 +651,7 @@ PAGES.bills = async () => {
 // ---------- accounts and connections ----------
 PAGES.accounts = async () => {
   const g = GEN;
-  const [s, sum, set] = await Promise.all([api("/api/status"), api("/api/summary"), api("/api/settings")]);
+  const [s, sum] = await Promise.all([api("/api/status"), api("/api/summary")]);
   if (stale(g)) return;
   const nw = sum.netWorth;
   const accounts = s.items.flatMap((it) => it.accounts.map((a) => ({ ...a, inst: it.institution_name })));
@@ -681,8 +684,7 @@ PAGES.accounts = async () => {
       <div class="actions" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px">
         <button class="btn primary" id="bank" ${!s.keys || s.used >= s.cap ? "disabled" : ""}>Link a bank or card</button>
         <button class="btn" id="brokerage" ${!s.keys || s.used >= s.cap ? "disabled" : ""}>Link a brokerage</button></div>
-      <div class="hint" style="margin-top:8px">Each link uses one of ${s.cap} slots for good. Fix a broken one instead of linking it again.</div></div>
-    ${settingsCard(set)}</aside></div>`;
+      <div class="hint" style="margin-top:8px">Each link uses one of ${s.cap} slots for good. Fix a broken one instead of linking it again.</div></div></aside></div>`;
   const msg = (t, bad) => { document.getElementById("msg").innerHTML = t ? `<div class="notice ${bad ? "bad" : ""}">${esc(t)}</div>` : ""; };
   for (const b of document.querySelectorAll("[data-sync]")) b.onclick = async () => {
     b.disabled = true; msg("Syncing…");
@@ -693,26 +695,63 @@ PAGES.accounts = async () => {
   for (const b of document.querySelectorAll("[data-fix]")) b.onclick = () => link({ itemId: b.dataset.fix }, msg);
   document.getElementById("bank").onclick = () => link({ kind: "bank" }, msg);
   document.getElementById("brokerage").onclick = () => link({ kind: "brokerage" }, msg);
-  wireSettings();
 };
 
-// Settings save as they change. Sync on open is for a computer that isn't on every morning for the daily job.
+// ---------- settings ----------
+// Every setting saves as it changes. The webhook never comes back from the server; the page only learns where one is.
+// A long path wraps at its slashes, not mid-name.
+const path = (p) => esc(p).replaceAll("/", "/<wbr>");
 const SYNC_CHOICES = [["1", "If older than 1 hour"], ["6", "If older than 6 hours"], ["12", "If older than 12 hours"], ["24", "If older than a day"], ["off", "Never"]];
-const settingsCard = (set) => `<div class="card sets"><h2>Settings</h2>
-  <div class="setrow stacked"><label for="autosync">Sync when you open tally</label>
-    <select id="autosync" data-key="autoSync">${SYNC_CHOICES.map(([v, t]) => `<option value="${v}"${v === set.autoSync ? " selected" : ""}>${t}</option>`).join("")}</select></div>
-  <div class="setrow"><label for="bigcharge">Alert for one charge of</label>
-    <span class="amtin"><span class="fld"><span class="cur">$</span><input id="bigcharge" data-key="bigCharge" inputmode="numeric" value="${esc(set.bigCharge)}"></span></span></div>
-  <div class="hint">${set.discord ? "Alerts post to Discord with the daily sync." : "Alerts post to Discord once ~/.config/tally/discord.env has a webhook."}</div>
-  <div class="ok hint" id="setok" role="status"></div></div>`;
-function wireSettings() {
-  const ok = document.getElementById("setok");
-  for (const el of document.querySelectorAll(".sets [data-key]")) el.addEventListener("change", async () => {
-    const v = el.value.replace(/[$,\s]/g, "");
-    try { const set = await api("/api/settings", { [el.dataset.key]: v }); el.value = set[el.dataset.key]; ok.textContent = "Saved"; ok.classList.remove("bad"); }
-    catch { ok.textContent = el.dataset.key === "bigCharge" ? "Use a whole dollar amount, like 200." : "Couldn't save that."; ok.classList.add("bad"); }
+PAGES.settings = async () => {
+  const g = GEN;
+  const set = await api("/api/settings");
+  if (stale(g)) return;
+  $hero.innerHTML = `<div class="big">Settings</div>`;
+  const on = set.alerts === "on";
+  const hookLine = set.webhook === "file" ? "Using the webhook in ~/.config/tally/discord.env. Paste one here to replace it."
+    : set.webhook === "settings" ? "A webhook is saved. Paste a new one to replace it." : "";
+  $page.innerHTML = `<div class="layout"><div class="stack">
+    <div class="card sets"><h2>Syncing</h2>
+      <div class="setrow stacked"><label for="autosync">Sync when you open tally</label>
+        <select id="autosync" data-key="autoSync">${SYNC_CHOICES.map(([v, t]) => `<option value="${v}"${v === set.autoSync ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <div class="hint">tally also syncs when it starts, and every morning at 7:00 if the daily job is installed.</div></div>
+      <div class="ok" data-for="autoSync" role="status"></div></div>
+    <div class="card sets"><h2>Discord alerts</h2>
+      <div class="setrow plain"><div><label for="alerts">Post alerts to Discord</label>
+        <div class="hint">With the daily sync: a big charge, a budget that goes over, or a bank that stops syncing.</div></div>
+        <input type="checkbox" role="switch" class="switch" id="alerts" data-key="alerts" ${on ? "checked" : ""}></div>
+      <div class="ok" data-for="alerts" role="status"></div>
+      <div class="alertopts" ${on ? "" : "hidden"}>
+        <div class="setrow stacked"><label for="hook">Webhook URL</label>
+          <input id="hook" class="text" data-key="discordWebhook" type="url" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/…">
+          <div class="hint">${hookLine || "In Discord, open a channel's settings, then Integrations, then Webhooks, and copy the URL."}</div></div>
+        <div class="ok" data-for="discordWebhook" role="status"></div>
+        <div class="setrow"><label for="bigcharge">Alert for one charge of</label>
+          <span class="amtin"><span class="fld"><span class="cur">$</span><input id="bigcharge" data-key="bigCharge" inputmode="numeric" value="${esc(set.bigCharge)}"></span></span></div>
+        <div class="ok" data-for="bigCharge" role="status"></div>
+        ${on && !set.webhook ? `<div class="notice bad" style="margin:8px 0 0">Alerts are on, but there's no webhook yet.</div>` : ""}
+      </div></div>
+    </div><aside class="side stack">
+    <div class="card"><h2>Your setup</h2><div style="margin-top:8px">
+      <div class="row"><span class="w"><b>Plaid</b><small>${set.plaidEnv ? (set.plaidEnv === "sandbox" ? "Sandbox, Plaid's test banks" : "Production, your real banks") : "No keys yet"}</small></span></div>
+      <div class="row"><span class="w"><b>Keys</b><small class="path">${path(set.keysPath)}</small></span></div>
+      <div class="row"><span class="w"><b>Data</b><small class="path">${path(set.dataPath)}</small></span></div>
+    </div></div></aside></div>`;
+  const BAD = { bigCharge: "Use a whole dollar amount, like 200.", discordWebhook: "That isn't a Discord webhook URL. It starts with https://discord.com/api/webhooks/." };
+  for (const el of $page.querySelectorAll("[data-key]")) el.addEventListener("change", async () => {
+    const key = el.dataset.key, ok = $page.querySelector(`.ok[data-for="${key}"]`);
+    const value = el.type === "checkbox" ? (el.checked ? "on" : "off") : key === "bigCharge" ? el.value.replace(/[$,\s]/g, "") : el.value.trim();
+    if (key === "discordWebhook" && !value) return;
+    try {
+      await api("/api/settings", { [key]: value });
+      if (stale(g)) return;
+      // Turning alerts on or saving a webhook changes what the card shows, so it redraws with focus kept.
+      if (key === "alerts" || key === "discordWebhook") { await PAGES.settings(); document.getElementById(el.id)?.focus({ preventScroll: true }); }
+      const now = $page.querySelector(`.ok[data-for="${key}"]`);
+      now.textContent = "Saved"; now.classList.remove("bad");
+    } catch { ok.textContent = BAD[key] ?? "Couldn't save that."; ok.classList.add("bad"); }
   });
-}
+};
 
 // Fixing a connection uses update mode on the same Item, which keeps its slot.
 async function link({ kind, itemId }, msg) {

@@ -157,7 +157,8 @@ test("settings save and check their values, and sync on open runs only when it's
   const s0 = await get();
   assert.equal(s0.autoSync, "12");
   assert.equal(s0.bigCharge, "200");
-  assert.equal(s0.discord, false);
+  assert.equal(s0.alerts, "off", "Discord alerts are opt-in");
+  assert.equal(s0.webhook, null);
   assert.equal((await post("/api/settings", { bigCharge: "350" })).bigCharge, "350");
   assert.match((await post("/api/settings", { bigCharge: "-5" })).error, /bigCharge/);
   assert.match((await post("/api/settings", { autoSync: "3" })).error, /autoSync/);
@@ -177,4 +178,16 @@ test("settings save and check their values, and sync on open runs only when it's
   db.prepare("UPDATE items SET last_sync = ?").run(new Date(Date.now() - 13 * 3600_000).toISOString());
   assert.equal((await post("/api/sync-if-due", {})).synced, false, "at most one automatic sync every 10 minutes");
   db.close();
+
+  const hook = "https://discord.com/api/webhooks/123/abc-DEF_9";
+  assert.match((await post("/api/settings", { discordWebhook: "https://example.com/hook" })).error, /discordWebhook/);
+  const saved = await post("/api/settings", { discordWebhook: hook });
+  assert.equal(saved.webhook, "settings");
+  assert.ok(!JSON.stringify(await get()).includes("webhooks/123"), "the page never gets the webhook back");
+  let daily = await post("/api/daily", {});
+  assert.deepEqual([daily.alerts, daily.webhook], [[], null], "alerts off: nothing to post");
+  await post("/api/settings", { alerts: "on" });
+  daily = await post("/api/daily", {});
+  assert.equal(daily.webhook, hook);
+  assert.ok(Array.isArray(daily.alerts));
 });

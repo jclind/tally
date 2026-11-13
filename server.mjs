@@ -11,6 +11,8 @@ import * as report from "./lib/report.mjs";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.TALLY_PORT || 3400);
 const KEYS = process.env.TALLY_KEYS || join(homedir(), ".config/tally/plaid.env");
+// A Discord webhook from before the Settings page could hold one. Read by webhook() below.
+const DISCORD = process.env.TALLY_DISCORD || join(homedir(), ".config/tally/discord.env");
 const DATA = process.env.TALLY_DATA || join(ROOT, "data");
 // Gig payout rules, off unless the file exists. See payouts() in lib/report.mjs.
 const PAYOUTS = process.env.TALLY_PAYOUTS || join(homedir(), ".config/tally/payouts.mjs");
@@ -262,10 +264,27 @@ const SETTINGS = {
   autoSync: { def: "12", ok: (v) => ["off", "1", "6", "12", "24"].includes(v) },
   // The daily alert for one charge this big or bigger, in dollars.
   bigCharge: { def: String(Number(process.env.TALLY_BIG_CHARGE || 200)), ok: (v) => /^[1-9]\d{0,6}$/.test(v) },
+  // Discord alerts are opt-in. A setup from before the setting, with a webhook file, keeps posting.
+  alerts: { def: existsSync(DISCORD) ? "on" : "off", ok: (v) => v === "on" || v === "off" },
+  // A webhook pasted on the Settings page wins over the file. Empty means none.
+  discordWebhook: { def: "", ok: (v) => v === "" || /^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(v) },
 };
 function settings() {
   const saved = Object.fromEntries(db.prepare("SELECT key, value FROM settings").all().map((r) => [r.key, r.value]));
   return Object.fromEntries(Object.entries(SETTINGS).map(([k, s]) => [k, saved[k] ?? s.def]));
+}
+// The webhook to post to: the one saved in settings, else DISCORD_WEBHOOK_URL in the file.
+function webhook() {
+  const saved = settings().discordWebhook;
+  if (saved) return saved;
+  if (!existsSync(DISCORD)) return null;
+  return readFileSync(DISCORD, "utf8").match(/^DISCORD_WEBHOOK_URL=(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "") || null;
+}
+// What the Settings page sees: never the webhook itself, only where it comes from.
+function publicSettings() {
+  const { discordWebhook, ...rest } = settings();
+  const k = loadKeys();
+  return { ...rest, webhook: discordWebhook ? "settings" : webhook() ? "file" : null, plaidEnv: k?.env ?? null, keysPath: KEYS, dataPath: DATA };
 }
 function saveSettings(body) {
   const set = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value");
@@ -328,7 +347,6 @@ const send = (res, code, body, type = "application/json") => {
 };
 
 const STATIC = { "/": ["index.html", "text/html; charset=utf-8"], "/app.js": ["app.js", "text/javascript"], "/app.css": ["app.css", "text/css"] };
-const DISCORD = process.env.TALLY_DISCORD || join(homedir(), ".config/tally/discord.env");
 
 // ?month=YYYY-MM, never later than this month. Anything else means this month.
 function pickMonth(q) {
@@ -357,7 +375,8 @@ const routes = {
   "POST /api/daily": async () => {
     const results = await syncAllOnce();
     snapshot();
-    return { alerts: report.dailyAlerts(db, { bigCharge: Number(settings().bigCharge) }), errors: results.flatMap((r) => r.errors) };
+    const set = settings(), on = set.alerts === "on";
+    return { alerts: on ? report.dailyAlerts(db, { bigCharge: Number(set.bigCharge) }) : [], webhook: on ? webhook() : null, errors: results.flatMap((r) => r.errors) };
   },
   "POST /api/alerts-sent": (body) => { report.markSent(db, body.keys ?? []); return { ok: true }; },
   "POST /api/link-token": async (body) => ({ link_token: (await linkToken(body)).link_token }),
@@ -365,8 +384,8 @@ const routes = {
   "POST /api/sync": async (body) => ({ results: body.item_id ? [await syncItem(body.item_id)] : await syncAllOnce() }),
   // The page asks on open and when its tab comes back; the server decides whether a sync is due.
   "POST /api/sync-if-due": () => autoSync("page opened"),
-  "GET /api/settings": () => ({ ...settings(), discord: existsSync(DISCORD) }),
-  "POST /api/settings": (body) => saveSettings(body),
+  "GET /api/settings": () => publicSettings(),
+  "POST /api/settings": (body) => { saveSettings(body); return publicSettings(); },
 };
 
 const server = http.createServer(async (req, res) => {

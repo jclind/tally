@@ -15,10 +15,10 @@ const body = (req) => new Promise((ok) => { let s = ""; req.on("data", (c) => (s
 test("many alerts go out in several Discord messages, and only posted ones are marked sent", async () => {
   const alerts = Array.from({ length: 40 }, (_, i) => ({ key: `k${i}`, text: `Alert number ${i}: ${"x".repeat(60)}` }));
   const marked = [], posts = [];
-  let failAfter = Infinity;
+  let failAfter = Infinity, sendHook;
   const tally = await listen(async (req, res) => {
     const b = await body(req);
-    if (req.url === "/api/daily") return res.end(JSON.stringify({ alerts, errors: [] }));
+    if (req.url === "/api/daily") return res.end(JSON.stringify({ alerts, errors: [], ...(sendHook ? { webhook: sendHook } : {}) }));
     if (req.url === "/api/alerts-sent") { marked.push(...b.keys); return res.end("{}"); }
     res.writeHead(404).end();
   });
@@ -44,6 +44,14 @@ test("many alerts go out in several Discord messages, and only posted ones are m
     assert.equal(await run(), 1, "a failed post fails the job");
     assert.equal(posts.length, 1);
     assert.equal(marked.length, posts[0].split("\n").length, "only the posted message's alerts are marked sent");
+
+    // A webhook sent by tally (the Settings page) wins over the file.
+    const other = await listen(async (req, res) => { await body(req); otherPosts++; res.writeHead(204).end(); });
+    let otherPosts = 0; posts.length = 0; failAfter = Infinity;
+    sendHook = `http://127.0.0.1:${other.address().port}/hook`;
+    assert.equal(await run(), 0);
+    assert.ok(otherPosts > 0 && posts.length === 0, "posted to the webhook tally sent");
+    other.close();
   } finally {
     tally.close(); discord.close(); rmSync(dir, { recursive: true, force: true });
   }
