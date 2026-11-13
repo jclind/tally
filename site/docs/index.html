@@ -39,9 +39,9 @@
       <option value="#link">3. Link an account</option>
       <option value="#real">4. Switch to your real banks</option>
       <option value="#background">Keep it running</option>
+      <option value="#backup">Backups and updates</option>
       <option value="#phone">Use it on your phone</option>
       <option value="#alerts">Discord alerts</option>
-      <option value="#backup">Backups and updates</option>
       <option value="#using">Using tally</option>
       <option value="#help">Troubleshooting</option>
     </select>
@@ -54,9 +54,9 @@
       <a href="#real">4. Switch to your real banks</a>
       <p class="grp">Running it</p>
       <a href="#background">Keep it running</a>
+      <a href="#backup">Backups and updates</a>
       <a href="#phone">Use it on your phone</a>
       <a href="#alerts">Discord alerts</a>
-      <a href="#backup">Backups and updates</a>
       <p class="grp">Reference</p>
       <a href="#using">Using tally</a>
       <a href="#help">Troubleshooting</a>
@@ -67,7 +67,7 @@
     <section id="before">
       <h2>Before you start</h2>
       <ul>
-        <li><b>A Mac or Linux computer.</b> Not Windows. It doesn't have to stay on, since tally syncs when it starts and when you open it.</li>
+        <li><b>A Mac or Linux computer.</b> Not Windows.</li>
         <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
         <li><b>git</b>, to download tally and update it later.</li>
         <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
@@ -80,7 +80,7 @@
       <p>Plaid connects to your banks. tally uses your own keys, so your data goes from Plaid straight to your computer.</p>
       <ol>
         <li><a href="https://dashboard.plaid.com/signup">Create a Plaid account</a> and verify your email.</li>
-        <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. It covers 10 bank connections with Transactions, Investments, and Liabilities. Plaid offers it to teams created on or after April 15, 2026; if yours is older, check the plans on your dashboard home page.</li>
+        <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. Plaid offers it to teams created on or after April 15, 2026; if yours is older, check the plans on your dashboard home page.</li>
         <li>Go to <b>Developers → Keys</b>. Copy your <b>client_id</b> and your <b>Sandbox</b> secret. You'll use the Production secret in step 4.</li>
       </ol>
       <div class="note warn"><b>Don't apply for full Production access.</b> Plaid ends the free Trial once you submit a Production application, and you can't go back.</div>
@@ -107,7 +107,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <h2><span class="step">3</span>Link an account</h2>
       <p>Open <b>Accounts</b> and choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments. Plaid's window opens.</p>
       <p>In sandbox, pick any bank and sign in with the test login <code>user_good</code> and password <code>pass_good</code>. tally pulls in Plaid's made-up accounts and transactions so you can look around.</p>
-      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1176" alt="The Connections card on the Accounts page: linked banks, 4 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
+      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-one-dark.png"><img src="/img/c-conn-one.png" width="896" height="702" alt="The Connections card on the Accounts page: one sandbox bank linked, 1 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
     </section>
 
     <section id="real">
@@ -129,43 +129,10 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
       <p>The log is <code>tally.log</code> in the tally folder. To restart tally after a change:</p>
       <div class="code"><pre><code>launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
-      <h3>On a laptop</h3>
-      <p>Opening tally, or switching back to its tab, syncs when the data is older than <b>Sync when you open tally</b> in Settings, 12 hours by default. If the Mac is asleep at 7:00, launchd runs the daily sync when it wakes.</p>
+      <h3>When it syncs</h3>
+      <p>tally syncs when you open it or switch back to its tab, if the data is more than 12 hours old. <b>Sync when you open tally</b> in Settings changes that. If the Mac is asleep at 7:00, the daily sync runs when it wakes.</p>
       <h3>On Linux</h3>
       <p>Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
-    </section>
-
-    <section id="phone">
-      <h2>Use it on your phone<span class="opt">Optional</span></h2>
-      <p>tally has no login, so it only listens on your computer. <a href="https://tailscale.com">Tailscale</a> lets your phone reach it over your tailnet without exposing it to the internet.</p>
-      <ol>
-        <li>Install Tailscale on the computer and your phone, and sign in to both with the same account.</li>
-        <li>In Tailscale's admin console, under <b>DNS</b>, turn on MagicDNS and HTTPS certificates.</li>
-        <li>On the computer, serve tally on port 8400 and tell tally its new address:
-          <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400
-bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
-        </li>
-      </ol>
-      <p>On Linux, set this when you start tally instead of running the script:</p>
-      <div class="code"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
-      <p>Open <code>https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
-      <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
-    </section>
-
-    <section id="alerts">
-      <h2>Discord alerts<span class="opt">Optional</span></h2>
-      <p>The 7:00 job can post to a Discord channel for:</p>
-      <ul>
-        <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
-        <li>a budget that went over</li>
-        <li>a bank that stopped syncing (once a week until it's fixed)</li>
-      </ul>
-      <p>To turn it on:</p>
-      <ol>
-        <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
-        <li>In tally, open Settings (the gear at the top), turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
-      </ol>
-      <p>The webhook URL is hidden after you save it.</p>
     </section>
 
     <section id="backup">
@@ -179,6 +146,40 @@ bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></d
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <p>On Linux, run <code>git pull</code> and restart the service you set up.</p>
     </section>
+
+    <section id="phone">
+      <h2>Use it on your phone<span class="opt">Optional</span></h2>
+      <p>tally has no login, so it only listens on your computer. <a href="https://tailscale.com">Tailscale</a> lets your phone reach it over your tailnet without exposing it to the internet.</p>
+      <ol>
+        <li>Install Tailscale on the computer and your phone, and sign in to both with the same account.</li>
+        <li>In Tailscale's admin console, under <b>DNS</b>, turn on MagicDNS and HTTPS certificates.</li>
+        <li>On the computer, serve tally on port 8400:
+          <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400</code></pre></div>
+        </li>
+        <li>Tell tally its new address. On a Mac:
+          <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
+          On Linux, set this when you start tally:
+          <div class="code"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
+        </li>
+      </ol>
+      <p>Open <code>https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
+      <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
+    </section>
+
+    <section id="alerts">
+      <h2>Discord alerts<span class="opt">Optional</span></h2>
+      <p>The 7:00 job can post to a Discord channel for:</p>
+      <ul>
+        <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
+        <li>a budget that went over</li>
+        <li>a bank that stopped syncing (once a week until it's fixed)</li>
+      </ul>
+      <ol>
+        <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
+        <li>In tally, open Settings (the gear at the top), turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
+      </ol>
+    </section>
+
 
     <section id="using">
       <h2>Using tally</h2>
@@ -227,6 +228,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
   for (const box of document.querySelectorAll(".code")) {
     const bar = document.createElement("div");
     bar.className = "bar";
+    if (!box.textContent.trim().includes("\n")) box.classList.add("one");
     const b = document.createElement("button");
     b.className = "copybtn"; b.type = "button"; b.textContent = "Copy";
     b.addEventListener("click", async () => {
