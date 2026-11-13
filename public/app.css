@@ -84,6 +84,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .card h2 .aside.tot { color: var(--ink); font-weight: 600; }
 .card h2 a:hover { text-decoration: underline; }
 .sub { color: var(--ink2); margin: 2px 0 16px; font-size: 15px; }
+.sub:has(+ .row) { margin-bottom: 6px; }
 .sub b { color: var(--ink); }
 .sub b.over { color: var(--danger); }
 .more { display: inline-flex; align-items: center; gap: 4px; color: var(--deep); font-weight: 600; font-size: 15px; margin-top: 12px; background: none; border: 0; padding: 0; cursor: pointer; }
@@ -111,6 +112,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .ring svg { display: block; }
 .ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-size: 14px; color: var(--ink2); pointer-events: none; }
 .ring .c b { font-size: 22px; line-height: 28px; color: var(--ink); }
+.dl .ring .c b { font-size: 18px; line-height: 24px; }
 .dl { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 8px; }
 .vleg { display: flex; flex-direction: column; font-size: 14px; min-width: 0; }
 .vleg a { display: flex; align-items: center; gap: 8px; padding: 3px 4px; margin: 0 -4px; border-radius: 6px; }
@@ -137,6 +139,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .bar .today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: .45; }
 .brow .l2 { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; color: var(--ink2); }
 .brow .l2 b { color: var(--ink); font-weight: 600; }
+.need .brow { padding-bottom: 0; }
 .need { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 28px; }
 /* The phone's spending preview: a stacked bar and the top three. The desktop keeps the ring. */
 .stackbar, .top3 { display: none; }
@@ -227,14 +230,15 @@ h2 + .erow { margin-top: 6px; }
 table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
 .tx th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 13px; padding: 4px 10px 10px; }
 .tx tr.day th { font-size: 14px; font-weight: 700; color: var(--ink); padding: 22px 10px 8px; border-top: 0; }
-.tx td:first-child > div:first-child { font-weight: 500; }
+.tx .nm { font-weight: 500; }
 .tx .acct-sub { display: none; }
 .tx tbody tr.day:first-child th { padding-top: 8px; }
 .tx tr.day + tr td { border-top: 0; }
 .tx td { padding: 10px; border-top: 1px solid var(--line); vertical-align: middle; }
 .tx td.amt, .tx th.amt { text-align: right; white-space: nowrap; }
 .tx td.amt { font-weight: 600; }
-.tx tr.pending td { color: var(--ink2); }
+/* Pending: the amount dims and the tag says why, on Activity and Home alike. */
+.tx tr.pending td.amt .num, .row.pending .amt .num { color: var(--ink2); }
 .tx .who-sub { display: none; font-size: 13px; color: var(--ink2); }
 .catbtn { background: none; border: 0; padding: 10px 8px; margin: -10px -8px; border-radius: 6px; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 8px; color: var(--ink2); }
 .catbtn:hover { background: var(--hover); color: var(--ink); }
@@ -256,6 +260,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
 .btn:disabled { opacity: .5; cursor: default; background: #fff; }
 .btn.primary:disabled { background: var(--teal); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.side .actions .btn { flex: 1 1 100%; }
 .mgrp + .mgrp { margin-top: 18px; }
 .mh { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--ink); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .mh .num { color: var(--ink2); font-weight: 600; }
@@ -263,7 +268,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
 .conn { padding: 14px 0; border-top: 1px solid var(--line); }
 .conn:first-child { border-top: 0; padding-top: 4px; }
 .conn .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.conn .top .more { margin: 0; font-size: 14px; }
+.conn .top .more { margin: -12px -10px -12px 0; font-size: 14px; min-height: 44px; min-width: 44px; justify-content: center; padding: 0 10px; }
 .conn .state { margin-top: 2px; }
 .state { font-size: 14px; color: var(--ink2); }
 .state::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--mint); }
@@ -320,6 +325,12 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
   .tx .acct-sub { display: block; font-size: 13px; font-weight: 400; color: var(--ink2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
   .tx td { padding: 10px 6px; } .tx tr.day th { padding: 20px 0 6px; }
   .tx td:first-child { padding-left: 0; } .tx td:last-child { padding-right: 0; }
+  /* The merchant stays on one line; the amount column sizes to the amount, and the account truncates under it. */
+  .tx td:first-child { max-width: 0; width: 100%; }
+  .tx .nm { display: flex; align-items: center; min-width: 0; }
+  .tx .nm > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .tx .nm .tag { flex: none; }
+  .tx .tag { font-size: 11px; padding: 0 5px; }
   /* Search stays; the selects fold behind Filters. */
   .filters { flex-wrap: wrap; margin-bottom: 20px; }
   .filters input[type=search] { flex: 1 1 0; }

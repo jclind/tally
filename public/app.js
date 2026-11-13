@@ -78,10 +78,13 @@ async function render() {
     if (a.dataset.page === page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
   closePicker(); closeMenu();
+  const g = GEN;
   try {
     META ??= await api("/api/meta");
+    if (stale(g)) return;
     await (PAGES[page] ?? PAGES.overview)(q);
   } catch (e) {
+    if (stale(g)) return;
     $hero.innerHTML = "";
     $page.innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   }
@@ -206,7 +209,7 @@ const catDot = (c) => `<span class="cav" style="background:${catColor(c)}24"><sp
 const short = (name) => String(name ?? "").replace(/ Visa Signature Card \d+$/, " Visa");
 // Privacy.com card charges arrive as "PWP*Merchant 2026-11-08". Show the merchant.
 const nice = (who) => String(who ?? "").replace(/^PWP\*/i, "").replace(/ \d{4}-\d\d-\d\d$/, "");
-const activityRow = (t) => `<div class="row">${catDot(t.cat)}<span class="w"><b>${esc(nice(t.who))}${t.pending ? '<span class="tag">pending</span>' : ""}</b><small>${shortDate(t.date)}, ${esc(label(t.cat))}</small></span>
+const activityRow = (t) => `<div class="row${t.pending ? " pending" : ""}">${catDot(t.cat)}<span class="w"><b>${esc(nice(t.who))}${t.pending ? '<span class="tag">pending</span>' : ""}</b><small>${shortDate(t.date)}, ${esc(label(t.cat))}</small></span>
   <span class="amt">${amt(t.amount)}<small class="acct">${esc(short(t.account_name))}</small></span></div>`;
 
 const FREQ = { WEEKLY: "Weekly", BIWEEKLY: "Every 2 weeks", SEMI_MONTHLY: "Twice a month", MONTHLY: "Monthly", ANNUALLY: "Yearly", UNKNOWN: "Irregular" };
@@ -252,7 +255,7 @@ function comingUpCard(bills) {
   const list = bills.slice().sort(byNextDue).slice(0, 6);
   const perMonth = bills.reduce((t, r) => t + r.monthly, 0);
   return `<div class="card c-coming"><h2>Coming up <a href="#/bills">All bills</a></h2>
-    ${list.length ? `<div class="sub">${plural(bills.length, "bill")}, <b class="num">${money(perMonth)}</b> a month</div>${list.map((r) => billRow(r, false)).join("")}` : `<div class="empty" style="margin-top:8px">No repeating bills found yet.</div>`}</div>`;
+    ${list.length ? `<div class="sub">${plural(bills.length, "bill")}, <b class="num">${money(perMonth)}</b> a month</div>${list.map((r) => billRow(r, false, true)).join("")}` : `<div class="empty" style="margin-top:8px">No repeating bills found yet.</div>`}</div>`;
 }
 
 // ---------- overview ----------
@@ -340,6 +343,7 @@ PAGES.transactions = async (q) => {
       if (mine !== seq || stale(g)) return;
       card.removeAttribute("aria-busy");
       // Old rows under new filters would look like results, so a failed load replaces them with the error.
+      if (!append) { document.getElementById("sum").innerHTML = ""; document.getElementById("more").innerHTML = ""; markFilters(); }
       if (!append) document.getElementById("rows").innerHTML = `<tr><td colspan="4" class="empty">Couldn't load transactions. <button class="more" id="retry">Try again</button></td></tr>`;
       else document.getElementById("more").innerHTML = `<span class="muted">Couldn't load more.</span> <button class="more" id="retry">Try again</button>`;
       document.getElementById("retry").onclick = () => load(append);
@@ -350,7 +354,7 @@ PAGES.transactions = async (q) => {
     if (!append) lastDay = null;
     // Rows sit under a header per day instead of repeating the date on every row.
     const html = r.rows.map((t) => `${t.date !== lastDay ? `<tr class="day"><th colspan="4" scope="rowgroup">${dayName((lastDay = t.date))}</th></tr>` : ""}<tr class="${t.pending ? "pending" : ""}">
-      <td><div>${esc(nice(t.who))}${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${catBtn(t)}</div></td>
+      <td><div class="nm"><span>${esc(nice(t.who))}</span>${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${catBtn(t)}</div></td>
       <td class="cat-col">${catBtn(t)}</td>
       <td class="acct-col muted">${esc(short(t.account_name))}</td>
       <td class="amt">${amt(t.amount)}<small class="acct-sub">${esc(short(t.account_name))}</small></td></tr>`).join("");
@@ -428,12 +432,12 @@ PAGES.spending = async (q) => {
     <p>${n ? `${plural(n, "transaction")} in ${plural(r.categories.length, "category", "categories")}.` : "No spending yet."}${prev?.hasData ? ` ${monthName(prev.month)} came to <b class="num">${money(prev.spent)}</b>.` : ""}</p>`;
   $page.innerHTML = `<div class="stack">
     <div class="card"><h2>Where it went</h2>
-      ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">Spent<b class="num">${money(total, true)}</b></div></div>
-        <table class="rank">${r.categories.map((c) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${money(c.spent, true)}</td></tr>`).join("")}</table></div>`
+      ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">Spent<b class="num">${money(total)}</b></div></div>
+        <table class="rank">${r.categories.map((c) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${money(c.spent)}</td></tr>`).join("")}</table></div>`
         : `<div class="empty" style="margin-top:8px">No spending in ${monthName(r.month)}. <a class="more" href="#/spending">Back to this month</a></div>`}</div>
     <div class="card" id="chart"><h2>By month</h2></div></div>`;
   const chartCard = document.getElementById("chart");
-  chartCard.append(barChart(r.history, { width: chartCard.clientWidth - 48, current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
+  chartCard.append(barChart(r.history, { width: chartCard.clientWidth - 2 * parseFloat(getComputedStyle(chartCard).paddingLeft), current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
   wireMonthMenu(); wireTips($page);
 };
 
@@ -456,7 +460,7 @@ function barChart(all, { onPick, current, picked, width = 760 } = {}) {
     const fill = h.month === picked ? "#1B8382" : "#A9D9D3";
     g += `<g data-m="${h.month}" data-tip="${esc(tip)}" tabindex="0" role="link" aria-label="${esc(tip)}"><rect class="hit" x="${x}" y="${pad.t}" width="${bw}" height="${ih}"/>`
       + (h.hasData && hgt > 0 ? `<path class="b-path" fill="${fill}" d="${roundTop(bx, t0, w, hgt, Math.min(4, hgt))}"/>` : "")
-      + (h.hasData ? `<text class="val${h.month === picked ? " on" : ""}" x="${x + bw / 2}" y="${t0 - 8}" text-anchor="middle">${money(v)}</text>` : "")
+      + (h.hasData && (bw >= 52 || h.month === picked) ? `<text class="val${h.month === picked ? " on" : ""}" x="${x + bw / 2}" y="${t0 - 8}" text-anchor="middle">${money(v)}</text>` : "")
       + `<text class="axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" ${h.month === picked ? 'style="font-weight:700;fill:#24272C"' : ""}>${monthName(h.month, bw < 40 ? "narrow" : "short")}${h.month === current ? " so far" : ""}</text></g>`;
   });
   const el = document.createElement("div");
@@ -485,7 +489,8 @@ PAGES.budgets = async (q, saved, pre) => {
   $hero.innerHTML = budgetHero(s, "budgets");
   const tick = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
   const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value != null ? value.toLocaleString("en-US") : ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></span></label>`;
-  const set = s.budgets.slice().sort((a, b) => (b.spent - b.budget) - (a.spent - a.budget));
+  const used = (b) => b.budget > 0 ? b.spent / b.budget : Infinity;
+  const set = s.budgets.slice().sort((a, b) => used(b) - used(a));
   const unset = s.unset.slice().sort((a, b) => b.spent - a.spent || (b.suggested ?? 0) - (a.suggested ?? 0));
   $page.innerHTML = `<div class="layout"><div class="stack">
     <div class="card"><h2>Budgets</h2>
@@ -493,11 +498,11 @@ PAGES.budgets = async (q, saved, pre) => {
         const over = b.spent > b.budget;
         return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${money(Math.abs(b.budget - b.spent))}</b> ${over ? "over" : "left"}</span></div>
           <div class="bar ${over ? "over" : ""}"><i style="width:${b.budget > 0 ? Math.max(0, Math.min(100, (b.spent / b.budget) * 100)) : 100}%"></i>${over ? "" : tick}</div>
-          <div class="l2"><span class="num"><b>${money(b.spent, true)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
+          <div class="l2"><span class="num"><b>${money(b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
     </div>
-    ${unset.length ? `<div class="card"><h2>Not budgeted <span class="aside num">${money(unset.reduce((t, b) => t + b.spent, 0), true)} spent</span></h2>
-      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${money(b.spent, true)} spent${b.suggested ? `, about ${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, b.suggested)}</div>`).join("")}</div>` : ""}
+    ${unset.length ? `<div class="card"><h2>Not budgeted <span class="aside num">${money(unset.reduce((t, b) => t + b.spent, 0))} spent</span></h2>
+      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.spent >= 0.5 ? `${money(b.spent)} spent${b.suggested ? ", about " : ""}` : b.suggested ? "About " : "Nothing spent"}${b.suggested ? `${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, b.suggested)}</div>`).join("")}</div>` : ""}
     </div><aside class="side stack">${incomeCard(s, streams)}</aside></div>`;
   for (const inp of $page.querySelectorAll(".amtin input")) {
     const box = inp.closest(".amtin"), status = box.querySelector(".ok");
@@ -505,15 +510,16 @@ PAGES.budgets = async (q, saved, pre) => {
       const v = inp.value.replace(/[$,\s]/g, "");
       if (v === inp.defaultValue.replace(/,/g, "")) return;
       if (v !== "" && !(Number(v) >= 0)) { const typed = inp.value; inp.value = inp.defaultValue; return notice(`"${typed}" isn't an amount. Type a number like 120, or clear the field to remove the budget.`); }
+      const g = GEN;
       box.classList.remove("bad", "saved"); box.classList.add("saving"); status.textContent = "Saving";
       try { await api("/api/budget", { category: inp.dataset.cat, monthly: v === "" ? null : Number(v) }); }
-      catch { box.classList.replace("saving", "bad"); status.textContent = "Couldn't save"; return; }
+      catch { if (!stale(g)) { box.classList.replace("saving", "bad"); status.textContent = "Couldn't save"; } return; }
       // Fetch the new totals first, then snapshot whatever field the owner moved on to and redraw with no wait in
       // between, so nothing typed during the requests is lost. Skip the redraw if they've left the page.
-      const g = GEN, pre = await budgetData(month).catch(() => null);
+      const pre = await budgetData(month).catch(() => null);
       if (stale(g)) return;
       if (!pre) { box.classList.replace("saving", "saved"); status.textContent = "Saved"; return; }
-      const act = document.activeElement?.matches?.(".amtin input") && document.activeElement !== inp ? document.activeElement : null;
+      const act = document.activeElement?.matches?.(".amtin input") ? document.activeElement : null;
       const keep = act && { cat: act.dataset.cat, value: act.value, from: act.selectionStart, to: act.selectionEnd };
       await PAGES.budgets(q, inp.dataset.cat, pre);
       if (keep) {
@@ -545,10 +551,10 @@ PAGES.bills = async () => {
   }
   $hero.innerHTML = `<div class="k">Bills and subscriptions</div>
     <div class="big num">${money(perMonth)} <span>a month</span></div>
-    <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(Math.abs(next.average_amount), true)}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
+    <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(Math.abs(next.average_amount))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
   const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(Math.abs(r.average_amount), true)}<small>average</small></span></div>`;
   $page.innerHTML = `<div class="layout"><div class="stack">
-      <div class="card">${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : monthYear(m).replace(` ${new Date().getFullYear()}`, "")}</span><span class="num">${money(list.reduce((t, r) => t + Math.abs(r.average_amount), 0))}</span></div>
+      <div class="card">${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : monthYear(m).replace(` ${new Date().getFullYear()}`, "")}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + Math.abs(r.average_amount), 0))}</span>` : ""}</div>
         ${list.map((r) => billRow(r, true, true)).join("")}</div>`).join("") || `<div class="empty">None found yet.</div>`}</div>
       ${ended.length ? `<div class="card"><h2>Stopped charging</h2><div style="margin-top:8px">${ended.map((r) => billRow(r)).join("")}</div></div>` : ""}
     </div><aside class="side stack"><div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
@@ -561,7 +567,7 @@ PAGES.accounts = async () => {
   if (stale(g)) return;
   const nw = sum.netWorth;
   const accounts = s.items.flatMap((it) => it.accounts.map((a) => ({ ...a, inst: it.institution_name })));
-  $hero.innerHTML = `<div class="k">Net worth</div><div class="big num">${money(nw.total, true)}</div>
+  $hero.innerHTML = `<div class="k">Net worth</div><div class="big num">${money(nw.total)}</div>
     <p><b class="num">${money(nw.cash)}</b> cash, <b class="num">${money(nw.investments)}</b> invested, <b class="num">${money(nw.owed)}</b> owed on cards.</p>`;
   // One full-width card per account type in the main column, connections in the side column, like the other pages.
   // What's owed is a negative balance, formatted once as a signed number.
@@ -591,7 +597,8 @@ PAGES.accounts = async () => {
   const msg = (t, bad) => { document.getElementById("msg").innerHTML = t ? `<div class="notice ${bad ? "bad" : ""}">${esc(t)}</div>` : ""; };
   for (const b of document.querySelectorAll("[data-sync]")) b.onclick = async () => {
     b.disabled = true; msg("Syncing…");
-    try { const { results } = await api("/api/sync", { item_id: b.dataset.sync }); const e = results.flatMap((r) => r.errors); await PAGES.accounts(); if (e.length) msg(e.join("\n"), true); }
+    const g = GEN;
+    try { const { results } = await api("/api/sync", { item_id: b.dataset.sync }); if (stale(g)) return; const e = results.flatMap((r) => r.errors); await PAGES.accounts(); if (e.length) msg(e.join("\n"), true); }
     catch (e) { msg(e.message, true); b.disabled = false; }
   };
   for (const b of document.querySelectorAll("[data-fix]")) b.onclick = () => link({ itemId: b.dataset.fix }, msg);
