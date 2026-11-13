@@ -56,6 +56,18 @@ side cards on the right. Keep it light. Colors and sizes are the variables at th
   the colorblind check as neighbors in that order; every other category is gray "Other". Don't add an eighth.
 - Text on the teal band is solid white (4.5:1). Don't fade it with opacity.
 
+A design council (Muse, Opus, and Codex reviewing, Fable judging splits) polished this on 2026-11-12 over 8 rounds.
+Its record is `.council/design/STATE.md` (local only, not in git). The rules it settled:
+
+- Pages are Home, Activity, Spending, Budgets, Bills, Accounts, on desktop and phone.
+- Money: hero numbers and summaries in whole dollars, single transactions and balances in cents. A month's category
+  figures are rounded once together (`dollarsByCat`) and shared by every page, so rows add up and pages agree.
+- Over budget is decided in cents, like the daily alert; under a dollar reads "<$1 over".
+- Every page but Home uses main-plus-side. Home is one grid written in phone reading order.
+- Judge's calls, kept unless the owner says otherwise: the budget field sits on the spent line; Activity's band has no
+  all-time count; Bills groups by month; Spending's By month is a side list; links stay deep teal (from the research).
+- Fake-data screenshots for any design review: `.council/design/seed.mjs`, `serve.sh` (port 3499), `shoot.mjs`.
+
 ## Daily job
 
 `bin/daily.mjs`, agent `local.tally-daily` at 7:00: syncs everything through `POST /api/daily`, writes
