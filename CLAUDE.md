@@ -60,5 +60,6 @@ side cards on the right. Keep it light. Colors and sizes are the variables at th
 
 `bin/daily.mjs`, agent `local.tally-daily` at 7:00: syncs everything through `POST /api/daily`, writes
 `data/tally-snapshot.db` for the nightly backup, and posts new alerts (broken connection weekly, charge of
-$200 or more, a budget gone over) to Discord. The webhook is `DISCORD_WEBHOOK_URL` in
-`~/.config/tally/discord.env`. Alerts are marked sent only after Discord accepts the post.
+$200 or more dated in the last 10 days, a budget gone over) to Discord. The webhook is `DISCORD_WEBHOOK_URL` in
+`~/.config/tally/discord.env`. Long posts are split into several messages, and each message's alerts are marked
+sent only after Discord accepts that message.
