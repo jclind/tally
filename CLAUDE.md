@@ -2,7 +2,7 @@
 
 A Mint-style money app you run yourself. Plaid links your bank, card, and brokerage accounts, and the data lives in
 SQLite at `data/tally.db` on your machine. Pages: Home, Activity, Spending, Budgets, Bills, Accounts.
-The install guide is https://tally.jesselind.com. Its source is `site/`, published with `site/publish.sh`; its screenshots come from made-up data (`site/tools/shoot.mjs`). A gitignored `CLAUDE.local.md` holds rules for one person's setup.
+The install guide is https://tally.jesselind.com. Its source is `site/`, published with `site/publish.sh`; its screenshots are crops of tally running on made-up data (`site/tools/shoot.mjs`, with the list in `site/tools/shots.json`). A gitignored `CLAUDE.local.md` holds rules for one person's setup.
 
 ## Rules
 
@@ -70,6 +70,27 @@ The rules it settled:
 - Every page but Home uses main-plus-side. Home is one grid written in phone reading order.
 - Judge's calls, kept unless the owner says otherwise: the budget field sits on the spent line; Activity's band has no
   all-time count; Bills groups by month; Spending's By month is a side list; links stay deep teal (from the research).
+
+
+## Site
+
+A design council (Opus and Codex reviewing, Muse for four rounds, Fable judging splits) reworked `site/` on
+2026-11-13 over 9 rounds. What it settled:
+
+- Screenshots are whole app cards cropped near their real size, never full pages shrunk down, and never faded at an
+  edge. Each heading over a panel is one line holding the one fact the panel can't show, and the picture has to show
+  what the heading claims (the Activity panel has the category picker open; Connections has a bank that needs a new
+  sign-in). No panel appears twice on a page.
+- The made-up data the crops assume: one category over budget (Groceries, $25 over) and every other spending category
+  budgeted, so Home's two totals match. `shoot.mjs`'s header says how to set up the Connections error state.
+- Each fact appears once per page. Copy that repeats a heading, a panel, or another section gets cut.
+- Code on phones keeps its real line breaks and scrolls sideways with an edge fade; only long inline addresses wrap.
+- Judge's calls, kept unless the owner says otherwise: the hero is the headline left with the description, one button
+  ("Read the install guide"), and fine print right; no address bar over the hero shot, and the phone hero has no
+  device frame; the four panels sit in two columns that stack on their own (Budgets and Connections, Bills and
+  Activity), with Budgets left out on phones because the phone hero ends on that card; guide steps use plain teal
+  numerals hung in the gutter with one left edge for every heading; the guide's only boxes are pink warnings;
+  Backups comes right after Keep it running.
 
 ## Daily job
 
