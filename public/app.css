@@ -329,7 +329,10 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .amtin input { width: 96px; min-height: 44px; font-size: 16px; }
   .tx .acct-col, .tx .cat-col, .tx thead { display: none; }
   .tx .who-sub .catbtn { margin: -10px 0 -10px -4px; padding: 10px 4px; font-size: 14px; line-height: 20px; gap: 5px; max-width: 100%; }
-  .tx .who-sub { min-width: 0; max-width: 48%; overflow: hidden; }
+  /* The category button keeps its 44px target and focus ring; only its label truncates. */
+  .tx .who-sub { min-width: 0; max-width: 48%; }
+  .tx .who-sub .catbtn > svg { flex: none; }
+  .tx .who-sub .catbtn .cl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tx .who-sub { display: block; }
   .tx .acct-sub { display: block; font-size: 13px; font-weight: 400; color: var(--ink2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
   .tx td { padding: 10px 6px; } .tx tr.day th { padding: 20px 0 6px; }

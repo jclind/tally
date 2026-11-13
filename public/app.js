@@ -147,7 +147,14 @@ function plan(s) {
   return { limit, spent, left: limit - spent, outside: all - spent };
 }
 // Over is decided in cents, like the daily alert; under a dollar over reads "<$1".
-const overBy = (b, d) => { const v = (d.get(b.category) ?? Math.round(b.spent)) - Math.round(b.budget); return v >= 1 ? money(v) : "<$1"; };
+const overBy = (b, d) => b.spent - b.budget < 1 ? "<$1" : money(Math.max(1, (d.get(b.category) ?? Math.round(b.spent)) - Math.round(b.budget)));
+// The Not budgeted subline: what was spent (or refunded), and the recent average unless the suggestion was raised past it.
+function notBudgetedLine(b, d) {
+  if (d <= -1) return `${money(-d)} refunded`;
+  const avg = b.suggested && suggest(b) === b.suggested ? `${money(b.suggested)} a month lately` : "";
+  if (d >= 1) return `${money(d)} spent${avg ? `, about ${avg}` : ""}`;
+  return avg ? `About ${avg}` : "Nothing spent";
+}
 // A suggestion never sits below what's already spent this month.
 const suggest = (b) => b.suggested ? Math.max(b.suggested, Math.ceil(b.spent / 5) * 5) : null;
 function budgetHero(s, page) {
@@ -161,11 +168,12 @@ function budgetHero(s, page) {
       ? (p.left >= 0 ? `You have <b class="num">${money(p.left)}</b> left${daysLeft ? ` for the next ${plural(daysLeft, "day")}` : " today"}.` : `You're <b class="num">${money(-p.left)}</b> over${daysLeft ? ` with ${plural(daysLeft, "day")} to go` : ""}.`)
       : (p.left >= 0 ? `You finished <b class="num">${money(p.left)}</b> under.` : `You finished <b class="num">${money(-p.left)}</b> over.`);
     // The band counts budgeted categories only, so spending elsewhere gets its own short line instead of being left out.
-    const also = outside >= 1 ? `<p class="also"><b class="num">${money(outside)}</b> spent without a budget.</p>` : "";
+    const also = outside >= 1 ? `<p class="also"><b class="num">${money(outside)}</b> spent without a budget.</p>`
+      : outside <= -1 ? `<p class="also"><b class="num">${money(-outside)}</b> refunded outside your budgets.</p>` : "";
     return `${monthMenu(s.month, s.history, page, "budget")}
       <div class="big num">${money(p.spent)} <span>of ${money(p.limit)}</span></div>
       <p${also ? ' class="has-also"' : ""}>${line}</p>${also}
-      <div class="track"><i class="${p.left < 0 ? "over" : ""}" style="width:${p.limit > 0 ? Math.min(100, (p.spent / p.limit) * 100) : 100}%"></i>${p.left < 0 ? "" : todayMark}</div>`;
+      <div class="track"><i class="${p.left < 0 ? "over" : ""}" style="width:${p.limit > 0 ? Math.min(100, (p.spent / p.limit) * 100) : p.spent > 0 ? 100 : 0}%"></i>${p.left < 0 ? "" : todayMark}</div>`;
   }
   // No budgets yet: measure the month against last month instead.
   const line = s.spentLastMonth > 0
@@ -416,16 +424,19 @@ const dayName = (d) => {
   if (d === y) return "Yesterday";
   return new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", ...(d.slice(0, 4) !== today.slice(0, 4) ? { year: "numeric" } : {}) });
 };
-const catBtn = (t) => `<button class="catbtn${t.overridden ? " set" : ""}" data-id="${esc(t.transaction_id)}" data-cat="${esc(t.cat)}" data-who="${esc(t.who)}" data-ov="${t.overridden ? 1 : 0}" data-rule="${t.ruled ? 1 : 0}" aria-label="Category: ${esc(label(t.cat))}. Change it"><span class="sw" style="background:${catColor(t.cat)}"></span>${esc(label(t.cat))}${icon("down", 14, 2.4).replace("<svg", '<svg class="cv"')}</button>`;
+const catBtn = (t) => `<button class="catbtn${t.overridden ? " set" : ""}" data-id="${esc(t.transaction_id)}" data-cat="${esc(t.cat)}" data-who="${esc(t.who)}" data-ov="${t.overridden ? 1 : 0}" data-rule="${t.ruled ? 1 : 0}" aria-label="Category: ${esc(label(t.cat))}. Change it"><span class="sw" style="background:${catColor(t.cat)}"></span><span class="cl">${esc(label(t.cat))}</span>${icon("down", 14, 2.4).replace("<svg", '<svg class="cv"')}</button>`;
 
 // ---------- category picker ----------
-let picker = null;
+let picker = null, pickerFor = null;
+// After the picker closes, focus returns to its category button, or to the list if a filter removed that row.
+const refocus = (id) => (document.querySelector(`.catbtn[data-id="${CSS.escape(id ?? "")}"]`) ?? document.getElementById("rows")?.closest(".card"))?.focus();
 function closePicker() { picker?.remove(); picker = null; document.removeEventListener("mousedown", outside); }
 function outside(e) { if (picker && !picker.contains(e.target)) closePicker(); }
 function openPicker(btn, done) {
   closePicker();
   const cats = Object.keys(META.labels).sort((a, b) => label(a).localeCompare(label(b)));
   picker = document.createElement("div");
+  pickerFor = btn.dataset.id;
   picker.className = "picker";
   picker.setAttribute("role", "dialog");
   picker.setAttribute("aria-label", `Category for ${btn.dataset.who}`);
@@ -449,6 +460,7 @@ function openPicker(btn, done) {
       if (stale(g)) return;
       if (picker === mine) closePicker();
       await done();
+      if (!stale(g)) refocus(btn.dataset.id);
     } catch (err) { if (!stale(g)) { mine.classList.remove("busy"); mine.removeAttribute("aria-busy"); notice(err.message); } }
   });
   setTimeout(() => document.addEventListener("mousedown", outside), 0);
@@ -482,6 +494,7 @@ PAGES.spending = async (q) => {
 };
 
 // ---------- budgets ----------
+let budgetRev = 0;
 const budgetData = (month) => Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/recurring")]);
 PAGES.budgets = async (q, saved, pre) => {
   const month = q.get("month") ?? "", g = GEN;
@@ -503,11 +516,12 @@ PAGES.budgets = async (q, saved, pre) => {
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
     </div>
     ${unset.length ? `<div class="card"><h2>Not budgeted</h2>
-      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.spent >= 0.5 ? `${money(dollars.get(b.category) ?? b.spent)} spent${b.suggested ? ", about " : ""}` : b.suggested ? "About " : "Nothing spent"}${b.suggested ? `${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, suggest(b))}</div>`).join("")}</div>` : ""}
+      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${notBudgetedLine(b, dollars.get(b.category) ?? Math.round(b.spent))}</div></div>${field(b, null, suggest(b))}</div>`).join("")}</div>` : ""}
     </div><aside class="side stack">${incomeCard(s, streams)}</aside></div>`;
   for (const inp of $page.querySelectorAll(".amtin input")) {
     const box = inp.closest(".amtin"), status = box.querySelector(".ok");
     const save = async () => {
+      const rev = ++budgetRev;
       const v = inp.value.replace(/[$,\s]/g, "");
       if (v === inp.defaultValue.replace(/,/g, "")) return;
       if (v !== "" && !(Number(v) >= 0)) { const typed = inp.value; inp.value = inp.defaultValue; return notice(`"${typed}" isn't an amount. Type a number like 120, or clear the field to remove the budget.`); }
@@ -518,7 +532,7 @@ PAGES.budgets = async (q, saved, pre) => {
       // Fetch the new totals first, then snapshot whatever field the owner moved on to and redraw with no wait in
       // between, so nothing typed during the requests is lost. Skip the redraw if they've left the page.
       const pre = await budgetData(month).catch(() => null);
-      if (stale(g)) return;
+      if (stale(g) || rev !== budgetRev) return; // another page, or a newer save that will redraw
       if (!pre) { box.classList.replace("saving", "saved"); status.textContent = "Saved"; return; }
       const act = document.activeElement?.matches?.(".amtin input") ? document.activeElement : null;
       const keep = act && { cat: act.dataset.cat, value: act.value, from: act.selectionStart, to: act.selectionEnd };
@@ -652,5 +666,5 @@ document.getElementById("syncall").addEventListener("click", async (e) => {
 });
 
 window.addEventListener("hashchange", render);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closePicker(); if (menuOpen) { const b = menuOpen.querySelector("button"); closeMenu(); b.focus(); } } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (picker) { const id = pickerFor; closePicker(); refocus(id); } if (menuOpen) { const b = menuOpen.querySelector("button"); closeMenu(); b.focus(); } } });
 render();
