@@ -112,7 +112,7 @@ PLAID_SECRET=your-sandbox-secret
 PLAID_ENV=sandbox
 EOF
 chmod 600 ~/.config/tally/plaid.env</code></pre></div>
-      <h3 id="start">Start it and check it works</h3>
+      <h3 id="start">Start and check it</h3>
       <div class="code"><pre><code>npm start</code></pre></div>
       <div class="output"><span class="olabel">Expected output</span><pre><samp>tally on http://localhost:3400 (keys found)</samp></pre></div>
       <p>If it says <code>(keys missing)</code>, see <a href="#keys-missing">keys missing</a>. Otherwise open <a href="http://localhost:3400">localhost:3400</a>.</p>
@@ -170,7 +170,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
         <li>On the computer, serve tally on port 8400:
           <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400</code></pre></div>
         </li>
-        <li>Tell tally its new address. <code>tailscale status</code> shows your computer's name. <b>On a Mac</b>:
+        <li>Tell tally its new address. <code>tailscale serve status</code> prints the full address. <b>On a Mac</b>:
           <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
           <b>On Linux</b>, add this environment variable to the service you set up, then restart it:
           <div class="code" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
