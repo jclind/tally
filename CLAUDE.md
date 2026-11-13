@@ -74,6 +74,13 @@ dated in the last 10 days, a budget gone over) to a Discord webhook, `DISCORD_WE
 `~/.config/tally/discord.env`. Long posts are split into several messages, and each message's alerts are marked
 sent only after Discord accepts that message.
 
+## Sync and settings
+
+One full sync runs at a time (`syncAllOnce`). Besides the daily job and the Sync button, tally syncs when it starts and
+when the page opens or its tab comes back, if any connection is older than the `autoSync` setting or last failed to
+reach Plaid; automatic syncs run at most every 10 minutes. Settings live in the `settings` table, each with a default
+and a check in `SETTINGS` in `server.mjs`, and show on the Accounts page.
+
 ## Gig payouts
 
 `GET /api/payouts` gives weekly payouts per gig platform, by the week the work happened. It's empty unless

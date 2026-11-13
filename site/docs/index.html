@@ -26,7 +26,7 @@
   </header>
   <div class="wrap docs-band">
     <h1>Install guide</h1>
-    <p>From nothing to your own accounts in tally. Plan on about 20 minutes, most of it in Plaid's dashboard.</p>
+    <p>How to get Plaid keys, install tally, link your accounts, and keep it running.</p>
   </div>
 </div>
 
@@ -67,7 +67,7 @@
     <section id="before">
       <h2>Before you start</h2>
       <ul>
-        <li><b>A computer that stays on.</b> tally syncs every morning and serves the page you open. A Mac is easiest, because a script sets it up to run in the background. Linux works with any process manager.</li>
+        <li><b>A Mac or Linux computer.</b> It doesn't have to stay on. tally syncs when it starts and when you open it, if the data is older than a setting you choose. A Mac is easiest, because a script runs it in the background. Linux works with any process manager.</li>
         <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
         <li><b>git</b>, to download tally and update it later.</li>
         <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
@@ -76,7 +76,7 @@
 
     <section id="plaid">
       <h2><span class="step">1</span>Get Plaid keys</h2>
-      <p>Plaid is the service that connects to your bank. tally talks to it with your own keys, so your data goes from Plaid straight to your computer.</p>
+      <p>Plaid is the service that connects to your bank. tally talks to it with your own keys, so your data goes from Plaid to your computer with no tally server in between.</p>
       <ol>
         <li>Create an account at <a href="https://dashboard.plaid.com/signup">dashboard.plaid.com/signup</a> and verify your email.</li>
         <li>Open <a href="https://dashboard.plaid.com/trial-plan">dashboard.plaid.com/trial-plan</a> and fill in the Trial plan form. It's free and covers 10 bank connections with Transactions, Investments, and Liabilities, which is everything tally uses.</li>
@@ -101,7 +101,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <p>Then start it:</p>
       <div class="code"><pre><code>npm start</code></pre></div>
       <p>The log line should end in <code>(keys found)</code>. Open <a href="http://localhost:3400">localhost:3400</a>.</p>
-      <div class="note"><b>Nothing to install.</b> tally has no npm dependencies, so there's no <code>npm install</code> step. <code>npm test</code> runs its checks against a fake Plaid if you want to confirm everything works.</div>
+      <div class="note"><b>No npm install step.</b> tally has no npm dependencies. <code>npm test</code> runs tally's checks against a fake Plaid.</div>
     </section>
 
     <section id="link">
@@ -113,11 +113,11 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
 
     <section id="real">
       <h2><span class="step">4</span>Switch to your real banks</h2>
-      <p>Once you've seen it work, start fresh with your own accounts. Stop tally (Ctrl+C) and set the sandbox data aside:</p>
+      <p>To switch to real accounts, stop tally (Ctrl+C) and set the sandbox data aside:</p>
       <div class="code"><pre><code>mv data data-sandbox</code></pre></div>
       <p>In <code>~/.config/tally/plaid.env</code>, change <code>PLAID_SECRET</code> to your Production secret and <code>PLAID_ENV</code> to <code>production</code>. Then start tally again with <code>npm start</code>.</p>
       <p>Link your banks from <b>Accounts</b> the same way. The first sync brings in as much history as your bank gives Plaid, up to two years.</p>
-      <div class="note warn"><b>You get 10 connections, for good.</b> On the Trial plan, removing a connection doesn't give the slot back. If a bank stops syncing, use <b>Fix connection</b> on the Accounts page instead of linking it again. tally shows how many you've used.</div>
+      <div class="note warn"><b>The Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back. If a bank stops syncing, use <b>Fix connection</b> on the Accounts page instead of linking it again. tally shows how many you've used.</div>
       <p>Some large banks sign you in on their own site (OAuth). If one won't connect, check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first.</p>
     </section>
 
@@ -127,12 +127,15 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
       <p>It installs two launchd agents, <code>local.tally</code> and <code>local.tally-daily</code>, pointing at this folder. The log is <code>tally.log</code> in the same folder. To restart tally after a change:</p>
       <div class="code"><pre><code>launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
-      <p>On Linux, run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
+      <h3>On a laptop</h3>
+      <p>tally syncs when it starts (at login, with the script) and when you open the page or switch back to its tab, if the data is older than <b>Sync when you open tally</b> on the Accounts page. The default is 12 hours. If the Mac is asleep at 7:00, launchd runs the daily sync when it wakes.</p>
+      <h3>On Linux</h3>
+      <p>Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
     </section>
 
     <section id="phone">
       <h2>Use it on your phone</h2>
-      <p>tally has no login, so it only listens on your computer. <a href="https://tailscale.com">Tailscale</a> gives your phone a private path to it without opening anything to the internet.</p>
+      <p>tally has no login, so it only listens on your computer. <a href="https://tailscale.com">Tailscale</a> lets your phone reach it over your tailnet without exposing it to the internet.</p>
       <ol>
         <li>Install Tailscale on the computer and your phone, and sign in to both with the same account.</li>
         <li>In Tailscale's admin console, under <b>DNS</b>, turn on MagicDNS and HTTPS certificates.</li>
@@ -147,22 +150,23 @@ bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></d
 
     <section id="alerts">
       <h2>Daily alerts</h2>
-      <p>The 7:00 job syncs every account. If you give it a Discord webhook, it also posts when something needs you:</p>
+      <p>The 7:00 job syncs every account. If you give it a Discord webhook, it also posts to Discord for these:</p>
       <ul>
-        <li>a charge of $200 or more</li>
+        <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
         <li>a budget that went over</li>
         <li>a bank that stopped syncing (once a week until it's fixed)</li>
       </ul>
       <p>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy the URL into a file:</p>
       <div class="code"><pre><code>echo 'DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...' &gt; ~/.config/tally/discord.env
 chmod 600 ~/.config/tally/discord.env</code></pre></div>
-      <p>A quiet day posts nothing. Without the file, alerts go to the log only.</p>
+      <p>If nothing matches, it posts nothing. Without the file, alerts go to the log only.</p>
     </section>
 
     <section id="backup">
       <h2>Backups and updates</h2>
-      <h3>Back up the data folder</h3>
-      <p>Everything lives in <code>data/tally.db</code>, including the tokens that keep your banks connected. Lose it and you'd link every bank again, using up more of your 10 connections. The daily job writes a safe copy to <code>data/tally-snapshot.db</code>; copy that file somewhere else, encrypted, on a schedule.</p>
+      <h3>Back up two folders</h3>
+      <p>Your accounts, transactions, settings, and the Plaid access tokens live in <code>data/tally.db</code>. Your Plaid keys and Discord webhook are in <code>~/.config/tally/</code>, so back up both. Lose the database and you'd link every bank again, using up more of your 10 connections.</p>
+      <p>The daily job writes a snapshot to <code>data/tally-snapshot.db</code> with SQLite's <code>VACUUM INTO</code>, so it's safe to copy while tally runs. Copy that file and <code>~/.config/tally/</code> somewhere else, encrypted, on a schedule.</p>
       <h3>Update tally</h3>
       <div class="code"><pre><code>git pull
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
@@ -178,7 +182,9 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h3>Search</h3>
       <p>Search finds names, amounts, and categories, and ignores case, spaces, and punctuation. <code>mcdonalds</code> finds McDonald's, <code>6.75</code> finds that exact charge, and <code>groc</code> finds Groceries.</p>
       <h3>Look back</h3>
-      <p>The month name at the top of Home, Spending, and Budgets is a menu. Pick any past month to see it whole.</p>
+      <p>The month name at the top of Home, Spending, and Budgets is a menu. Pick a past month to see all of it.</p>
+      <h3>Settings</h3>
+      <p>The Settings card at the bottom of Accounts has two choices. <b>Sync when you open tally</b> sets how old the data can get before opening tally syncs it: 1, 6, or 12 hours, a day, or never. <b>Alert for one charge of</b> sets the amount for the Discord alert.</p>
     </section>
 
     <section id="help">
