@@ -70,7 +70,7 @@
       <ul>
         <li><b>A Mac or Linux computer.</b> Not Windows.</li>
         <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
-        <li><b>git</b>, to download tally and update it later.</li>
+        <li><b>git</b>.</li>
         <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
       </ul>
     </section>
@@ -108,7 +108,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <h2><span class="step">3</span>Link an account</h2>
       <p>Open <b>Accounts</b> and choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments.</p>
       <p>In sandbox, pick any bank and sign in with the test login <code>user_good</code> and password <code>pass_good</code>. tally loads test accounts and transactions.</p>
-      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-one-dark.png"><img src="/img/c-conn-one.png" width="896" height="702" alt="The Connections card on the Accounts page: one sandbox bank linked, 1 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
+      <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-one-dark.png"><img src="/img/c-conn-one.png" width="896" height="590" alt="The Connections card on the Accounts page: one sandbox bank linked, 1 of 10 connections used, and the Link a bank or card and Link a brokerage buttons." loading="lazy"></picture>
     </section>
 
     <section id="real">
@@ -138,8 +138,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
     <section id="backup">
       <h2>Backups and updates</h2>
       <h3>What to back up</h3>
-      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs.</p>
-      <p>It also holds the Plaid access tokens. Without it you'd link every bank again.</p>
+      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs. The snapshot also holds your Plaid access tokens; without it you'd link every bank again, and each relink uses a slot.</p>
       <h3>Update tally</h3>
       <p>Pull the new code, then restart tally. On a Mac:</p>
       <div class="code"><pre><code>git pull
@@ -244,6 +243,8 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
   // A command too wide for the box moves Copy above it and fades at the right edge, so it reads as scrollable.
   const markScroll = () => { for (const box of document.querySelectorAll(".code")) { const pre = box.querySelector("pre"); box.classList.remove("scrolls"); if (pre.scrollWidth > pre.clientWidth + 1) box.classList.add("scrolls"); } };
   addEventListener("load", markScroll); addEventListener("resize", markScroll);
+  // The fade goes once the command is scrolled to its end.
+  for (const pre of document.querySelectorAll(".code pre")) pre.addEventListener("scroll", () => pre.parentElement.classList.toggle("end", pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2), { passive: true });
   const jump = document.querySelector(".jump");
   jump.addEventListener("change", () => { location.hash = jump.value; });
   const links = [...document.querySelectorAll(".side nav a")];

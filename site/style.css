@@ -33,7 +33,7 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; border-radius: 4px; }
 .band :focus-visible { outline-color: #fff; }
 img { max-width: 100%; height: auto; display: block; }
-.skip { position: absolute; left: 16px; top: -48px; z-index: 10; background: #fff; color: var(--deep); padding: 10px 14px; border-radius: 8px; }
+.skip { position: absolute; left: 16px; top: -48px; z-index: 10; background: #fff; color: var(--btn-ink); padding: 10px 14px; border-radius: 8px; }
 .skip:focus { top: 12px; }
 picture { display: block; }
 figure { margin: 0; }
@@ -58,14 +58,12 @@ p, li, dd { text-wrap: pretty; }
 .btn:hover { text-decoration: none; }
 .btn.light { background: #fff; color: var(--btn-ink); }
 .btn.light:hover { background: #E5FAF5; }
-.btn.line { border-color: rgba(255, 255, 255, .7); color: #fff; }
-.btn.line:hover { background: rgba(255, 255, 255, .1); }
 .btn.solid { background: var(--teal); color: #fff; }
 .btn.solid:hover { background: #006B68; }
 
 /* ---------- hero: headline left, what it is and the buttons right ---------- */
 .hero { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: end; padding-top: 56px; }
-.hero h1 { font-size: 60px; line-height: 1.06; letter-spacing: -.02em; font-weight: 700; }
+.hero h1 { font-size: 60px; line-height: 1.06; letter-spacing: -.02em; font-weight: 700; text-wrap: balance; }
 .hero .lede { font-size: 18px; line-height: 28px; color: #fff; margin: 0; }
 .hero .ctas { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
 .hero .fine { font-size: 15px; line-height: 22px; margin: 14px 0 0; color: #fff; text-wrap: balance; }
@@ -87,13 +85,15 @@ p, li, dd { text-wrap: pretty; }
 .tile img { width: 100%; border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
 
 /* What you need, with the commands beside it. */
-.setup { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px 72px; align-items: start; }
-.setup h2 { grid-column: 1 / -1; }
-.reqs { margin: 0; }
-.reqs dt { font-weight: 700; padding-top: 18px; border-top: 1px solid var(--line); }
-.reqs dt:first-child { border-top: 0; padding-top: 0; }
-.reqs dd { margin: 4px 0 18px; color: var(--ink2); font-size: 16px; line-height: 25px; }
-.term { margin: 4px 0 24px; background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 20px 24px; overflow-x: auto; font: 14px/24px var(--mono); outline: 1px solid var(--edge); }
+/* What you need: four items two by two, then the commands and the guide button in one row. */
+.setup h2 { margin-bottom: 32px; }
+.reqs { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 72px; }
+.reqs dt { font-weight: 700; }
+.reqs dd { margin: 4px 0 0; color: var(--ink2); font-size: 16px; line-height: 25px; max-width: 46ch; }
+.term-col { display: flex; align-items: center; gap: 40px; margin-top: 48px; }
+.term-col .term { flex: 1; min-width: 0; margin: 0; }
+.term-col .btn { flex: none; }
+.term { background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); outline: 1px solid var(--edge); }
 .term .c { color: #8FB3AC; }
 .term .out { color: #7FE3CF; }
 
@@ -103,7 +103,7 @@ footer a { color: var(--ink2); font-weight: 600; }
 footer .flinks { display: flex; gap: 20px; }
 
 /* ---------- docs ---------- */
-.docs-band { padding-top: 40px; padding-bottom: 44px; }
+.docs-band { padding-top: 28px; padding-bottom: 36px; }
 .docs-band h1 { font-size: 40px; letter-spacing: -.02em; }
 .docs { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; padding-top: 48px; padding-bottom: 96px; }
 .side { position: sticky; top: 24px; align-self: start; font-size: 15px; }
@@ -130,7 +130,7 @@ article h3 { font-size: 18px; margin: 28px 0 6px; }
 .steps h2 { position: relative; font-size: 28px; margin-bottom: 14px; line-height: 36px; }
 .step { position: absolute; right: calc(100% + 16px); top: 0; color: var(--step); }
 .steps section:last-child { padding-bottom: 16px; }
-.done { margin: 0 0 48px; padding: 0 0 40px; border-bottom: 1px solid var(--line); color: var(--ink); font-weight: 600; text-wrap: balance; }
+.done { margin: 0 0 48px; padding: 0 0 40px; border-bottom: 1px solid var(--line); color: var(--ink); font-weight: 600; }
 .opt { font-size: 14px; font-weight: 600; color: var(--ink2); margin-left: 8px; letter-spacing: 0; }
 
 code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 2px 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
@@ -145,7 +145,7 @@ pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 .note { background: var(--warn-tint); border-radius: 12px; padding: 16px 20px; margin: 18px 0; font-size: 16px; line-height: 25px; }
 .note b:first-child { color: var(--warn); }
 .shot { margin: 20px 0; max-width: 448px; }
-.shot img { border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
+.shot img { border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--line); }
 /* Term lists use the same bold label as the h3s elsewhere in the guide, with no rules. */
 dl.faq dt { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 24px; }
 dl.faq dt:first-child { margin-top: 0; }
@@ -158,7 +158,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .hero h1 { font-size: 52px; max-width: 640px; }
   .hero-side { max-width: 600px; }
   .tour { column-gap: 40px; }
-  .setup { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .term-col { flex-direction: column; align-items: stretch; gap: 24px; }
 }
 @media (max-width: 760px) {
   body { font-size: 16px; line-height: 26px; }
@@ -175,13 +175,18 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .section { padding: 64px 0; }
   .section h2 { font-size: 30px; }
   /* One column on phones. Bills comes first, since the hero just showed the Budgets card. */
-  .tour { grid-template-columns: minmax(0, 1fr); gap: 56px; margin-top: 32px; }
+  .tour { grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 32px; }
+  .code.scrolls pre { padding-top: 0; }
   .tour .col { display: contents; }
   .tour .tile + .tile { margin-top: 0; }
   .t2 { order: 1; } .t3 { order: 2; } .t1 { order: 3; } .t4 { order: 4; }
   .tile h3 { font-size: 20px; }
-  .tile picture { margin-top: 18px; }
-  .term { font-size: 12px; line-height: 21px; padding: 16px; }
+  .tile picture { margin-top: 12px; }
+  .term { font-size: 12px; line-height: 21px; padding: 12px 16px; }
+  .reqs { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .code.one { align-items: center; }
+  .code.one .bar { padding: 0 8px 0 0; }
+  .code.one pre { padding: 13px 16px; }
   .docs-band { padding-top: 24px; padding-bottom: 32px; }
   .docs-band h1 { font-size: 32px; }
   .docs { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 0; padding-bottom: 72px; }
@@ -204,7 +209,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   article code.long { white-space: normal; overflow-wrap: anywhere; }
   .code.scrolls { grid-template-columns: minmax(0, 1fr); }
   .code.scrolls .bar { order: 0; display: flex; justify-content: flex-end; padding: 8px 8px 0; }
-  .code.scrolls pre { padding-top: 0; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .code.scrolls:not(.end) pre { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
   .copybtn { height: 36px; }
   .term-col .btn { width: 100%; }
   .shot { max-width: 100%; }

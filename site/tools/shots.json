@@ -1,0 +1,78 @@
+[
+ [
+  "hero-home",
+  "#/",
+  1280,
+  800,
+  {
+   "until": ".c-cash",
+   "below": 22
+  }
+ ],
+ [
+  "c-budgets",
+  "#/budgets",
+  480,
+  900,
+  {
+   "card": "Budgets",
+   "pad": 0,
+   "js": "(() => { const c=[...document.querySelectorAll('.card h2')].find(h=>h.textContent.trim()==='Budgets').closest('.card'); [...c.querySelectorAll('.erow')].slice(3).forEach(e=>e.remove()); return 1; })()"
+  }
+ ],
+ [
+  "c-activity",
+  "#/transactions",
+  480,
+  900,
+  {
+   "sel": "table.tx",
+   "pad": 0,
+   "union": ".picker",
+   "js": "(async () => { [...document.querySelectorAll('table.tx tr')].slice(9).forEach(r=>r.remove()); const b=document.querySelector('table.tx .catbtn'); b.click(); await new Promise(r=>setTimeout(r,300)); const cb=document.querySelector('.picker #pall'); if (cb) cb.checked=true; document.activeElement && document.activeElement.blur(); return 1; })()"
+  }
+ ],
+ [
+  "c-conn",
+  "#/accounts",
+  480,
+  900,
+  {
+   "card": "Connections",
+   "pad": 0,
+   "js": "(() => { const c=[...document.querySelectorAll('.card h2')].find(h=>h.textContent.trim().startsWith('Connections')).closest('.card'); [...c.querySelectorAll('*')].filter(e=>e.children.length===0 && /Each link uses/.test(e.textContent)).forEach(e=>e.remove()); c.querySelectorAll('.err').forEach(e=>e.remove()); return 1; })()"
+  }
+ ],
+ [
+  "c-coming",
+  "#/",
+  480,
+  900,
+  {
+   "card": "Coming up",
+   "pad": 0,
+   "js": "(() => { const c=[...document.querySelectorAll('.card h2')].find(h=>h.textContent.trim().startsWith('Coming up')).closest('.card'); [...c.querySelectorAll('.row')].slice(4).forEach(e=>e.remove()); return 1; })()"
+  }
+ ],
+ [
+  "c-conn-one",
+  "#/accounts",
+  480,
+  900,
+  {
+   "card": "Connections",
+   "pad": 0,
+   "js": "(() => { const c=[...document.querySelectorAll('.card h2')].find(h=>h.textContent.trim().startsWith('Connections')).closest('.card'); const list=c.querySelector('div[style*=\"margin-top\"]'); [...list.children].slice(1).forEach(e=>e.remove()); const a=c.querySelector('h2 .aside'); if (a) a.textContent='1 of 10 used'; [...c.querySelectorAll('*')].filter(e=>e.children.length===0 && /Each link uses/.test(e.textContent)).forEach(e=>e.remove()); return 1; })()"
+  }
+ ],
+ [
+  "hero-phone",
+  "#/",
+  390,
+  844,
+  {
+   "until": ".c-budgets",
+   "below": 12
+  }
+ ]
+]
