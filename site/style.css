@@ -6,23 +6,26 @@
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --shadow: 0 1px 2px rgba(20, 60, 60, .06), 0 8px 24px rgba(20, 90, 90, .08);
   --shot: 0 2px 6px rgba(10, 50, 50, .10), 0 24px 60px rgba(10, 60, 60, .18);
-  --page: #fff; --card: #fff; --body: #3A3F45; --band: var(--teal);
+  --page: #fff; --card: #fff; --body: #3A3F45; --band: #136564;
+  --app: #E4F9F4; --frame: #fff;
+  --lift: 0 0 0 1px rgba(19, 101, 100, .10), 0 2px 6px rgba(4, 30, 29, .08), 0 28px 56px -16px rgba(4, 30, 29, .30), 0 70px 120px -40px rgba(4, 30, 29, .40);
   --warn: #B4234D; --warn-tint: #FFF1F5; --btn-ink: var(--deep); --edge: transparent;
   --term: #1F2A2C; --step: var(--teal);
   --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235E656C' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
   color-scheme: light;
 }
-/* Dark follows the visitor's device, with the app's dark palette (B, Slate, picked 2026-11-13). */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #14181B; --card: #1D2226; --tint: #1A2326; --ink: #ECEFF1; --ink2: #A1AAB1; --body: #C9D0D4; --line: #2D3439;
-    --deep: #4FD1BE; --code: #252B30; --warn: #FF7FA2; --warn-tint: #3B2129;
-    --btn-ink: #006B68; --edge: #2D3439; --term: #0F1416; --step: #4FD1BE;
-    --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23A1AAB1' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
-    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .3);
-    --shot: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .45);
-    color-scheme: dark;
-  }
+/* Dark uses the app's dark palette (B, Slate, picked 2026-11-13). theme.js sets data-theme from the visitor's
+   choice in the header, or from their device until they make one. */
+:root[data-theme="dark"] {
+  --page: #14181B; --card: #1D2226; --tint: #1A2326; --ink: #ECEFF1; --ink2: #A1AAB1; --body: #C9D0D4; --line: #2D3439;
+  --deep: #4FD1BE; --code: #252B30; --warn: #FF7FA2; --warn-tint: #3B2129;
+  --btn-ink: #006B68; --edge: #2D3439; --term: #0F1416; --step: #4FD1BE;
+  --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23A1AAB1' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .3);
+  --shot: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+  --band: #104F4E; --app: #13171A; --frame: #262E33;
+  --lift: 0 0 0 1px rgba(255, 255, 255, .08), 0 2px 6px rgba(0, 0, 0, .3), 0 30px 60px -16px rgba(0, 0, 0, .55), 0 70px 120px -40px rgba(0, 0, 0, .6);
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 24px; }
@@ -53,6 +56,11 @@ p, li, dd { text-wrap: pretty; }
 .top nav a:hover { background: rgba(0, 0, 0, .12); text-decoration: none; }
 .top nav a.on { background: rgba(0, 0, 0, .16); }
 .top nav a.gh { display: inline-flex; align-items: center; gap: 8px; }
+/* Light or dark: shows the mode it switches to. */
+.theme { display: inline-grid; place-items: center; width: 40px; height: 40px; margin-left: 4px; border: 0; border-radius: 8px; background: none; color: #fff; cursor: pointer; }
+.theme:hover { background: rgba(0, 0, 0, .12); }
+.theme .sun, [data-theme="dark"] .theme .moon { display: none; }
+[data-theme="dark"] .theme .sun { display: block; }
 
 /* ---------- buttons ---------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; font-size: 16px; font-weight: 700; border: 2px solid transparent; }
@@ -62,42 +70,36 @@ p, li, dd { text-wrap: pretty; }
 .btn.solid { background: var(--teal); color: #fff; }
 .btn.solid:hover { background: #006B68; }
 
-/* ---------- hero: headline left, what it is and the buttons right ---------- */
-.hero { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: end; padding-top: 56px; }
-.hero h1 { font-size: 60px; line-height: 1.06; letter-spacing: -.02em; font-weight: 700; text-wrap: balance; }
-.hero .lede { font-size: 18px; line-height: 28px; color: #fff; margin: 0; }
-.hero .ctas { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
-.hero .fine { font-size: 15px; line-height: 22px; margin: 14px 0 0; color: #fff; text-wrap: balance; }
-.stage { position: relative; margin-top: 56px; }
-/* The page tint starts level with the screenshot's own band edge, so there is one seam, not two. */
-.stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 41.5%; background: var(--tint); z-index: 0; }
-.stage .wrap { position: relative; z-index: 1; }
-.browser { border-radius: 16px; overflow: hidden; box-shadow: var(--shot); background: var(--card); outline: 1px solid rgba(255, 255, 255, .22); outline-offset: -1px; }
-
-/* ---------- sections ---------- */
-.tint { background: var(--tint); }
-.section { padding: 96px 0; }
-.section h2 { font-size: 40px; font-weight: 700; letter-spacing: -.02em; }
-
-/* What tally shows: real panels from the app in two columns that stack on their own (judge, round 3). */
-.tour { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 64px; margin-top: 48px; align-items: start; }
-.tour .tile + .tile { margin-top: 72px; }
-.tile h3 { font-size: 21px; line-height: 28px; text-wrap: balance; }
-.tile picture { margin-top: 16px; }
-.tile img { width: 100%; border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
-
-/* What you need: four items two by two, then the commands and the guide button in one row. */
-.setup h2 { margin-bottom: 32px; }
-.reqs { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 72px; }
-.reqs dt { font-weight: 700; }
-.reqs dd { margin: 4px 0 0; color: var(--ink2); font-size: 16px; line-height: 25px; max-width: 46ch; }
-.term-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 72px; align-items: end; margin-top: 48px; }
-.term-col .term { min-width: 0; margin: 0; }
-.term-col .btn { justify-self: start; }
-.term:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
-.term { background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); outline: 1px solid var(--edge); }
-.term .c { color: #8FB3AC; }
-.term .out { color: #7FE3CF; }
+/* ---------- homepage (5e, picked 2026-11-13): centered hero in the band, the Home screen lifted off it ---------- */
+.land-hero { text-align: center; padding-top: 56px; padding-bottom: 48px; }
+.land-hero h1 { font-size: clamp(38px, 4.9vw, 68px); line-height: 1.06; letter-spacing: -.03em; font-weight: 700; margin: 0 auto 20px; max-width: 15em; text-wrap: balance; }
+.land-hero .lede { margin: 0 auto 32px; max-width: 31em; font-size: 19.5px; line-height: 30px; color: rgba(255, 255, 255, .86); }
+.land-hero .fine { margin: 20px 0 0; font-size: 15px; color: rgba(255, 255, 255, .86); }
+.ctas { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.btn.pill { height: 52px; padding: 0 26px; border-radius: 999px; font-size: 17px; font-weight: 600; }
+.btn.ghost { border: 1.5px solid rgba(255, 255, 255, .45); color: #fff; }
+.btn.ghost:hover { border-color: #fff; }
+.btn.outline { border: 1.5px solid var(--line); color: var(--ink); }
+.btn.outline:hover { border-color: var(--ink); }
+/* The band ends a third of the way down the screenshot, so its teal never meets the screenshot's own band edge to edge. */
+.lift-band { background: linear-gradient(var(--band) 0 30%, var(--app) 30%); }
+.lift { padding: 10px; border-radius: 28px; background: var(--frame); box-shadow: var(--lift); }
+.lift img { border-radius: 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .lift { animation: rise .7s cubic-bezier(.2, .7, .2, 1) .1s both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(28px); } }
+}
+/* Four app cards two by two, each with one caption naming what the card can't show. */
+.feats { background: var(--app); padding: 120px 0 128px; }
+.feats .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 72px 64px; }
+.feats figcaption { padding: 18px 4px 0; font-size: 18px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; color: var(--ink); }
+/* Setup is one commented block: what you need sits in the comments, in the order you need it. */
+.setup { max-width: 728px; padding-top: 120px; padding-bottom: 112px; }
+.setup h2 { font-size: clamp(30px, 3vw, 40px); letter-spacing: -.03em; line-height: 1.1; font-weight: 700; margin: 0 0 28px; text-align: center; }
+.setup pre { margin: 0 0 36px; padding: 24px 26px; border-radius: 18px; font-size: 15px; line-height: 28px; outline: 1px solid var(--edge); }
+.setup pre .c { color: #8FB3AC; }
+.setup pre:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
+.setup .btn.solid { background: var(--teal); color: #fff; }
 
 footer { border-top: 1px solid var(--line); padding: 32px 0; color: var(--ink2); font-size: 15px; }
 footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -156,6 +158,9 @@ pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 .code.labeled .clabel { grid-row: 1; grid-column: 1; }
 .code.labeled .bar { grid-row: 1; grid-column: 2; }
 .code.labeled pre { grid-row: 2; grid-column: 1 / -1; padding-top: 8px; }
+/* The setup prompt for a coding agent is prose, so it wraps instead of scrolling. */
+.code.prompt pre, .code.prompt.labeled.one pre { white-space: pre-wrap; font: 15px/24px var(--font); }
+.code.prompt pre code { font-family: inherit; }
 /* What a command prints: on the page's own surface, labeled, and with no Copy, so it never reads as something to run. */
 .output { margin: 8px 0 18px; border-left: 2px solid var(--mint); padding: 2px 0 2px 16px; }
 .olabel { display: block; font-size: 13px; font-weight: 600; color: var(--ink2); margin-bottom: 2px; }
@@ -174,40 +179,31 @@ dl.faq dt:first-child { margin-top: 0; }
 dl.faq dd { margin: 6px 0 0; color: var(--body); }
 
 /* ---------- smaller screens ---------- */
-@media (max-width: 980px) {
-  .hero { grid-template-columns: 1fr; gap: 24px; }
-  .hero h1 { font-size: 52px; max-width: 640px; }
-  .hero-side { max-width: 600px; }
-  .tour { column-gap: 40px; }
-  .term-col { grid-template-columns: minmax(0, 1fr); row-gap: 24px; }
+@media (max-width: 860px) {
+  .feats .grid { grid-template-columns: minmax(0, 1fr); gap: 64px; }
+  .feats { padding: 80px 0 88px; }
+  .setup { padding-top: 88px; padding-bottom: 88px; }
 }
 @media (max-width: 760px) {
   body { font-size: 16px; line-height: 26px; }
   .wrap { padding-left: 16px; padding-right: 16px; }
   .top nav { margin-right: -10px; }
-  .top nav a { padding: 8px 10px; }
-  .reqs dd { max-width: none; }
+  .top nav a { padding: 8px 8px; }
+  .theme { width: 36px; margin-left: 0; }
   /* GitHub shows as its icon on phones, so all three links fit. */
   .top nav a.gh span { display: none; }
-  .hero { padding-top: 32px; }
-  .hero h1 { font-size: 40px; line-height: 1.08; }
-  .hero .lede { font-size: 17px; line-height: 27px; }
-  .hero .ctas .btn { flex: 1 1 100%; }
-  .stage { margin-top: 40px; }
-  /* On a phone the hero shows tally's phone layout down to the end of its first card, framed like the desktop shot (judge, round 4). */
-  .section { padding: 64px 0; }
-  .section h2 { font-size: 30px; }
-  /* One column on phones, Bills first. The Budgets tile is left out, since the phone hero ends on that same card. */
-  .stage::after { height: 28%; }
-  .t1 { display: none; }
-  .tour { grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 32px; }
-  .tour .col { display: contents; }
-  .tour .tile + .tile { margin-top: 0; }
-  .t2 { order: 1; } .t3 { order: 2; } .t4 { order: 3; }
-  .tile h3 { font-size: 20px; }
-  .tile picture { margin-top: 12px; }
-  .term { font-size: 12px; line-height: 21px; padding: 12px 16px; }
-  .reqs { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .land-hero { padding-top: 28px; padding-bottom: 36px; }
+  .land-hero h1 { font-size: clamp(32px, 8.8vw, 40px); margin-bottom: 16px; }
+  .land-hero .lede { font-size: 17.5px; line-height: 27px; margin-bottom: 24px; }
+  .land-hero .fine { margin-top: 16px; }
+  .ctas .btn { flex: 1 1 100%; }
+  .lift-band { background: linear-gradient(var(--band) 0 42%, var(--app) 42%); }
+  .lift { padding: 8px; }
+  .lift img { border-radius: 20px; }
+  /* The phone hero ends on the Budgets card, so the Budgets card is left out of the four below it. */
+  .f-budgets { display: none; }
+  .setup h2 { text-align: left; }
+  .setup pre { font-size: 12px; line-height: 22px; padding: 16px; }
   .code.one { align-items: center; }
   .code.one .bar { padding: 0 6px 0 0; }
   .code.one pre { padding: 13px 16px; }
@@ -246,14 +242,18 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   /* A 32px button with a 44px tap area. */
   .copybtn { height: 32px; position: relative; }
   .copybtn::after { content: ""; position: absolute; inset: -6px 0; }
-  .term-col .btn { width: 100%; }
   .shot { max-width: 100%; }
 }
 /* The narrowest phones: smaller brand and tighter links, so the nav stays on one line. */
-@media (max-width: 370px) {
+@media (max-width: 380px) {
   .brand { font-size: 20px; gap: 8px; }
   .brand svg { width: 28px; height: 28px; }
   .top { gap: 8px; }
+  .theme { width: 36px; margin-left: 0; }
   .top nav { margin-right: -5px; }
   .top nav a { padding: 8px 5px; font-size: 14px; }
+}
+/* Under 350px the Features link goes, so the brand, Install guide, GitHub, and the light/dark switch fit. */
+@media (max-width: 350px) {
+  .top nav a[href$="#features"] { display: none; }
 }

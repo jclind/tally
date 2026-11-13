@@ -78,19 +78,31 @@ A design council (Opus and Codex reviewing, Muse for four rounds, Fable judging 
 2026-11-13 over 9 rounds. What it settled:
 
 - Screenshots are whole app cards cropped near their real size, never full pages shrunk down, and never faded at an
-  edge. Each heading over a panel is one line holding the one fact the panel can't show, and the picture has to show
-  what the heading claims (the Activity panel has the category picker open; Connections has a bank that needs a new
+  edge. Each card's caption is one line holding the one fact the card can't show, and the picture has to show what
+  the caption claims (the Activity panel has the category picker open; Connections has a bank that needs a new
   sign-in). No panel appears twice on a page.
 - The made-up data the crops assume: one category over budget (Groceries, $25 over) and every other spending category
   budgeted, so Home's two totals match. `shoot.mjs`'s header says how to set up the Connections error state.
 - Each fact appears once per page. Copy that repeats a heading, a panel, or another section gets cut.
 - Code on phones keeps its real line breaks and scrolls sideways with an edge fade; only long inline addresses wrap.
-- Judge's calls, kept unless the owner says otherwise: the hero is the headline left with the description, one button
-  ("Read the install guide"), and fine print right; no address bar over the hero shot, and the phone hero has no
-  device frame; the four panels sit in two columns that stack on their own (Budgets and Connections, Bills and
-  Activity), with Budgets left out on phones because the phone hero ends on that card; guide steps use plain teal
-  numerals hung in the gutter with one left edge for every heading; the guide's only boxes are pink warnings;
-  Backups comes right after Keep it running.
+- Judge's calls still standing: no address bar over the hero shot; Budgets is left out of the panels on phones because
+  the phone hero ends on that card; guide steps use plain teal numerals hung in the gutter with one left edge for every
+  heading; the guide's only boxes are pink warnings; Backups comes right after Keep it running.
+- The homepage is the owner's pick from a design-variants run on 2026-11-13 (design 5e), which replaced the judge's
+  hero and panel layout. The headline names open source: "Like Mint, but open source and on your computer", and the
+  description opens with "A budgeting app" so a reader who never used Mint knows what it is. The hero is centered in
+  the band with "Read the install guide" and a "jclind/tally" button, then one fine-print line. The Home screenshot
+  sits in a frame with a deep shadow, lifted off the band, and the band ends a third of the way down it, so the band's
+  teal never meets the screenshot's own band edge to edge. The four panels are a two by two grid on the app's mint,
+  each with one short caption under it. Setup is one code block whose comments carry what you need, with no
+  requirements list. Everything uses the app's type (Avenir Next, Nunito Sans as the fallback); the owner turned down
+  serif and display faces.
+- The band is a deep teal (#136564, #104F4E in dark) on both pages. A light/dark button in the header overrides the
+  device; `site/theme.js` sets `data-theme` on the root before the page draws, and the stylesheet's dark tokens hang
+  off `[data-theme="dark"]`, never off a `prefers-color-scheme` query. The script also points each screenshot's
+  dark-twin `<source>` at the mode in use, so a new screenshot needs only the usual `<picture>` markup.
+- The guide opens, under Before you start, with a copyable prompt for a coding agent. It keeps the Plaid keys out of
+  the chat and asks before anything that runs at login; keep both if the prompt changes.
 
 A second council on 2026-11-13 (4 rounds, Opus and Codex, Muse for one) measured the install guide against ten
 published install guides (Obsidian, Homebrew, Ghost, Next.js, Tailwind, Resend, Sentry, GitBook, Immich, Actual

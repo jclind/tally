@@ -3,19 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tally: a money app you run on your own computer</title>
-<meta name="description" content="tally is a free, open-source money app you run yourself. Budgets, spending, bills, and net worth from your real accounts, kept in a file on your machine.">
-<meta property="og:title" content="tally: a money app you run on your own computer">
-<meta property="og:description" content="tally shows budgets, spending, bills, and net worth from your bank accounts, and stores them in a SQLite file on your computer.">
+<title>tally: like Mint, but open source and on your computer</title>
+<meta name="description" content="tally is a free, open-source budgeting app you run on your own computer. Spending, bills, and net worth from your real accounts, kept in one file on your machine.">
+<meta property="og:title" content="tally: like Mint, but open source and on your computer">
+<meta property="og:description" content="A budgeting app for your spending, bills, and net worth. Link your banks with your own Plaid keys, and tally keeps it all in one file on your machine.">
 <meta property="og:image" content="https://tally.jesselind.com/img/hero-home.png">
-<meta name="theme-color" content="#1B8382">
+<meta name="theme-color" content="#136564">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2300CDA9'/%3E%3Cg stroke='%23fff' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M10 9v14M14 9v14M18 9v14M22 9v14'/%3E%3Cpath d='M7.5 20.5 24.5 11.5'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
 </head>
-<body>
+<body class="land">
 <a class="skip" href="#main">Skip to content</a>
 <div class="band">
   <header class="wrap top">
@@ -24,100 +25,71 @@
       <a href="#features">Features</a>
       <a href="/docs/">Install guide</a>
       <a class="gh" href="https://github.com/jclind/tally" aria-label="tally on GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+    <button class="theme" type="button" aria-label="Use dark mode"><svg class="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg><svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
     </nav>
   </header>
 </div>
 
 <main id="main">
 <div class="band">
-
-  <section class="wrap hero">
-    <h1>A money app that runs on your own computer</h1>
-    <div class="hero-side">
-      <p class="lede">tally shows your spending, budgets, bills, and net worth, using your own Plaid keys. Everything stays in a SQLite file on your computer, and there's no tally account.</p>
-      <div class="ctas">
-        <a class="btn light" href="/docs/">Read the install guide</a>
-      </div>
-      <p class="fine">Free and open source.<br>Mac or&nbsp;Linux, with US&nbsp;banks.</p>
+  <section class="wrap land-hero">
+    <h1>Like Mint, but open source and on your computer</h1>
+    <p class="lede">A budgeting app for your spending, bills, and net worth. Link your banks with your own Plaid keys, and tally keeps it all in one file on your machine.</p>
+    <div class="ctas">
+      <a class="btn pill light" href="/docs/">Read the install guide</a>
+      <a class="btn pill ghost" href="https://github.com/jclind/tally"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>jclind/tally</a>
     </div>
+    <p class="fine">MIT licensed. Mac or Linux. US banks.</p>
   </section>
+</div>
 
-  <div class="stage">
-    <div class="wrap">
-      <div class="browser">
-        <picture>
-          <source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/hero-phone-dark.png" width="780" height="904">
-          <source media="(max-width: 760px)" srcset="/img/hero-phone.png" width="780" height="904">
-          <source media="(prefers-color-scheme: dark)" srcset="/img/hero-home-dark.png" width="2560" height="1388">
-          <img src="/img/hero-home.png" width="2560" height="1388" alt="tally's Home page: this month's spending against the monthly budget, with what's left and the days to go.">
-        </picture>
-      </div>
-    </div>
+<div class="lift-band">
+  <div class="wrap">
+    <figure class="lift">
+      <picture>
+        <source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/hero-phone-dark.png" width="780" height="904">
+        <source media="(max-width: 760px)" srcset="/img/hero-phone.png" width="780" height="904">
+        <source media="(prefers-color-scheme: dark)" srcset="/img/hero-home-dark.png" width="2560" height="1388">
+        <img src="/img/hero-home.png" width="2560" height="1388" fetchpriority="high" alt="tally's Home page: $1,774 spent of a $2,530 November budget, with cash flow, spending by category, and a $32,835 net worth.">
+      </picture>
+    </figure>
   </div>
 </div>
 
-<section class="tint section" id="features">
-  <div class="wrap">
-    <h2>What tally shows</h2>
-    <div class="tour">
-      <div class="col">
-        <figure class="tile t1">
-          <h3>Fill budgets from your last three months.</h3>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="768" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; Bills and utilities and Gas are under theirs." loading="lazy"></picture>
-        </figure>
-        <figure class="tile t4">
-          <h3>Reconnect a bank without a new connection.</h3>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1078" alt="Connections: Harbor Credit Union needs a new sign-in and shows a Fix connection button; the other three banks synced." loading="lazy"></picture>
-        </figure>
-      </div>
-      <div class="col">
-        <figure class="tile t2">
-          <h3>Plaid finds your recurring bills.</h3>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-coming-dark.png"><img src="/img/c-coming.png" width="896" height="766" alt="Coming up: 9 bills at $1,543 a month, with Verizon due Nov 14, Planet Fitness Nov 17, Comcast Nov 18, and Geico Nov 22." loading="lazy"></picture>
-        </figure>
-        <figure class="tile t3">
-          <h3>Recategorize a charge or a merchant's charges.</h3>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-activity-dark.png"><img src="/img/c-activity.png" width="896" height="1078" alt="Activity: the category picker open on a Blue Bottle Coffee charge, with Every Blue Bottle Coffee transaction ticked." loading="lazy"></picture>
-        </figure>
-      </div>
-    </div>
+<section class="feats" id="features" aria-label="What tally does">
+  <div class="wrap grid">
+    <figure class="f-budgets"><picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="768" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; Bills and utilities and Gas are under theirs." loading="lazy"></picture>
+      <figcaption>Budgets, filled in from your last three months</figcaption></figure>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-coming-dark.png"><img src="/img/c-coming.png" width="896" height="766" alt="Coming up: 9 bills at $1,543 a month, with Verizon due Nov 14, Planet Fitness Nov 17, Comcast Nov 18, and Geico Nov 22." loading="lazy"></picture>
+      <figcaption>Bills, before they're due</figcaption></figure>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-activity-dark.png"><img src="/img/c-activity.png" width="896" height="1078" alt="Activity: the category picker open on a Blue Bottle Coffee charge, with Every Blue Bottle Coffee transaction ticked." loading="lazy"></picture>
+      <figcaption>One category change for every charge from a merchant</figcaption></figure>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1078" alt="Connections: Harbor Credit Union needs a new sign-in and shows a Fix connection button; the other three banks synced." loading="lazy"></picture>
+      <figcaption>Reconnect a bank without using up a connection</figcaption></figure>
   </div>
 </section>
 
-<section class="section" id="setup">
-  <div class="wrap setup">
-    <h2>What you need</h2>
-    <dl class="reqs">
-      <div><dt>A Mac or Linux computer</dt>
-      <dd>It can sleep. tally catches up when you open it.</dd></div>
-      <div><dt>Node 24 or newer, and git</dt>
-      <dd>tally has no npm dependencies.</dd></div>
-      <div><dt>A free Plaid account</dt>
-      <dd>The free Trial plan covers 10 bank connections.</dd></div>
-      <div><dt>Tailscale, if you want it on your phone</dt>
-      <dd>tally has no login, so it stays off the internet.</dd></div>
-    </dl>
-    <div class="term-col">
-      <pre class="term"><code>git clone https://github.com/jclind/tally.git
+<section class="wrap setup" id="setup">
+  <h2>Setup</h2>
+<pre aria-label="Setup commands"><code><span class="c"># Mac or Linux, with Node 24 and git</span>
+git clone https://github.com/jclind/tally.git
 cd tally
-<span class="c"># add your Plaid keys, see the guide</span>
+<span class="c"># add the keys from your free Plaid account</span>
 npm start
-<span class="out">tally on http://localhost:3400 (keys found)</span></code></pre>
-      <a class="btn solid" href="/docs/">Read the install guide</a>
-    </div>
-  </div>
+<span class="c"># open localhost:3400</span></code></pre>
+  <div class="ctas"><a class="btn pill solid" href="/docs/">Read the install guide</a><a class="btn pill outline" href="https://github.com/jclind/tally">Read the code</a></div>
 </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>tally is MIT licensed. Made by <a href="https://jesselind.com">Jesse Lind</a>. Not affiliated with Plaid.</span>
-    <span class="flinks"><a href="/docs/">Install guide</a><a href="https://github.com/jclind/tally">GitHub</a></span>
+    <span>Free and MIT licensed. Made by <a href="https://jesselind.com">Jesse Lind</a>. Not affiliated with Plaid or Intuit.</span>
+    <span>Screens shown on made-up data.</span>
   </div>
 </footer>
 <script>
-  // The terminal takes keyboard focus only when a line is too wide for it.
-  const term = document.querySelector(".term");
+  // The setup block takes keyboard focus only when a line is too wide for it.
+  const term = document.querySelector(".setup pre");
   const fit = () => { if (term.scrollWidth > term.clientWidth + 1) term.tabIndex = 0; else term.removeAttribute("tabindex"); };
   addEventListener("load", fit); addEventListener("resize", fit);
 </script>
