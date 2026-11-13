@@ -227,7 +227,8 @@ h2 + .erow { margin-top: 6px; }
   appearance: none; -webkit-appearance: none; padding-right: 40px;
   background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23006B68' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 16px; }
 .filters select:hover { background-color: #F4FBF9; }
-table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
+/* 16px body text, the research folder's type ramp (body 16/24): Activity is the longest reading surface. */
+table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
 .tx th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 13px; padding: 4px 10px 10px; }
 .tx tr.day th { font-size: 14px; font-weight: 700; color: var(--ink); padding: 22px 10px 8px; border-top: 0; }
 .tx .nm { font-weight: 500; }
