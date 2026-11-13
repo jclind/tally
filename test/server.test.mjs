@@ -96,6 +96,56 @@ test("a dropped connection is retried once", async () => {
   assert.deepEqual(results[0].errors, []);
 });
 
+const status = () => fetch(base + "/api/status").then((r) => r.json());
+const withReplies = async (over, fn) => {
+  const saved = {}; for (const k of Object.keys(over)) { saved[k] = plaidReplies[k]; plaidReplies[k] = over[k]; }
+  try { return await fn(); } finally { Object.assign(plaidReplies, saved); }
+};
+
+test("a sync that Plaid interrupts mid-paging restarts from its first cursor and counts each charge once", async () => {
+  const start = (await status()).items[0];
+  const before = start.tx.n;
+  let mutated = 0;
+  const seen = [];
+  await withReplies({
+    "/transactions/sync": (b) => {
+      seen.push(b.cursor);
+      if (b.cursor === "c3") return { added: [tx("m1", 50)], modified: [], removed: [], next_cursor: "c3a", has_more: true };
+      if (b.cursor === "c3a" && mutated++ === 0) return { status: 400, error_code: "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION", error_message: "changed" };
+      return { added: [tx("m2", 5)], modified: [], removed: [], next_cursor: "c4", has_more: false };
+    },
+  }, async () => {
+    const { results } = await post("/api/sync", {});
+    assert.deepEqual(results[0].errors, []);
+  });
+  assert.deepEqual(seen, ["c3", "c3a", "c3", "c3a"], "the retry starts again from c3");
+  assert.equal((await status()).items[0].tx.n, before + 2, "m1 and m2, each once");
+});
+
+test("a category set on a pending charge follows it when it posts", async () => {
+  const pend = { ...tx("pend1", 42), pending: true };
+  await withReplies({ "/transactions/sync": () => ({ added: [pend], modified: [], removed: [], next_cursor: "c5", has_more: false }) }, () => post("/api/sync", {}));
+  assert.deepEqual(await post("/api/category", { transaction_id: "pend1", category: "TRAVEL" }), { ok: true });
+  const posted = { ...tx("post1", 42), pending_transaction_id: "pend1" };
+  await withReplies({ "/transactions/sync": () => ({ added: [posted], modified: [], removed: [{ transaction_id: "pend1" }], next_cursor: "c6", has_more: false }) }, () => post("/api/sync", {}));
+  const rows = (await fetch(base + "/api/transactions?q=post1").then((r) => r.json())).rows;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].cat, "TRAVEL");
+});
+
+test("an account Plaid stops listing is closed: kept, but out of net worth", async () => {
+  const acct2 = { ...acct, account_id: "acc2", name: "Old Savings", balances: { current: 2000 } };
+  const quiet = () => ({ added: [], modified: [], removed: [], next_cursor: "c7", has_more: false });
+  await withReplies({ "/accounts/get": () => ({ accounts: [acct, acct2] }), "/transactions/sync": quiet }, () => post("/api/sync", {}));
+  const nw1 = (await fetch(base + "/api/summary").then((r) => r.json())).netWorth.cash;
+  await withReplies({ "/transactions/sync": quiet }, () => post("/api/sync", {}));
+  const s = await status();
+  const old = s.items[0].accounts.find((a) => a.account_id === "acc2");
+  assert.ok(old.closed_at, "marked closed");
+  const nw2 = (await fetch(base + "/api/summary").then((r) => r.json())).netWorth.cash;
+  assert.equal(nw1 - nw2, 2000);
+});
+
 test("POST from another origin is refused", async () => {
   const r = await fetch(base + "/api/sync", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: "{}" });
   assert.equal(r.status, 403);

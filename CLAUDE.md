@@ -5,6 +5,10 @@ SQLite at `data/tally.db` on the server. Pages: Overview, Transactions, Spending
 
 ## Rules
 
+- The owner, 2026-11-12: "unless it is something risky or very much needs my opinion, I will hand trust your judgement
+  on fixing things." Fix bugs and review findings without asking, test them, and ship them. Ask first only for
+  something risky (anything that could burn a Plaid slot, lose `data/`, touch keys, or change the tailnet setup) or a
+  real product choice.
 - Plaid's free Trial plan allows 10 Items for life. Removing an Item does not free its slot. A broken
   connection is fixed with update mode (a link token made from the existing access token), never by
   linking the institution again. Never call `/item/remove` without the owner's OK.
@@ -29,6 +33,12 @@ All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's 
 - A recurring stream is a transfer, not a bill, when its name says payment, pmt, transfer, xfer, or autopay.
   Plaid's category alone isn't trusted there (it calls Railway's hosting bill a transfer).
 - Plaid sends some merchant names as empty strings. Treat `''` as missing (`nullif`).
+- Nothing dated after today counts yet: every month figure takes `upTo` (today), so "so far" numbers agree.
+- An account Plaid's `/accounts/get` stops listing is closed (`closed_at`): kept for its transactions, left out of
+  net worth and balances. It reopens if Plaid lists it again.
+- A category set on a pending charge moves to the posted charge (`pending_transaction_id`).
+- `/transactions/sync` pages are collected first and written in one transaction; the cursor moves only when every
+  page is in. On `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION` the sync restarts from its first cursor (3 tries).
 - Net worth history is the `balances` table: one row per account per day, written on every sync. A sync that
   fails keeps the account's last known balance, so the line doesn't dip. History starts 2026-11-12.
 - `?month=YYYY-MM` on the summary, spending, and budgets endpoints shows that month whole. The current month

@@ -18,8 +18,9 @@ function webhook() {
   return m ? m[1].trim().replace(/^["']|["']$/g, "") : null;
 }
 
-async function post(path, body) {
-  const r = await fetch(BASE + path, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify(body ?? {}) });
+// The daily sync walks every bank one after another, so it gets 15 minutes; Discord gets 30 seconds a post.
+async function post(path, body, ms = 15 * 60_000) {
+  const r = await fetch(BASE + path, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify(body ?? {}), signal: AbortSignal.timeout(ms) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   return j;
@@ -36,9 +37,22 @@ log(`${result.alerts.length} new alerts, ${result.errors.length} sync errors`);
 if (!result.alerts.length) process.exit(0);
 
 const hook = webhook();
-const content = [...result.alerts.map((a) => `- ${a.text}`), PAGE ? `<${PAGE}>` : ""].filter(Boolean).join("\n").slice(0, 1900);
-if (!hook) { log("no webhook, alerts not posted:\n" + content); process.exit(0); }
-const r = await fetch(hook, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "tally", content, allowed_mentions: { parse: [] } }) });
-if (!r.ok) { log(`discord post failed: HTTP ${r.status}`); process.exit(1); }
-if (!result.down) await post("/api/alerts-sent", { keys: result.alerts.map((a) => a.key) });
-log("posted to discord");
+// Discord takes 2,000 characters a message. Alerts go out in as many messages as they need, and each message's
+// alerts are marked sent only after Discord accepts that message, so nothing is marked sent that wasn't posted.
+const LIMIT = 1900;
+const chunks = [];
+for (const a of result.alerts) {
+  const line = `- ${a.text}`.slice(0, LIMIT - 100);
+  const last = chunks.at(-1);
+  if (last && last.text.length + line.length + 1 <= LIMIT - 100) { last.text += "\n" + line; last.keys.push(a.key); }
+  else chunks.push({ text: line, keys: [a.key] });
+}
+if (PAGE) chunks.at(-1).text += `\n<${PAGE}>`;
+if (!hook) { log("no webhook, alerts not posted:\n" + chunks.map((c) => c.text).join("\n")); process.exit(0); }
+for (const c of chunks) {
+  const r = await fetch(hook, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(30_000),
+    body: JSON.stringify({ username: "tally", content: c.text, allowed_mentions: { parse: [] } }) }).catch((e) => ({ ok: false, status: e.name }));
+  if (!r.ok) { log(`discord post failed: ${r.status}`); process.exit(1); }
+  if (!result.down) await post("/api/alerts-sent", { keys: c.keys }, 30_000);
+}
+log(`posted to discord in ${chunks.length} message${chunks.length === 1 ? "" : "s"}`);

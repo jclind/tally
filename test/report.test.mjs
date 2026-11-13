@@ -165,3 +165,19 @@ test("a merchant rule is flagged, so the page can offer to undo it", () => {
   assert.equal(row.ruled, 1);
   assert.equal(row.overridden, 0);
 });
+
+test("a charge dated after today doesn't count yet anywhere in the month", () => {
+  const db = fixture();
+  const s = r.summary(db, "2026-11-04");
+  assert.equal(s.spent, 100);
+  assert.equal(s.categories.reduce((t, c) => t + c.spent, 0), 100, "categories stop at today too");
+  assert.equal(s.income, 0, "the Nov 6 paycheck hasn't happened yet");
+});
+
+test("a large charge that arrives days late still alerts, and a $0 budget can be over", () => {
+  const db = fixture();
+  r.setBudget(db, { category: "GAS", monthly: 0 });
+  const a = r.dailyAlerts(db, { today: "2026-11-14", bigCharge: 200 });
+  assert.ok(a.some((x) => x.key === "big:t7"), "the Nov 8 charge, six days back");
+  assert.ok(a.some((x) => x.key === "budget:GAS:2026-11"));
+});

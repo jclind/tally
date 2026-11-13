@@ -226,7 +226,7 @@ function yourBudgetsCard(s) {
 }
 const GROUPS = [["depository", "Cash"], ["credit", "Credit cards"], ["investment", "Investments"], ["loan", "Loans"]];
 function accountsCard(status) {
-  const accts = status.items.flatMap((it) => it.accounts.map((a) => ({ ...a, inst: it.institution_name })));
+  const accts = status.items.flatMap((it) => it.accounts.filter((a) => !a.closed_at).map((a) => ({ ...a, inst: it.institution_name })));
   return `<div class="card"><h2>Accounts <a href="#/accounts">Manage</a></h2><div style="margin-top:8px">${GROUPS.filter(([t]) => accts.some((a) => a.type === t)).map(([t, name]) => {
     const list = accts.filter((a) => a.type === t), total = list.reduce((x, a) => x + (a.current ?? 0), 0);
     // Accounts at $5 or less (empty savings buckets, paid-off cards) stay on the Accounts page.
@@ -479,9 +479,9 @@ PAGES.accounts = async () => {
   $hero.innerHTML = `<div class="k">Net worth</div><div class="big num">${money(nw.total, true)}</div>
     <p><b class="num">${money(nw.cash)}</b> cash, <b class="num">${money(nw.investments)}</b> invested, <b class="num">${money(nw.owed)}</b> owed on cards.</p>`;
   const groups = GROUPS.filter(([t]) => accounts.some((a) => a.type === t)).map(([t, name]) => {
-    const list = accounts.filter((a) => a.type === t), total = list.reduce((x, a) => x + (a.current ?? 0), 0);
+    const list = accounts.filter((a) => a.type === t), total = list.filter((a) => !a.closed_at).reduce((x, a) => x + (a.current ?? 0), 0);
     return `<div class="card"><h2>${name} <span class="aside num">${t === "credit" || t === "loan" ? "-" : ""}${money(total, true)}</span></h2><div style="margin-top:8px">
-      ${list.map((a) => `<div class="row"><span class="w"><b>${esc(short(a.name))}</b><small>${esc(a.inst)}${a.mask ? `, ending ${esc(a.mask)}` : ""}${t === "credit" && a.credit_limit ? `, ${money(a.credit_limit)} limit` : ""}</small></span><span class="amt num">${money(a.current, true)}</span></div>`).join("")}</div></div>`;
+      ${list.map((a) => `<div class="row${a.closed_at ? " closed" : ""}"><span class="w"><b>${esc(short(a.name))}${a.closed_at ? '<span class="tag">closed</span>' : ""}</b><small>${esc(a.inst)}${a.mask ? `, ending ${esc(a.mask)}` : ""}${a.closed_at ? `, gone from ${esc(a.inst)} since ${shortDate(a.closed_at.slice(0, 10))}` : t === "credit" && a.credit_limit ? `, ${money(a.credit_limit)} limit` : ""}</small></span><span class="amt num">${a.closed_at ? "" : money(a.current, true)}</span></div>`).join("")}</div></div>`;
   }).join("");
   $page.innerHTML = `<div id="msg"></div>
     ${!s.keys ? `<div class="notice bad">No Plaid keys. Put PLAID_CLIENT_ID and PLAID_SECRET in ${esc(s.keysPath)}.</div>` : ""}

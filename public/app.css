@@ -156,6 +156,7 @@ h2 + .erow { margin-top: 6px; }
 .row .amt small { display: block; font-weight: 400; font-size: 13px; }
 .cav { width: 36px; height: 36px; border-radius: 50%; display: grid; place-content: center; flex: none; }
 .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-content: center; font-weight: 700; color: #fff; flex: none; font-size: 15px; }
+.row.closed .w b { color: var(--ink2); }
 .tag { font-size: 12px; font-weight: 600; color: var(--ink2); background: var(--track); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
 
 /* ---------- side cards ---------- */
