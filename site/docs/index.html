@@ -78,7 +78,6 @@
     <div class="steps">
     <section id="plaid">
       <h2><span class="step">1</span>Get Plaid keys</h2>
-      <p>tally uses your own Plaid keys, so your data goes from Plaid straight to your computer.</p>
       <ol>
         <li><a href="https://dashboard.plaid.com/signup">Create a Plaid account</a> and verify your email.</li>
         <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. Plaid offers it to teams created on or after April 15, 2026; if yours is older, check the plans on your dashboard home page.</li>
@@ -137,7 +136,6 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
 
     <section id="backup">
       <h2>Backups and updates</h2>
-      <h3>What to back up</h3>
       <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs. The snapshot also holds your Plaid access tokens; without it you'd link every bank again, and each relink uses a slot.</p>
       <h3>Update tally</h3>
       <p>Pull the new code, then restart tally. On a Mac:</p>
@@ -157,7 +155,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
         </li>
         <li>Tell tally its new address. On a Mac:
           <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
-          On Linux, set this when you start tally:
+          On Linux, add this environment variable to the service you set up, then restart it:
           <div class="code"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
         </li>
       </ol>
@@ -203,7 +201,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
         <dt>The log says "keys missing"</dt>
         <dd>tally reads <code>~/.config/tally/plaid.env</code>. Check that the file exists and has both <code>PLAID_CLIENT_ID</code> and <code>PLAID_SECRET</code>.</dd>
         <dt>A bank shows an error on the Accounts page</dt>
-        <dd>Its sign-in expired or changed. Click <b>Fix connection</b> and sign in again. This reuses the same connection and doesn't cost a slot.</dd>
+        <dd>Its sign-in expired or changed. Click <b>Fix connection</b> and sign in again.</dd>
         <dt>A bank won't connect</dt>
         <dd>Some large banks sign you in on their own site (OAuth). Check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first.</dd>
         <dt>A bank has only a few months of history</dt>
@@ -241,10 +239,19 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     box.prepend(bar);
   }
   // A command too wide for the box moves Copy above it and fades at the right edge, so it reads as scrollable.
-  const markScroll = () => { for (const box of document.querySelectorAll(".code")) { const pre = box.querySelector("pre"); box.classList.remove("scrolls"); if (pre.scrollWidth > pre.clientWidth + 1) box.classList.add("scrolls"); } };
+  // Measured twice: moving Copy above the command widens the box, and the command may then fit.
+  const atEnd = (pre) => pre.parentElement.classList.toggle("end", pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2);
+  const markScroll = () => {
+    for (const box of document.querySelectorAll(".code")) {
+      const pre = box.querySelector("pre");
+      box.classList.remove("scrolls");
+      if (pre.scrollWidth > pre.clientWidth + 1) { box.classList.add("scrolls"); if (pre.scrollWidth <= pre.clientWidth + 1) box.classList.remove("scrolls"); }
+      atEnd(pre);
+    }
+  };
   addEventListener("load", markScroll); addEventListener("resize", markScroll);
   // The fade goes once the command is scrolled to its end.
-  for (const pre of document.querySelectorAll(".code pre")) pre.addEventListener("scroll", () => pre.parentElement.classList.toggle("end", pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2), { passive: true });
+  for (const pre of document.querySelectorAll(".code pre")) pre.addEventListener("scroll", () => atEnd(pre), { passive: true });
   const jump = document.querySelector(".jump");
   jump.addEventListener("change", () => { location.hash = jump.value; });
   const links = [...document.querySelectorAll(".side nav a")];

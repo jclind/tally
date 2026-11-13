@@ -29,7 +29,7 @@
    "sel": "table.tx",
    "pad": 0,
    "union": ".picker",
-   "js": "(async () => { [...document.querySelectorAll('table.tx tr')].slice(9).forEach(r=>r.remove()); const b=document.querySelector('table.tx .catbtn'); b.click(); await new Promise(r=>setTimeout(r,300)); const cb=document.querySelector('.picker #pall'); if (cb) cb.checked=true; document.activeElement && document.activeElement.blur(); return 1; })()"
+   "js": "(async () => { [...document.querySelectorAll('table.tx tr')].slice(8).forEach(r=>r.remove()); const b=document.querySelector('table.tx .catbtn'); b.click(); await new Promise(r=>setTimeout(r,300)); const cb=document.querySelector('.picker #pall'); if (cb) cb.checked=true; document.activeElement && document.activeElement.blur(); return 1; })()"
   }
  ],
  [

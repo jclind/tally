@@ -54,7 +54,7 @@ p, li, dd { text-wrap: pretty; }
 .top nav a.gh { display: inline-flex; align-items: center; gap: 8px; }
 
 /* ---------- buttons ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 10px; font-size: 16px; font-weight: 700; border: 2px solid transparent; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; font-size: 16px; font-weight: 700; border: 2px solid transparent; }
 .btn:hover { text-decoration: none; }
 .btn.light { background: #fff; color: var(--btn-ink); }
 .btn.light:hover { background: #E5FAF5; }
@@ -68,9 +68,10 @@ p, li, dd { text-wrap: pretty; }
 .hero .ctas { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
 .hero .fine { font-size: 15px; line-height: 22px; margin: 14px 0 0; color: #fff; text-wrap: balance; }
 .stage { position: relative; margin-top: 56px; }
-.stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: var(--tint); z-index: 0; }
+/* The page tint starts level with the screenshot's own band edge, so there is one seam, not two. */
+.stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 41.5%; background: var(--tint); z-index: 0; }
 .stage .wrap { position: relative; z-index: 1; }
-.browser { border-radius: 14px; overflow: hidden; box-shadow: var(--shot); background: var(--card); outline: 1px solid rgba(255, 255, 255, .22); outline-offset: -1px; }
+.browser { border-radius: 16px; overflow: hidden; box-shadow: var(--shot); background: var(--card); outline: 1px solid rgba(255, 255, 255, .22); outline-offset: -1px; }
 
 /* ---------- sections ---------- */
 .tint { background: var(--tint); }
@@ -84,15 +85,14 @@ p, li, dd { text-wrap: pretty; }
 .tile picture { margin-top: 16px; }
 .tile img { width: 100%; border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
 
-/* What you need, with the commands beside it. */
 /* What you need: four items two by two, then the commands and the guide button in one row. */
 .setup h2 { margin-bottom: 32px; }
 .reqs { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 72px; }
 .reqs dt { font-weight: 700; }
 .reqs dd { margin: 4px 0 0; color: var(--ink2); font-size: 16px; line-height: 25px; max-width: 46ch; }
-.term-col { display: flex; align-items: center; gap: 40px; margin-top: 48px; }
-.term-col .term { flex: 1; min-width: 0; margin: 0; }
-.term-col .btn { flex: none; }
+.term-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 72px; align-items: center; margin-top: 48px; }
+.term-col .term { min-width: 0; margin: 0; }
+.term-col .btn { justify-self: start; }
 .term { background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); outline: 1px solid var(--edge); }
 .term .c { color: #8FB3AC; }
 .term .out { color: #7FE3CF; }
@@ -140,8 +140,9 @@ article :not(pre) > code { white-space: nowrap; }
 .code .bar { order: 2; padding: 10px 10px 0 8px; }
 pre { margin: 0; background: var(--term); color: #E6F2EF; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); }
 pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
-.copybtn { height: 28px; padding: 0 12px; border-radius: 7px; border: 0; background: rgba(255, 255, 255, .1); color: #fff; font: 600 13px var(--font); cursor: pointer; }
+.copybtn { height: 28px; padding: 0 12px; border-radius: 8px; border: 0; background: rgba(255, 255, 255, .1); color: #fff; font: 600 13px var(--font); cursor: pointer; }
 .copybtn:hover { background: rgba(255, 255, 255, .2); }
+.copybtn:focus-visible { outline-color: #fff; }
 .note { background: var(--warn-tint); border-radius: 12px; padding: 16px 20px; margin: 18px 0; font-size: 16px; line-height: 25px; }
 .note b:first-child { color: var(--warn); }
 .shot { margin: 20px 0; max-width: 448px; }
@@ -158,7 +159,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .hero h1 { font-size: 52px; max-width: 640px; }
   .hero-side { max-width: 600px; }
   .tour { column-gap: 40px; }
-  .term-col { flex-direction: column; align-items: stretch; gap: 24px; }
+  .term-col { grid-template-columns: minmax(0, 1fr); row-gap: 24px; }
 }
 @media (max-width: 760px) {
   body { font-size: 16px; line-height: 26px; }
@@ -174,7 +175,9 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   /* On a phone the hero shows tally's phone layout down to the end of its first card, framed like the desktop shot (judge, round 4). */
   .section { padding: 64px 0; }
   .section h2 { font-size: 30px; }
-  /* One column on phones. Bills comes first, since the hero just showed the Budgets card. */
+  /* One column on phones, Bills first. The Budgets tile is left out, since the phone hero ends on that same card. */
+  .stage::after { height: 28%; }
+  .t1 { display: none; }
   .tour { grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 32px; }
   .code.scrolls pre { padding-top: 0; }
   .tour .col { display: contents; }
@@ -187,13 +190,16 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .code.one { align-items: center; }
   .code.one .bar { padding: 0 8px 0 0; }
   .code.one pre { padding: 13px 16px; }
+  .code.one.scrolls { grid-template-columns: minmax(0, 1fr) auto; }
+  .code.one.scrolls .bar { order: 2; display: block; padding: 0 8px 0 0; }
+  .code.one.scrolls pre { padding: 13px 16px; }
   .docs-band { padding-top: 24px; padding-bottom: 32px; }
   .docs-band h1 { font-size: 32px; }
   .docs { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 0; padding-bottom: 72px; }
   /* The section menu stays at the top of the screen while you read. */
   .side { position: sticky; top: 0; z-index: 5; background: var(--page); padding: 12px 0; margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-bottom: 1px solid var(--line); }
   html { scroll-padding-top: 88px; }
-  .side .jump { display: block; width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 10px; background: var(--card) var(--chev) right 14px center no-repeat; padding: 0 40px 0 14px; font: 600 16px var(--font); color: var(--ink); appearance: none; }
+  .side .jump { display: block; width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 8px; background: var(--card) var(--chev) right 14px center no-repeat; padding: 0 40px 0 14px; font: 600 16px var(--font); color: var(--ink); appearance: none; }
   .side nav { display: none; }
   #before h2, .steps h2 { font-size: 24px; }
   /* On phones the number sits inline before the heading. */
