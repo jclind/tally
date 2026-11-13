@@ -15,7 +15,7 @@
 /* Dark follows the visitor's device, with the app's dark palette (B, Slate, picked 2026-11-13). */
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #14181B; --card: #1D2226; --tint: #191E21; --ink: #ECEFF1; --ink2: #A1AAB1; --body: #C9D0D4; --line: #2D3439;
+    --page: #14181B; --card: #1D2226; --tint: #1A2326; --ink: #ECEFF1; --ink2: #A1AAB1; --body: #C9D0D4; --line: #2D3439;
     --deep: #4FD1BE; --code: #252B30; --warn: #FF7FA2; --warn-tint: #3B2129;
     --btn-ink: #006B68; --edge: #2D3439; --term: #0F1416; --step: #4FD1BE;
     --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23A1AAB1' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -90,7 +90,7 @@ p, li, dd { text-wrap: pretty; }
 .reqs { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 72px; }
 .reqs dt { font-weight: 700; }
 .reqs dd { margin: 4px 0 0; color: var(--ink2); font-size: 16px; line-height: 25px; max-width: 46ch; }
-.term-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 72px; align-items: center; margin-top: 48px; }
+.term-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 72px; align-items: end; margin-top: 48px; }
 .term-col .term { min-width: 0; margin: 0; }
 .term-col .btn { justify-self: start; }
 .term { background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); outline: 1px solid var(--edge); }
@@ -211,7 +211,8 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .code:not(.one) .bar { order: 0; display: flex; justify-content: flex-end; padding: 8px 8px 0; }
   .code:not(.one) pre { padding-top: 0; }
   /* Commands keep their real line breaks and scroll sideways; a wrapped URL reads like a second command. */
-  pre { font-size: 12px; line-height: 21px; padding: 12px 16px 14px; }
+  pre { font-size: 13px; line-height: 22px; padding: 12px 16px 14px; }
+  pre:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
   article code.long { white-space: normal; overflow-wrap: anywhere; }
   .code.scrolls { grid-template-columns: minmax(0, 1fr); }
   .code.scrolls .bar { order: 0; display: flex; justify-content: flex-end; padding: 8px 8px 0; }

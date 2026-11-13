@@ -69,8 +69,7 @@
       <h2>Before you start</h2>
       <ul>
         <li><b>A Mac or Linux computer.</b> Not Windows.</li>
-        <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
-        <li><b>git</b>.</li>
+        <li><b>Node 24 or newer, and git.</b> Check Node with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
         <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
       </ul>
     </section>
@@ -136,7 +135,8 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
 
     <section id="backup">
       <h2>Backups and updates</h2>
-      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs. The snapshot also holds your Plaid access tokens; without it you'd link every bank again, and each relink uses a slot.</p>
+      <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs.</p>
+      <p>The snapshot holds your Plaid access tokens. Without it you'd link every bank again, and each relink uses one of your 10 connections.</p>
       <h3>Update tally</h3>
       <p>Pull the new code, then restart tally. On a Mac:</p>
       <div class="code"><pre><code>git pull
@@ -165,15 +165,10 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
 
     <section id="alerts">
       <h2>Discord alerts<span class="opt">Optional</span></h2>
-      <p>The 7:00 job can post to a Discord channel for:</p>
-      <ul>
-        <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
-        <li>a budget that went over</li>
-        <li>a bank that stopped syncing (once a week until it's fixed)</li>
-      </ul>
+      <p>The 7:00 job can post to a Discord channel when a charge reaches your alert amount ($200 unless you change it in Settings), a budget goes over, or a bank stops syncing (weekly until it's fixed).</p>
       <ol>
         <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
-        <li>In tally, open Settings (the gear at the top), turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
+        <li>In tally, open Settings, turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
       </ol>
     </section>
 
@@ -182,16 +177,15 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h2>Using tally</h2>
       <dl class="faq">
         <dt>Budgets</dt>
-        <dd>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.
-          <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="768" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; the others are under." loading="lazy"></picture></dd>
+        <dd>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</dd>
         <dt>Fix a category</dt>
         <dd>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</dd>
         <dt>Search</dt>
-        <dd>Search finds names, amounts, and categories, and ignores case, spaces, and punctuation. <code>mcdonalds</code> finds McDonald's, <code>6.75</code> finds that exact charge, and <code>groc</code> finds Groceries.</dd>
+        <dd>Search names, amounts, or categories. <code>mcdonalds</code> finds McDonald's, <code>6.75</code> finds that exact charge, and <code>groc</code> finds Groceries.</dd>
         <dt>Look back</dt>
         <dd>The month name at the top of Home, Spending, and Budgets is a menu. Pick a past month to see all of it.</dd>
         <dt>Your setup</dt>
-        <dd>In Settings (the gear at the top), <b>Your setup</b> shows whether Plaid is in sandbox or production, and where the keys and data live.</dd>
+        <dd>In Settings, <b>Your setup</b> shows whether Plaid is in sandbox or production, and where the keys and data live.</dd>
       </dl>
     </section>
 
@@ -246,6 +240,8 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       const pre = box.querySelector("pre");
       box.classList.remove("scrolls");
       if (pre.scrollWidth > pre.clientWidth + 1) { box.classList.add("scrolls"); if (pre.scrollWidth <= pre.clientWidth + 1) box.classList.remove("scrolls"); }
+      // A command that scrolls takes keyboard focus, so arrow keys can reach its end.
+      if (box.classList.contains("scrolls")) pre.tabIndex = 0; else pre.removeAttribute("tabindex");
       atEnd(pre);
     }
   };
