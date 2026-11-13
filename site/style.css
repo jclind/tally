@@ -107,6 +107,7 @@ footer .flinks { display: flex; gap: 20px; }
 /* ---------- docs ---------- */
 .docs-band { padding-top: 28px; padding-bottom: 36px; }
 .docs-band h1 { font-size: 40px; letter-spacing: -.02em; }
+.docs-band .lede { margin: 8px 0 0; font-size: 18px; line-height: 28px; color: #fff; max-width: 60ch; }
 .docs { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; padding-top: 48px; padding-bottom: 96px; }
 .side { position: sticky; top: 24px; align-self: start; font-size: 15px; }
 .side .grp { font-size: 14px; font-weight: 700; color: var(--ink2); margin: 24px 0 6px; }
@@ -114,6 +115,8 @@ footer .flinks { display: flex; gap: 20px; }
 .side a { display: block; color: var(--ink); font-weight: 500; padding: 5px 12px; border-left: 2px solid var(--line); }
 .side a:hover { color: var(--deep); text-decoration: none; border-left-color: var(--mint); }
 .side a.on { color: var(--deep); font-weight: 700; border-left-color: var(--teal); }
+.side a.sub { padding-left: 26px; font-size: 14px; font-weight: 400; }
+.side a.sub.on { font-weight: 700; }
 .side .jump { display: none; }
 article { max-width: 700px; }
 article p, article li { color: var(--body); }
@@ -122,17 +125,17 @@ article ul, article ol { padding-left: 22px; margin: 0 0 14px; }
 article li { margin: 6px 0; }
 article section { padding-bottom: 40px; margin-bottom: 40px; border-bottom: 1px solid var(--line); }
 article > section:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
-article h2 { font-size: 24px; margin-bottom: 12px; text-wrap: balance; }
+article h2 { font-size: 28px; line-height: 36px; margin-bottom: 12px; text-wrap: balance; }
+article h2 + dl.faq { margin-top: 20px; }
 article h3 { font-size: 18px; margin: 28px 0 6px; }
 #before { padding-bottom: 32px; }
-#before h2 { font-size: 28px; }
 
 /* Setup steps 1 to 4: the number hangs in the gutter as plain teal text, and every heading shares one left edge (judge, round 3). */
+.steps { padding-bottom: 24px; margin-bottom: 40px; border-bottom: 1px solid var(--line); }
 .steps section { padding: 0 0 48px; margin: 0; border: 0; }
 .steps h2 { position: relative; font-size: 28px; margin-bottom: 14px; line-height: 36px; }
 .step { position: absolute; right: calc(100% + 16px); top: 0; color: var(--step); }
 .steps section:last-child { padding-bottom: 16px; }
-.done { margin: 0 0 48px; padding: 0 0 40px; border-bottom: 1px solid var(--line); color: var(--ink); font-weight: 600; }
 .opt { font-size: 14px; font-weight: 600; color: var(--ink2); margin-left: 8px; letter-spacing: 0; }
 
 code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 1px 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
@@ -145,17 +148,25 @@ pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 .copybtn { height: 28px; padding: 0 12px; border-radius: 8px; border: 0; background: rgba(255, 255, 255, .1); color: #fff; font: 600 13px var(--font); cursor: pointer; }
 .copybtn:hover { background: rgba(255, 255, 255, .2); }
 .copybtn:focus-visible { outline-color: #fff; }
+/* A labeled block (a file, a service's environment) puts its label and Copy on one row above the code. */
+.clabel { font: 600 13px/18px var(--font); color: #8FB3AC; padding: 15px 0 0 20px; }
+.code.labeled { align-items: start; grid-template-columns: minmax(0, 1fr) auto; }
+.code.labeled .clabel { grid-row: 1; grid-column: 1; }
+.code.labeled .bar { grid-row: 1; grid-column: 2; }
+.code.labeled pre { grid-row: 2; grid-column: 1 / -1; padding-top: 8px; }
 /* What a command prints: on the page's own surface, labeled, and with no Copy, so it never reads as something to run. */
 .output { margin: 8px 0 18px; border-left: 2px solid var(--mint); padding: 2px 0 2px 16px; }
 .olabel { display: block; font-size: 13px; font-weight: 600; color: var(--ink2); margin-bottom: 2px; }
 .output pre { background: none; color: var(--ink); padding: 0; font-size: 14px; }
 .output samp { font-family: var(--mono); }
 .note { background: var(--warn-tint); border-radius: 12px; padding: 16px 20px; margin: 18px 0; font-size: 16px; line-height: 25px; }
-.note b:first-child { color: var(--warn); }
+.note > b:first-child { color: var(--warn); }
 .shot { margin: 20px 0; max-width: 448px; }
 .shot img { border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--line); }
 /* Term lists use the same bold label as the h3s elsewhere in the guide, with no rules. */
-dl.faq dt { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 24px; }
+dl.faq dt, article h3.q { font-size: 17px; font-weight: 700; color: var(--ink); margin-top: 24px; }
+article h2 + h3.q { margin-top: 20px; }
+article h3.q + p { margin-top: 6px; }
 dl.faq dt:first-child { margin-top: 0; }
 dl.faq dd { margin: 6px 0 0; color: var(--body); }
 
@@ -187,7 +198,6 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .stage::after { height: 28%; }
   .t1 { display: none; }
   .tour { grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 32px; }
-  .code.scrolls pre { padding-top: 0; }
   .tour .col { display: contents; }
   .tour .tile + .tile { margin-top: 0; }
   .t2 { order: 1; } .t3 { order: 2; } .t4 { order: 3; }
@@ -208,11 +218,10 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   html { scroll-padding-top: 88px; }
   .side .jump { display: block; width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 8px; background: var(--card) var(--chev) right 14px center no-repeat; padding: 0 40px 0 14px; font: 600 16px var(--font); color: var(--ink); appearance: none; }
   .side nav { display: none; }
-  #before h2, .steps h2 { font-size: 24px; }
   /* On phones the number sits inline before the heading. */
   .step { position: static; margin-right: 10px; }
-  .steps h2 { line-height: 32px; }
-  article h2 { font-size: 22px; }
+  .steps h2 { font-size: 24px; line-height: 32px; }
+  article h2 { font-size: 24px; line-height: 32px; }
   /* On phones Copy gets its own row above the code, and long lines wrap at spaces. */
   .code:not(.one) { grid-template-columns: minmax(0, 1fr); }
   .code:not(.one) .bar { order: 0; display: flex; justify-content: flex-end; padding: 8px 8px 0; }
@@ -221,11 +230,13 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   pre { font-size: 13px; line-height: 22px; padding: 12px 16px 14px; }
   /* Multi-line blocks match the homepage terminal, so the clone line fits a 390px phone. */
   .code:not(.one) pre { font-size: 12px; line-height: 21px; }
-  .output pre { font-size: 12px; line-height: 21px; }
+  .output pre { font-size: 13px; line-height: 22px; }
+  .code.labeled, .code.labeled.scrolls { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .code.labeled .bar, .code.labeled.scrolls .bar { grid-row: 1; grid-column: 2; order: 0; display: block; padding: 8px 8px 0 0; }
+  .code.labeled .clabel { padding: 17px 0 0 16px; }
+  .code.labeled pre, .code.labeled.one pre { grid-row: 2; grid-column: 1 / -1; padding-top: 6px; }
   pre:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
   article code.long { white-space: normal; overflow-wrap: anywhere; }
-  .code.scrolls { grid-template-columns: minmax(0, 1fr); }
-  .code.scrolls .bar { order: 0; display: flex; justify-content: flex-end; padding: 8px 8px 0; }
   .code.scrolls:not(.end) pre { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
   .copybtn { height: 36px; }
   .term-col .btn { width: 100%; }
