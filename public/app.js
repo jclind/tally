@@ -648,7 +648,7 @@ PAGES.bills = async () => {
 // ---------- accounts and connections ----------
 PAGES.accounts = async () => {
   const g = GEN;
-  const [s, sum] = await Promise.all([api("/api/status"), api("/api/summary")]);
+  const [s, sum, set] = await Promise.all([api("/api/status"), api("/api/summary"), api("/api/settings")]);
   if (stale(g)) return;
   const nw = sum.netWorth;
   const accounts = s.items.flatMap((it) => it.accounts.map((a) => ({ ...a, inst: it.institution_name })));
@@ -681,7 +681,8 @@ PAGES.accounts = async () => {
       <div class="actions" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px">
         <button class="btn primary" id="bank" ${!s.keys || s.used >= s.cap ? "disabled" : ""}>Link a bank or card</button>
         <button class="btn" id="brokerage" ${!s.keys || s.used >= s.cap ? "disabled" : ""}>Link a brokerage</button></div>
-      <div class="hint" style="margin-top:8px">Each link uses one of ${s.cap} slots for good. Fix a broken one instead of linking it again.</div></div></aside></div>`;
+      <div class="hint" style="margin-top:8px">Each link uses one of ${s.cap} slots for good. Fix a broken one instead of linking it again.</div></div>
+    ${settingsCard(set)}</aside></div>`;
   const msg = (t, bad) => { document.getElementById("msg").innerHTML = t ? `<div class="notice ${bad ? "bad" : ""}">${esc(t)}</div>` : ""; };
   for (const b of document.querySelectorAll("[data-sync]")) b.onclick = async () => {
     b.disabled = true; msg("Syncing…");
@@ -692,7 +693,26 @@ PAGES.accounts = async () => {
   for (const b of document.querySelectorAll("[data-fix]")) b.onclick = () => link({ itemId: b.dataset.fix }, msg);
   document.getElementById("bank").onclick = () => link({ kind: "bank" }, msg);
   document.getElementById("brokerage").onclick = () => link({ kind: "brokerage" }, msg);
+  wireSettings();
 };
+
+// Settings save as they change. Sync on open is for a computer that isn't on every morning for the daily job.
+const SYNC_CHOICES = [["1", "If older than 1 hour"], ["6", "If older than 6 hours"], ["12", "If older than 12 hours"], ["24", "If older than a day"], ["off", "Never"]];
+const settingsCard = (set) => `<div class="card sets"><h2>Settings</h2>
+  <div class="setrow stacked"><label for="autosync">Sync when you open tally</label>
+    <select id="autosync" data-key="autoSync">${SYNC_CHOICES.map(([v, t]) => `<option value="${v}"${v === set.autoSync ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+  <div class="setrow"><label for="bigcharge">Alert for one charge of</label>
+    <span class="amtin"><span class="fld"><span class="cur">$</span><input id="bigcharge" data-key="bigCharge" inputmode="numeric" value="${esc(set.bigCharge)}"></span></span></div>
+  <div class="hint">${set.discord ? "Alerts post to Discord with the daily sync." : "Alerts post to Discord once ~/.config/tally/discord.env has a webhook."}</div>
+  <div class="ok hint" id="setok" role="status"></div></div>`;
+function wireSettings() {
+  const ok = document.getElementById("setok");
+  for (const el of document.querySelectorAll(".sets [data-key]")) el.addEventListener("change", async () => {
+    const v = el.value.replace(/[$,\s]/g, "");
+    try { const set = await api("/api/settings", { [el.dataset.key]: v }); el.value = set[el.dataset.key]; ok.textContent = "Saved"; ok.classList.remove("bad"); }
+    catch { ok.textContent = el.dataset.key === "bigCharge" ? "Use a whole dollar amount, like 200." : "Couldn't save that."; ok.classList.add("bad"); }
+  });
+}
 
 // Fixing a connection uses update mode on the same Item, which keeps its slot.
 async function link({ kind, itemId }, msg) {
@@ -726,6 +746,20 @@ document.getElementById("syncall").addEventListener("click", async (e) => {
   b.disabled = false; b.classList.remove("spin");
 });
 
+// tally may run on a laptop that was asleep for the daily sync. On open, and when the tab comes back, the server says
+// whether a sync is due (the Sync on open setting) and runs it. The page redraws unless the owner is typing.
+async function syncIfDue() {
+  const b = document.getElementById("syncall");
+  if (b.disabled) return;
+  const spin = setTimeout(() => { b.disabled = true; b.classList.add("spin"); }, 400);
+  try {
+    const r = await api("/api/sync-if-due", {});
+    if (r.synced && !document.activeElement?.matches("input, select, textarea") && !picker) await render();
+  } catch { /* the Sync button still works, and Accounts shows what failed */ }
+  clearTimeout(spin); b.disabled = false; b.classList.remove("spin");
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncIfDue(); });
+
 window.addEventListener("hashchange", render);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (picker) { const id = pickerFor; closePicker(); refocus(id); } if (menuOpen) { const b = menuOpen.querySelector("button"); closeMenu(); b.focus(); } } });
-render();
+render().then(syncIfDue);

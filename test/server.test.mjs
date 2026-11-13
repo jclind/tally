@@ -44,7 +44,7 @@ before(async () => {
   writeFileSync(join(dir, "plaid.env"), `PLAID_CLIENT_ID=cid\nPLAID_SECRET=sec\nPLAID_HOST=http://127.0.0.1:${fake.address().port}\n`);
   const port = 34000 + Math.floor(Math.random() * 1000);
   base = `http://localhost:${port}`;
-  app = spawn(process.execPath, [join(root, "server.mjs")], { env: { ...process.env, TALLY_PORT: String(port), TALLY_KEYS: join(dir, "plaid.env"), TALLY_DATA: join(dir, "data") }, stdio: "pipe" });
+  app = spawn(process.execPath, [join(root, "server.mjs")], { env: { ...process.env, TALLY_PORT: String(port), TALLY_KEYS: join(dir, "plaid.env"), TALLY_DATA: join(dir, "data"), TALLY_DISCORD: join(dir, "discord.env"), TALLY_PAYOUTS: join(dir, "payouts.mjs") }, stdio: "pipe" });
   for (let i = 0; i < 50; i++) {
     if (await fetch(base + "/api/status").then(() => true, () => false)) return;
     await new Promise((r) => setTimeout(r, 100));
@@ -149,4 +149,32 @@ test("an account Plaid stops listing is closed: kept, but out of net worth", asy
 test("POST from another origin is refused", async () => {
   const r = await fetch(base + "/api/sync", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: "{}" });
   assert.equal(r.status, 403);
+});
+
+// Last in the file: it runs one more sync, which the earlier tests' fake replies don't expect.
+test("settings save and check their values, and sync on open runs only when it's due", async () => {
+  const get = () => fetch(base + "/api/settings").then((r) => r.json());
+  const s0 = await get();
+  assert.equal(s0.autoSync, "12");
+  assert.equal(s0.bigCharge, "200");
+  assert.equal(s0.discord, false);
+  assert.equal((await post("/api/settings", { bigCharge: "350" })).bigCharge, "350");
+  assert.match((await post("/api/settings", { bigCharge: "-5" })).error, /bigCharge/);
+  assert.match((await post("/api/settings", { autoSync: "3" })).error, /autoSync/);
+  assert.match((await post("/api/settings", { nope: "1" })).error, /nope/);
+
+  assert.equal((await post("/api/sync-if-due", {})).synced, false, "just synced, so not due");
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(join(dir, "data", "tally.db"));
+  db.prepare("UPDATE items SET last_sync = ?").run(new Date(Date.now() - 13 * 3600_000).toISOString());
+  await post("/api/settings", { autoSync: "off" });
+  assert.equal((await post("/api/sync-if-due", {})).synced, false, "off never syncs on open");
+  await post("/api/settings", { autoSync: "12" });
+  const n = calls.filter((c) => c.path === "/transactions/sync").length;
+  const r = await post("/api/sync-if-due", {});
+  assert.equal(r.synced, true, "13 hours old is past 12");
+  assert.ok(calls.filter((c) => c.path === "/transactions/sync").length > n);
+  db.prepare("UPDATE items SET last_sync = ?").run(new Date(Date.now() - 13 * 3600_000).toISOString());
+  assert.equal((await post("/api/sync-if-due", {})).synced, false, "at most one automatic sync every 10 minutes");
+  db.close();
 });

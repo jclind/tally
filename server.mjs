@@ -47,6 +47,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS holdings (
     account_id TEXT NOT NULL, security_id TEXT NOT NULL, item_id TEXT NOT NULL, name TEXT, ticker TEXT, type TEXT,
     quantity REAL, value REAL, cost_basis REAL, updated_at TEXT, PRIMARY KEY (account_id, security_id));
+  CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
 report.setupViews(db);
 
@@ -250,6 +251,48 @@ async function syncAll() {
   return results;
 }
 
+// One full sync at a time: the daily job, the Sync button, and an automatic sync all share the one running.
+let running = null;
+const syncAllOnce = () => (running ??= syncAll().finally(() => { running = null; }));
+
+// Settings the owner changes on the Accounts page. Each has a default and a check; the env var still sets the default.
+const SETTINGS = {
+  // Sync when tally starts or the page is opened, if the data is older than this many hours. "off" leaves it to the
+  // daily job and the Sync button, for a computer that's always on.
+  autoSync: { def: "12", ok: (v) => ["off", "1", "6", "12", "24"].includes(v) },
+  // The daily alert for one charge this big or bigger, in dollars.
+  bigCharge: { def: String(Number(process.env.TALLY_BIG_CHARGE || 200)), ok: (v) => /^[1-9]\d{0,6}$/.test(v) },
+};
+function settings() {
+  const saved = Object.fromEntries(db.prepare("SELECT key, value FROM settings").all().map((r) => [r.key, r.value]));
+  return Object.fromEntries(Object.entries(SETTINGS).map(([k, s]) => [k, saved[k] ?? s.def]));
+}
+function saveSettings(body) {
+  const set = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value");
+  for (const [k, v] of Object.entries(body)) {
+    if (!SETTINGS[k]?.ok(String(v))) throw Object.assign(new Error(`${k} can't be ${JSON.stringify(v)}`), { status: 400 });
+    set.run(k, String(v));
+  }
+  return settings();
+}
+
+// An automatic sync is due when a connection last synced longer ago than autoSync allows, or its last try couldn't
+// reach Plaid (a laptop that woke before its Wi-Fi did). At most one automatic sync every 10 minutes.
+let lastAuto = 0;
+function syncDue() {
+  const h = settings().autoSync;
+  if (h === "off" || Date.now() - lastAuto < 10 * 60_000) return false;
+  const cutoff = Date.now() - Number(h) * 3600_000;
+  return db.prepare("SELECT last_sync, last_error FROM items").all()
+    .some((it) => !it.last_sync || Date.parse(it.last_sync) < cutoff || /NETWORK_ERROR/.test(it.last_error ?? ""));
+}
+async function autoSync(why) {
+  if (!syncDue()) return { synced: false };
+  lastAuto = Date.now();
+  console.log(now(), "auto sync", why);
+  return { synced: true, results: await syncAllOnce() };
+}
+
 function status() {
   const items = db.prepare("SELECT item_id, institution_name, kind, created_at, last_sync, last_error, tx_status FROM items ORDER BY created_at").all();
   for (const it of items) {
@@ -285,7 +328,7 @@ const send = (res, code, body, type = "application/json") => {
 };
 
 const STATIC = { "/": ["index.html", "text/html; charset=utf-8"], "/app.js": ["app.js", "text/javascript"], "/app.css": ["app.css", "text/css"] };
-const BIG_CHARGE = Number(process.env.TALLY_BIG_CHARGE || 200);
+const DISCORD = process.env.TALLY_DISCORD || join(homedir(), ".config/tally/discord.env");
 
 // ?month=YYYY-MM, never later than this month. Anything else means this month.
 function pickMonth(q) {
@@ -312,14 +355,18 @@ const routes = {
   "POST /api/budget": (body) => report.setBudget(db, body),
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.
   "POST /api/daily": async () => {
-    const results = await syncAll();
+    const results = await syncAllOnce();
     snapshot();
-    return { alerts: report.dailyAlerts(db, { bigCharge: BIG_CHARGE }), errors: results.flatMap((r) => r.errors) };
+    return { alerts: report.dailyAlerts(db, { bigCharge: Number(settings().bigCharge) }), errors: results.flatMap((r) => r.errors) };
   },
   "POST /api/alerts-sent": (body) => { report.markSent(db, body.keys ?? []); return { ok: true }; },
   "POST /api/link-token": async (body) => ({ link_token: (await linkToken(body)).link_token }),
   "POST /api/exchange": (body) => exchange(body),
-  "POST /api/sync": async (body) => ({ results: body.item_id ? [await syncItem(body.item_id)] : await syncAll() }),
+  "POST /api/sync": async (body) => ({ results: body.item_id ? [await syncItem(body.item_id)] : await syncAllOnce() }),
+  // The page asks on open and when its tab comes back; the server decides whether a sync is due.
+  "POST /api/sync-if-due": () => autoSync("page opened"),
+  "GET /api/settings": () => ({ ...settings(), discord: existsSync(DISCORD) }),
+  "POST /api/settings": (body) => saveSettings(body),
 };
 
 const server = http.createServer(async (req, res) => {
@@ -342,3 +389,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => console.log(`${now()} tally on http://localhost:${PORT} (keys ${loadKeys() ? "found" : "missing"})`));
+// A computer that was off overnight catches up once it starts. The wait gives a laptop's network time to come up.
+const STARTUP_SYNC_MS = Number(process.env.TALLY_STARTUP_SYNC_MS ?? 30_000);
+if (loadKeys()) setTimeout(() => autoSync("startup").catch((e) => console.error(now(), "auto sync", e.message)), STARTUP_SYNC_MS).unref();
