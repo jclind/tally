@@ -81,8 +81,10 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .card h2 { font-size: 18px; line-height: 24px; margin: 0; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .card h2 a, .card h2 .aside { font-size: 15px; font-weight: 600; color: var(--deep); }
 .card h2 .aside { color: var(--ink2); font-weight: 500; }
-.card h2 .aside.tot { color: var(--ink); font-weight: 600; }
+/* Every card or section total looks the same: 15px semibold ink. */
+.card h2 .aside.tot { color: var(--ink); font-weight: 600; font-size: 15px; }
 .card h2 a:hover { text-decoration: underline; }
+.card h2 a { display: inline-flex; align-items: center; min-height: 44px; margin: -10px 0; }
 .sub { color: var(--ink2); margin: 2px 0 16px; font-size: 15px; }
 .sub:has(+ .row) { margin-bottom: 6px; }
 .sub b { color: var(--ink); }
@@ -119,7 +121,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .vleg a:hover { background: var(--hover); }
 .vleg .l { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
-.spend { display: grid; grid-template-columns: 220px minmax(0, 640px); gap: 40px; align-items: center; margin-top: 8px; }
+.spend { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: center; margin-top: 8px; }
 .rank { width: 100%; border-collapse: collapse; }
 .rank td { padding: 9px 0; border-top: 1px solid var(--line); }
 .rank tr:first-child td { border-top: 0; }
@@ -127,7 +129,17 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .rank a { color: var(--deep); font-weight: 600; }
 .rank a:hover { text-decoration: underline; }
 .rank .n { text-align: right; color: var(--ink2); font-size: 14px; white-space: nowrap; padding-right: 16px; }
-.rank .v { text-align: right; width: 96px; }
+.rank .v { text-align: right; width: 96px; font-weight: 600; }
+/* Spending's side card: one row per month on a shared zero-based scale. */
+.months { margin-top: 10px; }
+.mrow { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 0; border-radius: 6px; font-size: 15px; color: var(--ink2); }
+.mrow:hover .ml { color: var(--deep); text-decoration: underline; }
+.mrow .mb { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.mrow .mb i { display: block; height: 100%; background: #A9D9D3; border-radius: 4px; }
+.mrow .mv { color: var(--ink); font-weight: 600; text-align: right; }
+.mrow.on { color: var(--ink); font-weight: 700; }
+.mrow.on .mb i { background: var(--teal); }
+.mrow.on .mv { font-weight: 700; }
 
 /* ---------- budget rows ---------- */
 .brow { padding: 12px 0 8px; }
@@ -149,7 +161,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .top3 .l { flex: 1; }
 .top3 .more { margin-top: 8px; }
 /* The budgets page: every row has its amount field */
-.erow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.erow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
 .erow:has(> .brow) { grid-template-columns: minmax(0, 1fr); }
 .erow:first-child, h2 + .erow { border-top: 0; }
 h2 + .erow { margin-top: 6px; }
@@ -167,7 +179,7 @@ h2 + .erow { margin-top: 6px; }
 .amtin.bad .ok { opacity: 1; color: var(--danger); }
 .amtin.bad input { border-color: var(--danger); }
 @keyframes saved { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
-.erow .bar { margin-bottom: 8px; }
+.erow .bar { margin: 6px 0; }
 .amtin input:focus { border-color: var(--teal); outline: 2px solid rgba(27, 131, 130, .25); outline-offset: 0; }
 
 /* ---------- rows: activity, bills, accounts ---------- */
@@ -198,17 +210,7 @@ h2 + .erow { margin-top: 6px; }
 .grp .acct { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--ink2); padding: 3px 0 0 12px; }
 .spark { display: block; width: 100%; height: 56px; margin-top: 10px; }
 
-/* ---------- charts ---------- */
-.chart { position: relative; margin-top: 10px; }
-.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
-.chart .axis { fill: var(--ink2); font: 12px var(--font); }
-.chart .val { fill: var(--ink2); font: 600 12px var(--font); font-variant-numeric: tabular-nums; }
-.chart .val.on { fill: var(--ink); font-size: 13px; font-weight: 700; }
-.chart g:hover .b-path[fill="#A9D9D3"] { fill: #7FC4BC; }
-.chart .grid-line { stroke: var(--line); stroke-width: 1; }
-.chart rect.hit { fill: transparent; cursor: pointer; }
-.chart g:focus { outline: none; }
-.chart g:focus-visible .b-path, .chart g:focus-visible rect.hit { stroke: var(--deep); stroke-width: 2; }
+/* ---------- ring links, tooltip ---------- */
 .ring a { cursor: pointer; }
 .ring a:hover circle, .ring a:focus-visible circle { filter: brightness(1.08); }
 .sr { position: absolute; left: -9999px; }
@@ -236,6 +238,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
 .tx tbody tr.day:first-child th { padding-top: 8px; }
 .tx tr.day + tr td { border-top: 0; }
 .tx td { padding: 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+.tx th:first-child, .tx td:first-child { padding-left: 0; } .tx th:last-child, .tx td:last-child { padding-right: 0; }
 .tx td.amt, .tx th.amt { text-align: right; white-space: nowrap; }
 .tx td.amt { font-weight: 600; }
 /* Pending: the amount dims and the tag says why, on Activity and Home alike. */
@@ -265,7 +268,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
 .mgrp + .mgrp { margin-top: 18px; }
 .card h2 + .mgrp { margin-top: 14px; }
 .mh { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--ink); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.mh .num { color: var(--ink2); font-weight: 600; }
+.mh .num { color: var(--ink); font-weight: 600; font-size: 15px; }
 .mgrp .row:nth-child(2) { border-top: 0; }
 .conn { padding: 14px 0; border-top: 1px solid var(--line); }
 .conn:first-child { border-top: 0; padding-top: 4px; }
@@ -322,7 +325,8 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .erow { gap: 8px 14px; }
   .amtin input { width: 96px; min-height: 44px; font-size: 16px; }
   .tx .acct-col, .tx .cat-col, .tx thead { display: none; }
-  .tx .who-sub .catbtn { margin: -10px 0 -10px -4px; padding: 10px 4px; font-size: 14px; gap: 5px; }
+  .tx .who-sub .catbtn { margin: -10px 0 -10px -4px; padding: 10px 4px; font-size: 14px; line-height: 20px; gap: 5px; max-width: 100%; }
+  .tx .who-sub { min-width: 0; max-width: 48%; overflow: hidden; }
   .tx .who-sub { display: block; }
   .tx .acct-sub { display: block; font-size: 13px; font-weight: 400; color: var(--ink2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
   .tx td { padding: 10px 6px; } .tx tr.day th { padding: 20px 0 6px; }
@@ -336,12 +340,12 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .tx .nm { grid-area: name; } .tx .who-sub { grid-area: cat; }
   .tx td.amt > .num { grid-area: amt; text-align: right; align-self: center; }
   /* The account spans the row's second line from the right, so only the amount sizes the right column. */
-  .tx tr .acct-sub { grid-column: 1 / -1; grid-row: 2; justify-self: end; align-self: center; max-width: 55%; text-align: right; }
+  .tx tr .acct-sub { grid-column: 1 / -1; grid-row: 2; justify-self: end; align-self: center; max-width: 48%; text-align: right; font-size: 14px; line-height: 20px; }
   .tx tbody tr:not(.day) > td.cat-col, .tx tbody tr:not(.day) > td.acct-col { display: none; }
   .tx tbody tr.day { display: block; } .tx tbody tr.day th { display: block; }
   .tx .nm { display: flex; align-items: center; min-width: 0; }
   .tx .nm > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .tx .nm .tag { flex: none; }
+  .tx .nm .tag { flex: none; line-height: 16px; }
   .tx .tag { font-size: 11px; padding: 0 5px; }
   /* Search stays; the selects fold behind Filters. */
   .filters { flex-wrap: wrap; margin-bottom: 20px; }

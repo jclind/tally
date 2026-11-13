@@ -17,6 +17,13 @@ function wholeDollars(values) {
   values.map((v, i) => [v - floors[i], i]).sort((a, b) => b[0] - a[0]).slice(0, Math.max(0, left)).forEach(([, i]) => floors[i]++);
   return floors;
 }
+// The month's categories in whole dollars, rounded once together, so a category shows the same figure on Home,
+// Spending, and Budgets, and the rows add up to the month's total.
+function dollarsByCat(categories) {
+  const w = wholeDollars(categories.map((c) => c.spent));
+  return new Map(categories.map((c, i) => [c.cat, w[i]]));
+}
+const sliceDollars = (c, map) => c.cat ? map.get(c.cat) ?? Math.round(c.spent) : c.parts.reduce((t, p) => t + (map.get(p.cat) ?? 0), 0);
 // A balance that can go either way, with a real minus sign: signed(-954.35) is "−$954.35".
 const signed = (n, cents = false) => `${n < 0 ? "−" : ""}${money(Math.abs(n), cents)}`;
 const amt = (n) => n < 0 ? `<span class="num in">+${money(-n, true)}</span>` : `<span class="num">${money(n, true)}</span>`;
@@ -288,14 +295,14 @@ PAGES.overview = async (q) => {
   // The ring can only draw money out. A category with net refunds is a signed row under the legend, and the ring's
   // center shows what the ring draws.
   const refunds = s.categories.filter((c) => c.spent < 0), drawn = sl.reduce((t, c) => t + c.spent, 0);
-  const whole = wholeDollars(sl.map((c) => c.spent));
-  const refundRows = refunds.map((c) => `<a href="${txLink({ cat: c.cat, month: s.month })}"><span class="sw" style="background:${OTHER}"></span><span class="l">${esc(label(c.cat))} refunds</span><b class="num">${signed(c.spent)}</b></a>`).join("");
+  const dollars = dollarsByCat(s.categories), whole = sl.map((c) => sliceDollars(c, dollars));
+  const refundRows = refunds.map((c) => `<a href="${txLink({ cat: c.cat, month: s.month })}"><span class="sw" style="background:${catColor(c.cat)}"></span><span class="l">${esc(label(c.cat))} refunds</span><b class="num">${signed(dollars.get(c.cat))}</b></a>`).join("");
   const where = `<div class="card c-where"><h2>Where it went <a class="hlink" href="#/spending${s.current ? "" : `?month=${s.month}`}">Spending</a></h2>
     ${s.categories.length ? `<div class="sub">You've spent <b class="num">${money(total)}</b> ${s.current ? "so far this month" : `in ${m}`}</div>
     <div class="dl"><div class="ring" style="width:124px;height:124px">${donut(s.categories, 124, 18, s.month)}<div class="c"><b class="num">${money(drawn)}</b></div></div>
       <div class="vleg">${sl.map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}${refundRows}</div></div>
     <div class="stackbar" role="img" aria-label="${esc(sl.map((c) => `${c.label} ${money(c.spent)}`).join(", "))}">${stackSegs(sl, total)}</div>
-    <div class="top3">${sl.slice(0, 3).map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}
+    <div class="top3">${sl.slice(0, 3).map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}${refundRows}
       <a class="more" href="#/spending${s.current ? "" : `?month=${s.month}`}">All categories</a></div>`
       : `<div class="empty" style="margin-top:8px">No spending in ${m} yet.</div>`}</div>`;
 
@@ -304,8 +311,8 @@ PAGES.overview = async (q) => {
   // "Within budget" is all the code knows: spent is at or under the limit. It doesn't judge pace.
   const budgetsCard = `<div class="card span2 c-budgets"><h2>Budgets <a href="#/budgets${s.current ? "" : `?month=${s.month}`}">All budgets</a></h2>
     ${s.budgets.length ? `<div class="sub">${over.length ? `<b class="over">${over.length} over</b>, ${ok.length} within budget` : `All ${ok.length} within budget`}</div>
-      ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${money(b.spent - b.budget)}</b> over</span></div>
-        <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>` : ""}
+      ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${money((dollars.get(b.category) ?? b.spent) - Math.round(b.budget))}</b> over</span></div>
+        <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>` : ""}
       `
       : `<div class="empty" style="margin-top:8px">No budgets yet.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Set them from the last 3 months</button>` : ""}</div>`}</div>`;
 
@@ -424,13 +431,17 @@ function openPicker(btn, done) {
   const h = picker.offsetHeight, roomBelow = window.innerHeight - r.bottom - (window.innerWidth <= 860 ? 76 : 8);
   picker.style.top = `${(roomBelow < h + 6 && r.top > h + 6 ? r.top - h - 6 : r.bottom + 6) + scrollY}px`;
   (picker.querySelector(".opt.on") ?? picker.querySelector(".opt")).focus();
+  const mine = picker, g = GEN;
   picker.addEventListener("click", async (e) => {
     const o = e.target.closest(".opt");
-    if (!o) return;
+    if (!o || mine.classList.contains("busy")) return;
+    mine.classList.add("busy");
     try {
-      await api("/api/category", { transaction_id: btn.dataset.id, category: o.dataset.c || null, merchant: o.dataset.all === "1" || picker.querySelector("#pall").checked });
-      closePicker(); await done();
-    } catch (err) { notice(err.message); }
+      await api("/api/category", { transaction_id: btn.dataset.id, category: o.dataset.c || null, merchant: o.dataset.all === "1" || mine.querySelector("#pall").checked });
+      if (stale(g)) return;
+      if (picker === mine) closePicker();
+      await done();
+    } catch (err) { if (!stale(g)) { mine.classList.remove("busy"); notice(err.message); } }
   });
   setTimeout(() => document.addEventListener("mousedown", outside), 0);
 }
@@ -442,66 +453,25 @@ PAGES.spending = async (q) => {
   const r = await api(`/api/spending${month ? `?month=${month}` : ""}`);
   if (stale(g)) return;
   const total = r.categories.reduce((s, c) => s + c.spent, 0), n = r.categories.reduce((s, c) => s + c.n, 0);
+  const dollars = dollarsByCat(r.categories), drawn = slices(r.categories).reduce((t, c) => t + c.spent, 0);
   const prev = r.history.find((h) => h.month === shiftMonth(r.month, -1));
   $hero.innerHTML = `${monthMenu(r.month, r.history, "spending", "spending")}
     <div class="big num">${money(total)}</div>
     <p>${n ? `${plural(n, "transaction")} in ${plural(r.categories.length, "category", "categories")}.` : "No spending yet."}${prev?.hasData ? ` ${monthName(prev.month)} came to <b class="num">${money(prev.spent)}</b>.` : ""}</p>`;
-  $page.innerHTML = `<div class="stack">
+  // Main column: the ring and the category table. Side column: each month with data as a row with a bar on one
+  // zero-based scale, newest first, the open month dark and bold. (Fable, round 6.)
+  const months = r.history.filter((h) => h.hasData).reverse(), top = Math.max(1, ...months.map((h) => h.spent));
+  const monthRows = months.map((h) => `<a class="mrow${h.month === r.month ? " on" : ""}" href="#/spending${h.month === thisMonth() ? "" : `?month=${h.month}`}"${h.month === r.month ? ' aria-current="true"' : ""}>
+      <span class="ml">${monthName(h.month, "short")}${h.month.slice(0, 4) !== thisMonth().slice(0, 4) ? ` ${h.month.slice(2, 4)}` : ""}${h.month === thisMonth() ? " so far" : ""}</span>
+      <span class="mb"><i style="width:${Math.max(0, h.spent) / top * 100}%"></i></span><span class="mv num">${money(h.spent)}</span></a>`).join("");
+  $page.innerHTML = `<div class="layout"><div class="stack">
     <div class="card"><h2>Where it went</h2>
-      ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">Spent<b class="num">${money(total)}</b></div></div>
-        <table class="rank">${r.categories.map((c, i, all) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${signed(wholeDollars(all.map((x) => x.spent))[i])}</td></tr>`).join("")}</table></div>`
+      ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">${drawn - total >= 0.5 ? "Before refunds" : "Spent"}<b class="num">${money(drawn)}</b></div></div>
+        <table class="rank">${r.categories.map((c) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${signed(dollars.get(c.cat))}</td></tr>`).join("")}</table></div>`
         : `<div class="empty" style="margin-top:8px">No spending in ${monthName(r.month)}. <a class="more" href="#/spending">Back to this month</a></div>`}</div>
-    <div class="card" id="chart"><h2>By month</h2></div></div>`;
-  const chartCard = document.getElementById("chart");
-  // The chart is drawn for its card's width, and drawn again when that width changes (a rotated phone, a resized window).
-  const draw = () => {
-    chartCard.querySelector(".chart")?.remove();
-    chartCard.append(barChart(r.history, { width: chartCard.clientWidth - 2 * parseFloat(getComputedStyle(chartCard).paddingLeft), current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
-  };
-  draw();
-  let drawnAt = chartCard.clientWidth;
-  new ResizeObserver(() => { if (chartCard.isConnected && Math.abs(chartCard.clientWidth - drawnAt) > 8) { drawnAt = chartCard.clientWidth; draw(); } }).observe(chartCard);
+    </div><aside class="side stack"><div class="card"><h2>By month</h2><div class="months">${monthRows}</div></div></aside></div>`;
   wireMonthMenu(); wireTips($page);
 };
-
-function barChart(all, { onPick, current, picked, width = 760 } = {}) {
-  // Months before the first transaction have no data, which isn't $0, so the chart starts at the first month with data.
-  const first = all.findIndex((h) => h.hasData), history = first < 0 ? all : all.slice(first);
-  const W = Math.max(300, Math.round(width)), H = 220, pad = { l: 4, r: 4, t: 28, b: 26 };
-  const max = Math.max(1, ...history.map((h) => h.spent));
-  const step = niceStep(max / 3), top = Math.ceil(max / step) * step;
-  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, bw = iw / history.length;
-  const y = (v) => pad.t + ih - (v / top) * ih;
-  let g = "";
-  // Each bar carries its own value, readable without hover (a tap on a phone opens the month), so there's no y axis.
-  g += `<line class="grid-line" x1="${pad.l}" x2="${W - pad.r}" y1="${y(0)}" y2="${y(0)}"/>`;
-  history.forEach((h, i) => {
-    const x = pad.l + i * bw, w = Math.min(44, bw * 0.56), bx = x + (bw - w) / 2;
-    const v = Math.max(0, h.spent), t0 = y(v), hgt = Math.max(0, pad.t + ih - t0);
-    const tip = !h.hasData ? `${monthYear(h.month)}: no data` : `${monthYear(h.month)}: ${money(h.spent)}${h.month === current ? " so far" : ""}`;
-    // The open month is the strong bar; the rest are light. "So far" for this month is in the tooltip, not a fade.
-    const fill = h.month === picked ? "#1B8382" : "#A9D9D3";
-    g += `<g data-m="${h.month}" data-tip="${esc(tip)}" tabindex="0" role="link" aria-label="${esc(tip)}"><rect class="hit" x="${x}" y="${pad.t}" width="${bw}" height="${ih}"/>`
-      + (h.hasData && hgt > 0 ? `<path class="b-path" fill="${fill}" d="${roundTop(bx, t0, w, hgt, Math.min(4, hgt))}"/>` : "")
-      + (h.hasData && (bw >= 52 || h.month === picked) ? `<text class="val${h.month === picked ? " on" : ""}" x="${x + bw / 2}" y="${t0 - 8}" text-anchor="middle">${money(v)}</text>` : "")
-      + `<text class="axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" ${h.month === picked ? 'style="font-weight:700;fill:#24272C"' : ""}>${monthName(h.month, bw < 40 ? "narrow" : "short")}${h.month === current ? " so far" : ""}</text></g>`;
-  });
-  const el = document.createElement("div");
-  el.className = "chart";
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spending by month">${g}</svg>
-    <table class="sr">${history.map((h) => `<tr><td>${monthYear(h.month)}</td><td>${h.hasData ? money(h.spent) : "no data"}</td></tr>`).join("")}</table>`;
-  for (const node of el.querySelectorAll("g[data-m]")) {
-    node.addEventListener("mousemove", (e) => showTip(e, node.dataset.tip));
-    node.addEventListener("mouseleave", hideTip);
-    if (onPick) {
-      node.addEventListener("click", () => onPick(node.dataset.m));
-      node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(node.dataset.m); } });
-    }
-  }
-  return el;
-}
-function roundTop(x, y, w, h, r) { return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
-function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(Math.max(raw, 1))); return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) ?? 10 * p; }
 
 // ---------- budgets ----------
 const budgetData = (month) => Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/recurring")]);
@@ -510,6 +480,7 @@ PAGES.budgets = async (q, saved, pre) => {
   const [s, streams] = pre ?? await budgetData(month);
   if (stale(g)) return;
   $hero.innerHTML = budgetHero(s, "budgets");
+  const dollars = dollarsByCat(s.categories);
   const tick = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
   const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value != null ? value.toLocaleString("en-US") : ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></span></label>`;
   const set = s.budgets.slice().sort((a, b) => used(b) - used(a));
@@ -518,13 +489,13 @@ PAGES.budgets = async (q, saved, pre) => {
     <div class="card"><h2>Budgets</h2>
       ${set.length ? set.map((b) => {
         const over = b.spent > b.budget;
-        return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${money(Math.abs(b.budget - b.spent))}</b> ${over ? "over" : "left"}</span></div>
+        return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${money(Math.abs(Math.round(b.budget) - (dollars.get(b.category) ?? Math.round(b.spent))))}</b> ${over ? "over" : "left"}</span></div>
           <div class="bar ${over ? "over" : ""}"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${over ? "" : tick}</div>
-          <div class="l2"><span class="num"><b>${money(b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
+          <div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
     </div>
-    ${unset.length ? `<div class="card"><h2>Not budgeted <span class="aside num">${money(unset.reduce((t, b) => t + b.spent, 0))} spent</span></h2>
-      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.spent >= 0.5 ? `${money(b.spent)} spent${b.suggested ? ", about " : ""}` : b.suggested ? "About " : "Nothing spent"}${b.suggested ? `${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, b.suggested)}</div>`).join("")}</div>` : ""}
+    ${unset.length ? `<div class="card"><h2>Not budgeted <span class="aside num tot">${money(unset.reduce((t, b) => t + (dollars.get(b.category) ?? 0), 0))} spent</span></h2>
+      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.spent >= 0.5 ? `${money(dollars.get(b.category) ?? b.spent)} spent${b.suggested ? ", about " : ""}` : b.suggested ? "About " : "Nothing spent"}${b.suggested ? `${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, b.suggested)}</div>`).join("")}</div>` : ""}
     </div><aside class="side stack">${incomeCard(s, streams)}</aside></div>`;
   for (const inp of $page.querySelectorAll(".amtin input")) {
     const box = inp.closest(".amtin"), status = box.querySelector(".ok");
@@ -566,15 +537,18 @@ PAGES.bills = async () => {
   const perMonth = bills.reduce((s, r) => s + r.monthly, 0);
   const next = bills.find((r) => r.predicted_next_date);
   // Bills under a subhead per month with its total: what still leaves this month, then next month. (Fable, round 3.)
-  const STEP = { WEEKLY: 7, BIWEEKLY: 14, SEMI_MONTHLY: 15 };
+  const STEP = { WEEKLY: 7, BIWEEKLY: 14, SEMI_MONTHLY: 15 }, MAX = { SEMI_MONTHLY: 2 };
+  // A predicted date already past is a late charge that still counts this month.
+  const dueMonth = (r) => { const m = (r.predicted_next_date ?? "").slice(0, 7); return !m ? "later" : m < thisMonth() ? thisMonth() : m; };
   const restOfMonth = (r) => {
     let n = 0, d = new Date(r.predicted_next_date + "T12:00:00");
-    while (d.toLocaleDateString("en-CA").slice(0, 7) === thisMonth()) { n++; if (!STEP[r.frequency]) break; d = new Date(d.getTime() + STEP[r.frequency] * 864e5); }
+    if (d.toLocaleDateString("en-CA").slice(0, 7) < thisMonth()) return Math.abs(r.average_amount);
+    while (d.toLocaleDateString("en-CA").slice(0, 7) === thisMonth() && n < (MAX[r.frequency] ?? 6)) { n++; if (!STEP[r.frequency]) break; d = new Date(d.getTime() + STEP[r.frequency] * 864e5); }
     return n * Math.abs(r.average_amount);
   };
   const groups = [];
   for (const r of bills) {
-    const m = (r.predicted_next_date ?? "").slice(0, 7) || "later";
+    const m = dueMonth(r);
     (groups.at(-1)?.[0] === m ? groups.at(-1)[1] : (groups.push([m, []]), groups.at(-1)[1])).push(r);
   }
   $hero.innerHTML = `<div class="k">Bills and subscriptions</div>
