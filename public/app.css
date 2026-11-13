@@ -114,6 +114,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .ring svg { display: block; }
 .ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-size: 14px; color: var(--ink2); pointer-events: none; }
 .ring .c b { font-size: 22px; line-height: 28px; color: var(--ink); }
+.ring .c small { font-size: 11px; line-height: 14px; }
 .dl .ring .c b { font-size: 18px; line-height: 24px; }
 .dl { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 8px; }
 .vleg { display: flex; flex-direction: column; font-size: 14px; min-width: 0; }
@@ -121,7 +122,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .vleg a:hover { background: var(--hover); }
 .vleg .l { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
-.spend { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: center; margin-top: 8px; }
+.spend { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: center; margin-top: 8px; }
 .rank { width: 100%; border-collapse: collapse; }
 .rank td { padding: 9px 0; border-top: 1px solid var(--line); }
 .rank tr:first-child td { border-top: 0; }
@@ -132,7 +133,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .rank .v { text-align: right; width: 96px; font-weight: 600; }
 /* Spending's side card: one row per month on a shared zero-based scale. */
 .months { margin-top: 10px; }
-.mrow { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 0; border-radius: 6px; font-size: 15px; color: var(--ink2); }
+.mrow { display: grid; grid-template-columns: 76px minmax(0, 1fr) 72px; gap: 12px; align-items: center; padding: 8px 0; border-radius: 6px; font-size: 15px; color: var(--ink2); }
 .mrow:hover .ml { color: var(--deep); text-decoration: underline; }
 .mrow .mb { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .mrow .mb i { display: block; height: 100%; background: #A9D9D3; border-radius: 4px; }
@@ -159,7 +160,8 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .top3 a:not(.more) { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
 .top3 a:first-child { border-top: 0; }
 .top3 .l { flex: 1; }
-.top3 .more { margin-top: 8px; }
+.top3 .more { margin-top: 2px; min-height: 44px; }
+#loadmore { min-height: 44px; }
 /* The budgets page: every row has its amount field */
 .erow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
 .erow:has(> .brow) { grid-template-columns: minmax(0, 1fr); }
@@ -232,7 +234,7 @@ h2 + .erow { margin-top: 6px; }
 /* 16px body text, the research folder's type ramp (body 16/24): Activity is the longest reading surface. */
 table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
 .tx th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 13px; padding: 4px 10px 10px; }
-.tx tr.day th { font-size: 14px; font-weight: 700; color: var(--ink); padding: 22px 10px 8px; border-top: 0; }
+.tx tr.day th { font-size: 14px; font-weight: 700; color: var(--ink); padding: 22px 0 8px; border-top: 0; }
 .tx .nm { font-weight: 500; }
 .tx .acct-sub { display: none; }
 .tx tbody tr.day:first-child th { padding-top: 8px; }
@@ -254,6 +256,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
 .picker .opt { background: none; border: 0; text-align: left; min-height: 44px; padding: 7px 10px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .picker .opt:hover, .picker .opt:focus-visible { background: var(--tint); outline: none; }
 .picker .opt.on { font-weight: 700; color: var(--deep); }
+.picker.busy .opt, .picker.busy label { opacity: .5; pointer-events: none; }
 .picker label { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink2); padding: 10px 10px 4px; border-top: 1px solid var(--line); margin-top: 6px; }
 
 /* ---------- buttons ---------- */

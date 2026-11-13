@@ -12,15 +12,15 @@ const money = (n, cents = false) => (cents ? usd2 : usd0).format(n ?? 0);
 // Plaid: positive is money out. Money in shows with a plus, in teal.
 // Whole-dollar values for a list that add up to the list's rounded total: floor each, then give the leftover dollars
 // to the largest fractions. Otherwise eight rounded rows can sum to $1,768 under a $1,767 total.
-function wholeDollars(values) {
+function wholeDollars(values, keys = values.map((_, i) => String(i))) {
   const floors = values.map(Math.floor), left = Math.round(values.reduce((t, v) => t + v, 0)) - floors.reduce((t, v) => t + v, 0);
-  values.map((v, i) => [v - floors[i], i]).sort((a, b) => b[0] - a[0]).slice(0, Math.max(0, left)).forEach(([, i]) => floors[i]++);
+  values.map((v, i) => [v - floors[i], i]).sort((a, b) => b[0] - a[0] || String(keys[a[1]]).localeCompare(String(keys[b[1]]))).slice(0, Math.max(0, left)).forEach(([, i]) => floors[i]++);
   return floors;
 }
 // The month's categories in whole dollars, rounded once together, so a category shows the same figure on Home,
 // Spending, and Budgets, and the rows add up to the month's total.
 function dollarsByCat(categories) {
-  const w = wholeDollars(categories.map((c) => c.spent));
+  const w = wholeDollars(categories.map((c) => c.spent), categories.map((c) => c.cat));
   return new Map(categories.map((c, i) => [c.cat, w[i]]));
 }
 const sliceDollars = (c, map) => c.cat ? map.get(c.cat) ?? Math.round(c.spent) : c.parts.reduce((t, p) => t + (map.get(p.cat) ?? 0), 0);
@@ -84,9 +84,11 @@ const go = (page, params) => { location.hash = `${href(page)}${params && [...par
 // can't draw over the one they're on.
 let GEN = 0;
 const stale = (g) => g !== GEN;
+let shownPage = null;
 async function render() {
   const { page, q } = route();
   GEN++;
+  if (page !== shownPage) { window.scrollTo(0, 0); shownPage = page; }
   for (const a of document.querySelectorAll("#seg a, #tabbar a")) {
     a.classList.toggle("on", a.dataset.page === page);
     if (a.dataset.page === page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
@@ -138,17 +140,23 @@ document.addEventListener("click", (e) => { if (menuOpen && !menuOpen.contains(e
 // ---------- the budget hero (overview and budgets) ----------
 // Share of a budget used. A $0 budget is fully used only once something is spent against it.
 const used = (b) => b.budget > 0 ? b.spent / b.budget : b.spent > 0 ? Infinity : 0;
+// Budget totals from the same whole-dollar figures the rows show, so the band always equals the rows' sum.
 function plan(s) {
-  const limit = s.budgets.reduce((t, b) => t + b.budget, 0), spent = s.budgets.reduce((t, b) => t + b.spent, 0);
-  return { limit, spent, left: limit - spent };
+  const d = dollarsByCat(s.categories), all = [...d.values()].reduce((t, v) => t + v, 0);
+  const limit = s.budgets.reduce((t, b) => t + Math.round(b.budget), 0), spent = s.budgets.reduce((t, b) => t + (d.get(b.category) ?? 0), 0);
+  return { limit, spent, left: limit - spent, outside: all - spent };
 }
+// Over is decided in cents, like the daily alert; under a dollar over reads "<$1".
+const overBy = (b, d) => { const v = (d.get(b.category) ?? Math.round(b.spent)) - Math.round(b.budget); return v >= 1 ? money(v) : "<$1"; };
+// A suggestion never sits below what's already spent this month.
+const suggest = (b) => b.suggested ? Math.max(b.suggested, Math.ceil(b.spent / 5) * 5) : null;
 function budgetHero(s, page) {
   const pm = monthName(shiftMonth(s.month, -1)), daysLeft = s.days - s.day;
   const todayMark = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
   const canFill = s.unset.some((b) => b.suggested);
   if (!s.hasData) return `${monthMenu(s.month, s.history, page, "budget")}<div class="big">No data</div><p>tally has no transactions from ${monthYear(s.month)}.</p>`;
   if (s.budgets.length) {
-    const p = plan(s), outside = s.spent - p.spent;
+    const p = plan(s), outside = p.outside;
     const line = s.current
       ? (p.left >= 0 ? `You have <b class="num">${money(p.left)}</b> left${daysLeft ? ` for the next ${plural(daysLeft, "day")}` : " today"}.` : `You're <b class="num">${money(-p.left)}</b> over${daysLeft ? ` with ${plural(daysLeft, "day")} to go` : ""}.`)
       : (p.left >= 0 ? `You finished <b class="num">${money(p.left)}</b> under.` : `You finished <b class="num">${money(-p.left)}</b> over.`);
@@ -173,7 +181,7 @@ function wireFill(s, rerender) {
   for (const b of document.querySelectorAll("[data-fill]")) b.onclick = async () => {
     b.disabled = true;
     const g = GEN;
-    try { for (const u of s.unset.filter((x) => x.suggested)) await api("/api/budget", { category: u.category, monthly: u.suggested }); if (!stale(g)) await rerender(); }
+    try { for (const u of s.unset.filter((x) => x.suggested)) await api("/api/budget", { category: u.category, monthly: suggest(u) }); if (!stale(g)) await rerender(); }
     catch (e) { if (!stale(g)) { notice(e.message); b.disabled = false; } }
   };
 }
@@ -249,7 +257,7 @@ function netWorthCard(nw, hist) {
     line = `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Net worth since ${shortDate(hist[0].date)}"><path d="${d}L${W},${H}L0,${H}Z" fill="#E5FAF5"/><path d="${d}" fill="none" stroke="#1B8382" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
       <div class="kv"><span>${change >= 0 ? "Up" : "Down"} since ${shortDate(hist[0].date)}</span><b class="num">${money(Math.abs(change))}</b></div>`;
   }
-  return `<div class="card c-nw"><h2>Net worth <a href="#/accounts">Accounts</a></h2><div class="nw num">${money(nw.total)}</div>
+  return `<div class="card c-nw"><h2>Net worth <a href="#/accounts">All accounts</a></h2><div class="nw num">${money(nw.total)}</div>
     ${line}<div class="groups">${parts.map((p) => `<div class="kv"><span>${p[0]}</span><b class="num">${signed(p[1])}</b></div>`).join("")}</div></div>`;
 }
 // Budgets against a month of income. Income so far would compare half a month of pay with a whole month of budgets,
@@ -297,9 +305,9 @@ PAGES.overview = async (q) => {
   const refunds = s.categories.filter((c) => c.spent < 0), drawn = sl.reduce((t, c) => t + c.spent, 0);
   const dollars = dollarsByCat(s.categories), whole = sl.map((c) => sliceDollars(c, dollars));
   const refundRows = refunds.map((c) => `<a href="${txLink({ cat: c.cat, month: s.month })}"><span class="sw" style="background:${catColor(c.cat)}"></span><span class="l">${esc(label(c.cat))} refunds</span><b class="num">${signed(dollars.get(c.cat))}</b></a>`).join("");
-  const where = `<div class="card c-where"><h2>Where it went <a class="hlink" href="#/spending${s.current ? "" : `?month=${s.month}`}">Spending</a></h2>
+  const where = `<div class="card c-where"><h2>Where it went <a class="hlink" href="#/spending${s.current ? "" : `?month=${s.month}`}">All categories</a></h2>
     ${s.categories.length ? `<div class="sub">You've spent <b class="num">${money(total)}</b> ${s.current ? "so far this month" : `in ${m}`}</div>
-    <div class="dl"><div class="ring" style="width:124px;height:124px">${donut(s.categories, 124, 18, s.month)}<div class="c"><b class="num">${money(drawn)}</b></div></div>
+    <div class="dl"><div class="ring" style="width:124px;height:124px">${donut(s.categories, 124, 18, s.month)}<div class="c">${drawn - total >= 0.5 ? "<small>Before refunds</small>" : ""}<b class="num">${money(drawn)}</b></div></div>
       <div class="vleg">${sl.map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}${refundRows}</div></div>
     <div class="stackbar" role="img" aria-label="${esc(sl.map((c) => `${c.label} ${money(c.spent)}`).join(", "))}">${stackSegs(sl, total)}</div>
     <div class="top3">${sl.slice(0, 3).map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}${refundRows}
@@ -311,7 +319,7 @@ PAGES.overview = async (q) => {
   // "Within budget" is all the code knows: spent is at or under the limit. It doesn't judge pace.
   const budgetsCard = `<div class="card span2 c-budgets"><h2>Budgets <a href="#/budgets${s.current ? "" : `?month=${s.month}`}">All budgets</a></h2>
     ${s.budgets.length ? `<div class="sub">${over.length ? `<b class="over">${over.length} over</b>, ${ok.length} within budget` : `All ${ok.length} within budget`}</div>
-      ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${money((dollars.get(b.category) ?? b.spent) - Math.round(b.budget))}</b> over</span></div>
+      ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${overBy(b, dollars)}</b> over</span></div>
         <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>` : ""}
       `
       : `<div class="empty" style="margin-top:8px">No budgets yet.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Set them from the last 3 months</button>` : ""}</div>`}</div>`;
@@ -435,13 +443,13 @@ function openPicker(btn, done) {
   picker.addEventListener("click", async (e) => {
     const o = e.target.closest(".opt");
     if (!o || mine.classList.contains("busy")) return;
-    mine.classList.add("busy");
+    mine.classList.add("busy"); mine.setAttribute("aria-busy", "true");
     try {
       await api("/api/category", { transaction_id: btn.dataset.id, category: o.dataset.c || null, merchant: o.dataset.all === "1" || mine.querySelector("#pall").checked });
       if (stale(g)) return;
       if (picker === mine) closePicker();
       await done();
-    } catch (err) { if (!stale(g)) { mine.classList.remove("busy"); notice(err.message); } }
+    } catch (err) { if (!stale(g)) { mine.classList.remove("busy"); mine.removeAttribute("aria-busy"); notice(err.message); } }
   });
   setTimeout(() => document.addEventListener("mousedown", outside), 0);
 }
@@ -489,13 +497,13 @@ PAGES.budgets = async (q, saved, pre) => {
     <div class="card"><h2>Budgets</h2>
       ${set.length ? set.map((b) => {
         const over = b.spent > b.budget;
-        return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${money(Math.abs(Math.round(b.budget) - (dollars.get(b.category) ?? Math.round(b.spent))))}</b> ${over ? "over" : "left"}</span></div>
+        return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${over ? overBy(b, dollars) : money(Math.max(0, Math.round(b.budget) - (dollars.get(b.category) ?? Math.round(b.spent))))}</b> ${over ? "over" : "left"}</span></div>
           <div class="bar ${over ? "over" : ""}"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${over ? "" : tick}</div>
           <div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
     </div>
-    ${unset.length ? `<div class="card"><h2>Not budgeted <span class="aside num tot">${money(unset.reduce((t, b) => t + (dollars.get(b.category) ?? 0), 0))} spent</span></h2>
-      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.spent >= 0.5 ? `${money(dollars.get(b.category) ?? b.spent)} spent${b.suggested ? ", about " : ""}` : b.suggested ? "About " : "Nothing spent"}${b.suggested ? `${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, b.suggested)}</div>`).join("")}</div>` : ""}
+    ${unset.length ? `<div class="card"><h2>Not budgeted</h2>
+      ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.spent >= 0.5 ? `${money(dollars.get(b.category) ?? b.spent)} spent${b.suggested ? ", about " : ""}` : b.suggested ? "About " : "Nothing spent"}${b.suggested ? `${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, suggest(b))}</div>`).join("")}</div>` : ""}
     </div><aside class="side stack">${incomeCard(s, streams)}</aside></div>`;
   for (const inp of $page.querySelectorAll(".amtin input")) {
     const box = inp.closest(".amtin"), status = box.querySelector(".ok");
@@ -556,7 +564,7 @@ PAGES.bills = async () => {
     <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(Math.abs(next.average_amount))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
   const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(Math.abs(r.average_amount), true)}<small>average</small></span></div>`;
   $page.innerHTML = `<div class="layout"><div class="stack">
-      <div class="card"><h2>Expected charges</h2>${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : monthYear(m).replace(` ${new Date().getFullYear()}`, "")}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + restOfMonth(r), 0))}</span>` : ""}</div>
+      <div class="card"><h2>Expected charges</h2>${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : `Next in ${monthYear(m).replace(` ${new Date().getFullYear()}`, "")}`}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + restOfMonth(r), 0))}</span>` : ""}</div>
         ${list.map((r) => billRow(r, true, true)).join("")}</div>`).join("") || `<div class="empty">None found yet.</div>`}</div>
       ${ended.length ? `<div class="card"><h2>Stopped charging</h2><div style="margin-top:8px">${ended.map((r) => billRow(r)).join("")}</div></div>` : ""}
     </div><aside class="side stack"><div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
