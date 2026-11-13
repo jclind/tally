@@ -41,12 +41,12 @@
   <div class="stage">
     <div class="wrap">
       <div class="browser">
-        <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>localhost:3400</span></div>
+        <div class="chrome" aria-hidden="true"><span>localhost:3400</span></div>
         <picture>
           <source media="(max-width: 760px) and (prefers-color-scheme: dark)" srcset="/img/phone-home-dark.png" width="780" height="1688">
           <source media="(max-width: 760px)" srcset="/img/phone-home.png" width="780" height="1688">
           <source media="(prefers-color-scheme: dark)" srcset="/img/hero-home-dark.png" width="2560" height="1420">
-          <img src="/img/hero-home.png" width="2560" height="1420" alt="tally's Home page: $1,747 spent of a $2,490 budget with 17 days left, cash flow, spending by category in a ring chart, and net worth.">
+          <img src="/img/hero-home.png" width="2560" height="1420" alt="tally's Home page: this month's spending against the monthly budget, with what's left and the days to go.">
         </picture>
       </div>
     </div>
@@ -57,56 +57,49 @@
   <div class="wrap">
     <h2>What tally shows</h2>
     <div class="tour">
-      <div class="col">
-        <figure class="tile">
-          <h3>Budgets</h3>
-          <p>Set a monthly limit per category, or fill them all in from your last three months. The tick marks today, and a category over its limit turns pink.</p>
-          <picture class="cut"><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="760" alt="Budgets: Groceries is $25 over its $240 limit, with Bills, Gas, and Food and drink under theirs." loading="lazy"></picture>
-        </figure>
-        <figure class="tile">
-          <h3>Accounts and net worth</h3>
-          <p>Cash, investments, and cards add up to one net worth. tally counts your Plaid connections against the free plan's 10.</p>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1176" alt="Connections: four banks synced, 4 of 10 used, with buttons to link a bank, card, or brokerage." loading="lazy"></picture>
-        </figure>
-      </div>
-      <div class="col">
-        <figure class="tile">
-          <h3>Spending</h3>
-          <p>Every category this month. Click one to see its transactions, or pick an earlier month from the menu.</p>
-          <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-where-dark.png"><img src="/img/c-where.png" width="932" height="700" alt="Where it went: $1,774 spent this month, split across eight categories in a ring chart." loading="lazy"></picture>
-        </figure>
-        <figure class="tile">
-          <h3>Activity</h3>
-          <p>Search by name, amount, or category. Change a category for one charge, or for every charge from that merchant.</p>
-          <picture class="cut"><source media="(prefers-color-scheme: dark)" srcset="/img/c-activity-dark.png"><img src="/img/c-activity.png" width="960" height="840" alt="Activity: a search box over transactions grouped by day, each with its category and card." loading="lazy"></picture>
-        </figure>
-      </div>
+      <figure class="tile">
+        <h3>Budgets</h3>
+        <p>Set a monthly limit per category, or fill them all in from your last three months.</p>
+        <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="768" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; Bills and utilities and Gas are under theirs." loading="lazy"></picture>
+      </figure>
+      <figure class="tile">
+        <h3>Bills</h3>
+        <p>The recurring charges Plaid finds, with what each costs and when it's due next.</p>
+        <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-coming-dark.png"><img src="/img/c-coming.png" width="896" height="1054" alt="Coming up: 9 bills at $1,543 a month, with Verizon due Nov 14, Planet Fitness Nov 17, and rent Dec 1." loading="lazy"></picture>
+      </figure>
+      <figure class="tile">
+        <h3>Activity</h3>
+        <p>Search by name, amount, or category. Change a category for one charge, or for every charge from that merchant.</p>
+        <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-activity-dark.png"><img src="/img/c-activity.png" width="896" height="936" alt="Activity: transactions grouped by day, each with its category and card, two of them pending." loading="lazy"></picture>
+      </figure>
+      <figure class="tile">
+        <h3>Connections</h3>
+        <p>See when each bank last synced, and fix a broken sign-in without using up another connection.</p>
+        <picture><source media="(prefers-color-scheme: dark)" srcset="/img/c-conn-dark.png"><img src="/img/c-conn.png" width="896" height="1176" alt="Connections: four banks synced, 4 of 10 used, with buttons to link a bank, card, or brokerage." loading="lazy"></picture>
+      </figure>
     </div>
   </div>
 </section>
 
 <section class="section" id="setup">
   <div class="wrap setup">
-    <div>
-      <h2>What you need</h2>
-      <dl class="reqs">
-        <dt>A Mac or Linux computer</dt>
-        <dd>Not Windows. It doesn't have to stay on, since tally syncs when it starts and when you open it.</dd>
-        <dt>Node 24 or newer, and git</dt>
-        <dd>tally has no npm dependencies.</dd>
-        <dt>A free Plaid account</dt>
-        <dd>The Trial plan covers 10 bank connections for life, at US and Canadian banks.</dd>
-        <dt>Tailscale, if you want it on your phone</dt>
-        <dd>Optional. Your phone reaches tally without it being on the internet.</dd>
-      </dl>
-    </div>
+    <h2>What you need</h2>
+    <dl class="reqs">
+      <dt>A Mac or Linux computer</dt>
+      <dd>Not Windows. It doesn't have to stay on, since tally syncs when it starts and when you open it.</dd>
+      <dt>Node 24 or newer, and git</dt>
+      <dd>tally has no npm dependencies.</dd>
+      <dt>A free Plaid account</dt>
+      <dd>The Trial plan covers 10 bank connections for life, at US and Canadian banks.</dd>
+      <dt>Tailscale, if you want it on your phone</dt>
+      <dd>Reach tally from your phone without putting it on the internet.</dd>
+    </dl>
     <div class="term-col">
       <pre class="term"><code>git clone https://github.com/jclind/tally.git
 cd tally
 <span class="c"># save your Plaid keys in ~/.config/tally/plaid.env</span>
 npm start
-<span class="c"># open localhost:3400 and link a bank</span></code></pre>
-      <p>The install guide covers each step, from Plaid keys to keeping tally running in the background.</p>
+<span class="out">2026-11-13T07:00:00Z tally on http://localhost:3400 (keys found)</span></code></pre>
       <a class="btn solid" href="/docs/">Read the install guide</a>
     </div>
   </div>

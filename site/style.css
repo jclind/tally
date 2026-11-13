@@ -65,41 +65,36 @@ p { margin: 0 0 14px; }
 .hero h1 { font-size: 60px; line-height: 1.06; letter-spacing: -.02em; font-weight: 700; }
 .hero .lede { font-size: 18px; line-height: 28px; color: #fff; margin: 0; }
 .hero .ctas { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
-.hero .fine { font-size: 15px; margin: 14px 0 0; color: rgba(255, 255, 255, .86); }
+.hero .fine { font-size: 15px; margin: 14px 0 0; color: #fff; }
 .stage { position: relative; margin-top: 56px; }
 .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: var(--tint); z-index: 0; }
 .stage .wrap { position: relative; z-index: 1; }
 .browser { border-radius: 14px; overflow: hidden; box-shadow: var(--shot); background: var(--card); }
-.browser .chrome { height: 34px; background: var(--chrome); display: flex; align-items: center; gap: 7px; padding: 0 14px; }
-.browser .chrome i { width: 11px; height: 11px; border-radius: 50%; background: var(--chrome-dot); }
-.browser .chrome span { margin-left: 14px; flex: 0 1 320px; height: 20px; border-radius: 6px; background: var(--card); font: 12px/20px var(--font); color: var(--ink2); padding: 0 10px; }
+.browser .chrome { height: 34px; background: var(--chrome); display: flex; align-items: center; padding: 0 12px; }
+.browser .chrome span { flex: 0 1 320px; height: 20px; border-radius: 6px; background: var(--card); font: 12px/20px var(--font); color: var(--ink2); padding: 0 10px; }
 
 /* ---------- sections ---------- */
 .tint { background: var(--tint); }
 .section { padding: 96px 0; }
 .section h2 { font-size: 40px; font-weight: 700; letter-spacing: -.02em; }
 
-/* What tally shows: real panels from the app, near their real size, in two staggered columns. */
-.tour { display: grid; grid-template-columns: 1fr 1fr; gap: 0 64px; margin-top: 48px; }
-.tour .col + .col { padding-top: 120px; }
-.tile + .tile { margin-top: 72px; }
+/* What tally shows: real panels from the app, near their real size, two to a row. */
+.tour { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 72px 64px; margin-top: 48px; }
 .tile h3 { font-size: 22px; margin-bottom: 8px; }
 .tile p { color: var(--ink2); font-size: 17px; line-height: 27px; max-width: 46ch; margin: 0; }
 .tile picture { margin-top: 24px; max-width: 480px; }
 .tile img { border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
-/* A panel cut short fades out instead of ending on a hard edge. */
-.tile .cut img { -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); border-radius: 16px 16px 0 0; }
 
 /* What you need, with the commands beside it. */
-.setup { display: grid; grid-template-columns: 5fr 6fr; gap: 72px; align-items: start; }
-.reqs { margin: 32px 0 0; }
+.setup { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px 72px; align-items: start; }
+.setup h2 { grid-column: 1 / -1; }
+.reqs { margin: 0; }
 .reqs dt { font-weight: 700; padding-top: 18px; border-top: 1px solid var(--line); }
 .reqs dt:first-child { border-top: 0; padding-top: 0; }
 .reqs dd { margin: 4px 0 18px; color: var(--ink2); font-size: 16px; line-height: 25px; }
-.term-col { padding-top: 76px; }
 .term { margin: 0 0 24px; background: var(--term); color: #E6F2EF; border-radius: 14px; padding: 24px 26px; overflow-x: auto; font: 15px/26px var(--mono); }
 .term .c { color: #8FB3AC; }
-.term-col p { color: var(--ink2); font-size: 16px; line-height: 25px; max-width: 46ch; }
+.term .out { color: #7FE3CF; }
 
 footer { border-top: 1px solid var(--line); padding: 32px 0; color: var(--ink2); font-size: 15px; }
 footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -112,8 +107,8 @@ footer .flinks { display: flex; gap: 20px; }
 .docs-band p { margin: 10px 0 0; font-size: 19px; }
 .docs { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; padding-top: 48px; padding-bottom: 96px; }
 .side { position: sticky; top: 24px; align-self: start; font-size: 15px; }
-.side h4 { font-size: 14px; font-weight: 700; color: var(--ink2); margin: 24px 0 6px; }
-.side h4:first-child { margin-top: 0; }
+.side .grp { font-size: 14px; font-weight: 700; color: var(--ink2); margin: 24px 0 6px; }
+.side .grp:first-child { margin-top: 0; }
 .side a { display: block; color: var(--ink); font-weight: 500; padding: 5px 12px; border-left: 2px solid var(--line); }
 .side a:hover { color: var(--deep); text-decoration: none; border-left-color: var(--mint); }
 .side a.on { color: var(--deep); font-weight: 700; border-left-color: var(--teal); }
@@ -132,19 +127,20 @@ article h3 { font-size: 18px; margin: 28px 0 6px; }
 
 /* Setup steps 1 to 4: numbered badges on one line down the left, no dividers between them. */
 .steps section { position: relative; padding: 0 0 48px 56px; margin: 0; border: 0; }
-.steps section::before { content: ""; position: absolute; left: 17px; top: 44px; bottom: 6px; width: 2px; background: var(--line); }
+.steps section::before { content: ""; position: absolute; left: 17px; top: 44px; bottom: -8px; width: 2px; background: var(--line); }
 .steps h2 { font-size: 28px; margin-bottom: 14px; line-height: 36px; }
 .step { position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 17px; font-weight: 700; display: grid; place-items: center; }
-.done { display: flex; align-items: center; gap: 14px; margin: 0 0 48px; padding: 0 0 40px; border-bottom: 1px solid var(--line); font-weight: 700; color: var(--ink); }
-.done::before { content: ""; flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.5l2.6 2.5L13 6.5' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/22px no-repeat; }
-/* After setup: a group title, then the reference sections under it. */
-.part { font-size: 15px; font-weight: 700; color: var(--ink2); margin: 0 0 20px; }
+/* The line ends in a small dot where setup is done. */
+.done { position: relative; margin: 0 0 48px; padding: 0 0 40px 56px; border-bottom: 1px solid var(--line); color: var(--ink2); }
+.done::before { content: ""; position: absolute; left: 12px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--teal); }
 .opt { font-size: 14px; font-weight: 600; color: var(--ink2); margin-left: 8px; letter-spacing: 0; }
 
-code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 2px 6px; }
-.code { margin: 14px 0 18px; border-radius: 12px; overflow: hidden; background: var(--term); }
-.code .bar { display: flex; justify-content: flex-end; padding: 6px 8px 0; }
-pre { margin: 0; background: var(--term); color: #E6F2EF; padding: 6px 20px 18px; overflow-x: auto; font: 14px/23px var(--mono); }
+code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 2px 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+article p code, article li code, article dd code { white-space: nowrap; }
+/* Copy gets its own column, so it never sits on top of the code. */
+.code { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; margin: 14px 0 18px; border-radius: 12px; overflow: hidden; background: var(--term); }
+.code .bar { order: 2; padding: 10px 10px 0 0; }
+pre { margin: 0; background: var(--term); color: #E6F2EF; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); }
 pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 pre .c { color: #8FB3AC; }
 .copybtn { height: 28px; padding: 0 12px; border-radius: 7px; border: 0; background: rgba(255, 255, 255, .1); color: #fff; font: 600 13px var(--font); cursor: pointer; }
@@ -155,7 +151,6 @@ pre .c { color: #8FB3AC; }
 .note.warn b:first-child { color: var(--warn); }
 .shot { margin: 20px 0; max-width: 448px; }
 .shot img { border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--line); }
-.shot.cut img { -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); border-radius: 16px 16px 0 0; outline: 0; }
 dl.faq dt { font-weight: 700; color: var(--ink); margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
 dl.faq dt:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 dl.faq dd { margin: 6px 0 0; color: var(--body); }
@@ -166,8 +161,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .hero h1 { font-size: 52px; max-width: 640px; }
   .hero-side { max-width: 600px; }
   .tour { gap: 0 40px; }
-  .setup { grid-template-columns: 1fr; gap: 40px; }
-  .term-col { padding-top: 0; }
+  .setup { grid-template-columns: minmax(0, 1fr); gap: 28px; }
 }
 @media (max-width: 760px) {
   body { font-size: 16px; line-height: 26px; }
@@ -184,9 +178,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .browser img { aspect-ratio: 390 / 640; object-fit: cover; object-position: top; }
   .section { padding: 64px 0; }
   .section h2 { font-size: 30px; }
-  .tour { grid-template-columns: 1fr; margin-top: 32px; }
-  .tour .col + .col { padding-top: 0; margin-top: 56px; }
-  .tile + .tile { margin-top: 56px; }
+  .tour { grid-template-columns: minmax(0, 1fr); gap: 56px; margin-top: 32px; }
   .tile h3 { font-size: 20px; }
   .tile p { font-size: 16px; line-height: 26px; }
   .tile picture { margin-top: 18px; }
@@ -201,11 +193,14 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .side .jump { display: block; width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 10px; background: var(--card) var(--chev) right 14px center no-repeat; padding: 0 40px 0 14px; font: 600 16px var(--font); color: var(--ink); appearance: none; }
   .side nav { display: none; }
   #before h2, .steps h2 { font-size: 24px; }
-  .steps section { padding-left: 48px; }
-  .steps section::before { left: 15px; top: 40px; }
-  .step, .done::before { width: 32px; height: 32px; font-size: 15px; }
+  /* Phones keep the full width for the steps: the badge sits inline with the heading and the line goes. */
+  .steps section { padding-left: 0; }
+  .steps section::before { display: none; }
+  .step { position: static; display: inline-grid; width: 32px; height: 32px; font-size: 15px; margin-right: 12px; vertical-align: 2px; }
   .steps h2 { line-height: 32px; }
+  .done { padding-left: 0; }
+  .done::before { display: none; }
   article h2 { font-size: 22px; }
-  pre { font-size: 13px; padding: 4px 16px 16px; }
+  pre { font-size: 13px; padding: 12px 16px; }
   .shot { max-width: 100%; }
 }
