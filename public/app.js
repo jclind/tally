@@ -151,6 +151,7 @@ function plan(s) {
 }
 // Over is decided in cents, like the daily alert; under a dollar over reads "<$1".
 const overBy = (b, d) => b.spent - b.budget < 1 ? "<$1" : money(Math.max(1, (d.get(b.category) ?? Math.round(b.spent)) - Math.round(b.budget)));
+const leftBy = (b, d) => money(Math.max(0, Math.round(b.budget) - (d.get(b.category) ?? Math.round(b.spent))));
 // The Not budgeted subline: what was spent (or refunded), and the recent average unless the suggestion was raised past it.
 function notBudgetedLine(b, d) {
   if (d <= -1) return `${money(-d)} refunded`;
@@ -331,7 +332,11 @@ PAGES.overview = async (q) => {
   const budgetsCard = `<div class="card span2 c-budgets"><h2>Budgets <a href="#/budgets${s.current ? "" : `?month=${s.month}`}">All budgets</a></h2>
     ${s.budgets.length ? `<div class="sub">${over.length ? `<b class="over">${over.length} over</b>, ${ok.length} within budget` : `All ${ok.length} within budget`}</div>
       ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${overBy(b, dollars)}</b> over</span></div>
-        <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>` : ""}
+        <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>`
+        // With nothing over, the card shows the budgets closest to their limits, so it still says how the month goes:
+        // four fill the desktop's two columns, and a phone hides the fourth.
+        : `<div class="need top">${ok.slice().sort((a, b) => used(b) - used(a)).slice(0, 4).map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num"><b>${leftBy(b, dollars)}</b> left</span></div>
+        <div class="bar"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : ""}</div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>`}
       `
       : `<div class="empty" style="margin-top:8px">No budgets yet.</div>`}</div>`;
 
@@ -566,7 +571,7 @@ PAGES.budgets = async (q, saved, pre) => {
     <div class="card"><h2>Budgets</h2>
       ${set.length ? set.map((b) => {
         const over = b.spent > b.budget;
-        return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${over ? overBy(b, dollars) : money(Math.max(0, Math.round(b.budget) - (dollars.get(b.category) ?? Math.round(b.spent))))}</b> ${over ? "over" : "left"}</span></div>
+        return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${over ? overBy(b, dollars) : leftBy(b, dollars)}</b> ${over ? "over" : "left"}</span></div>
           <div class="bar ${over ? "over" : ""}"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${over ? "" : tick}</div>
           <div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
