@@ -330,7 +330,7 @@ PAGES.overview = async (q) => {
       ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${overBy(b, dollars)}</b> over</span></div>
         <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>` : ""}
       `
-      : `<div class="empty" style="margin-top:8px">No budgets yet.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Set them from the last 3 months</button>` : ""}</div>`}</div>`;
+      : `<div class="empty" style="margin-top:8px">No budgets yet.</div>`}</div>`;
 
   const activity = `<div class="card span2 c-activity"><h2>Recent activity <a href="#/transactions${s.current ? "" : `?month=${s.month}`}">All activity</a></h2>
     <div style="margin-top:8px">${s.recent.map(activityRow).join("") || `<div class="empty">Nothing yet.</div>`}</div></div>`;

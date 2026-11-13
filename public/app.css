@@ -43,7 +43,8 @@ button, input, select { font: inherit; color: inherit; }
 .hero p { margin: 0 0 22px; font-size: 17px; text-wrap: pretty; }
 .hero p.has-also { margin-bottom: 2px; }
 .hero p.also { font-size: 15px; }
-.track + p { margin-top: 18px; }
+/* Room for the "Today" label under the track before whatever follows. */
+.track + p { margin-top: 34px; }
 .hero .hbtn { background: #fff; color: var(--deep); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 700; cursor: pointer; }
 .hero .hbtn:hover { background: var(--tint); }
 .track { height: 12px; border-radius: 6px; background: rgba(255, 255, 255, .22); position: relative; margin-bottom: 30px; }
