@@ -10,6 +10,13 @@ const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD"
 const usd2 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const money = (n, cents = false) => (cents ? usd2 : usd0).format(n ?? 0);
 // Plaid: positive is money out. Money in shows with a plus, in teal.
+// Whole-dollar values for a list that add up to the list's rounded total: floor each, then give the leftover dollars
+// to the largest fractions. Otherwise eight rounded rows can sum to $1,768 under a $1,767 total.
+function wholeDollars(values) {
+  const floors = values.map(Math.floor), left = Math.round(values.reduce((t, v) => t + v, 0)) - floors.reduce((t, v) => t + v, 0);
+  values.map((v, i) => [v - floors[i], i]).sort((a, b) => b[0] - a[0]).slice(0, Math.max(0, left)).forEach(([, i]) => floors[i]++);
+  return floors;
+}
 // A balance that can go either way, with a real minus sign: signed(-954.35) is "−$954.35".
 const signed = (n, cents = false) => `${n < 0 ? "−" : ""}${money(Math.abs(n), cents)}`;
 const amt = (n) => n < 0 ? `<span class="num in">+${money(-n, true)}</span>` : `<span class="num">${money(n, true)}</span>`;
@@ -37,7 +44,7 @@ const ICON = {
   list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   pie: '<path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
   month: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
-  repeat: '<path d="M4 9a6 6 0 0 1 6-5h8l-3-3M20 15a6 6 0 0 1-6 5H6l3 3"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
   bank: '<path d="M3 9 12 4l9 5M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
   chev: '<path d="m9 6 6 6-6 6"/>',
@@ -46,7 +53,7 @@ const icon = (n, s = 20, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0
 
 // One name per page on desktop and phone. "Transactions" doesn't fit a 65px phone tab, so the page is Activity.
 const NAV = [["overview", "Home", "home", "Home"], ["transactions", "Activity", "list", "Activity"], ["spending", "Spending", "pie", "Spending"],
-  ["budgets", "Budgets", "month", "Budgets"], ["bills", "Bills", "repeat", "Bills"], ["accounts", "Accounts", "bank", "Accounts"]];
+  ["budgets", "Budgets", "month", "Budgets"], ["bills", "Bills", "receipt", "Bills"], ["accounts", "Accounts", "bank", "Accounts"]];
 const href = (page) => `#/${page === "overview" ? "" : page}`;
 document.getElementById("seg").innerHTML = NAV.map(([p, n]) => `<a href="${href(p)}" data-page="${p}">${n}${p === "accounts" ? '<span class="dot" hidden></span>' : ""}</a>`).join("");
 document.getElementById("tabbar").innerHTML = NAV.map(([p, , i, short]) => `<a href="${href(p)}" data-page="${p}">${icon(i, 22)}${short}${p === "accounts" ? '<span class="dot" hidden></span>' : ""}</a>`).join("");
@@ -122,6 +129,8 @@ function wireMonthMenu() {
 document.addEventListener("click", (e) => { if (menuOpen && !menuOpen.contains(e.target)) closeMenu(); });
 
 // ---------- the budget hero (overview and budgets) ----------
+// Share of a budget used. A $0 budget is fully used only once something is spent against it.
+const used = (b) => b.budget > 0 ? b.spent / b.budget : b.spent > 0 ? Infinity : 0;
 function plan(s) {
   const limit = s.budgets.reduce((t, b) => t + b.budget, 0), spent = s.budgets.reduce((t, b) => t + b.spent, 0);
   return { limit, spent, left: limit - spent };
@@ -156,8 +165,9 @@ function budgetHero(s, page) {
 function wireFill(s, rerender) {
   for (const b of document.querySelectorAll("[data-fill]")) b.onclick = async () => {
     b.disabled = true;
-    try { for (const u of s.unset.filter((x) => x.suggested)) await api("/api/budget", { category: u.category, monthly: u.suggested }); await rerender(); }
-    catch (e) { notice(e.message); b.disabled = false; }
+    const g = GEN;
+    try { for (const u of s.unset.filter((x) => x.suggested)) await api("/api/budget", { category: u.category, monthly: u.suggested }); if (!stale(g)) await rerender(); }
+    catch (e) { if (!stale(g)) { notice(e.message); b.disabled = false; } }
   };
 }
 
@@ -275,16 +285,21 @@ PAGES.overview = async (q) => {
 
   // Summary cards on Home show whole dollars; the Activity list keeps cents.
   const sl = slices(s.categories), total = s.categories.reduce((t, c) => t + c.spent, 0);
+  // The ring can only draw money out. A category with net refunds is a signed row under the legend, and the ring's
+  // center shows what the ring draws.
+  const refunds = s.categories.filter((c) => c.spent < 0), drawn = sl.reduce((t, c) => t + c.spent, 0);
+  const whole = wholeDollars(sl.map((c) => c.spent));
+  const refundRows = refunds.map((c) => `<a href="${txLink({ cat: c.cat, month: s.month })}"><span class="sw" style="background:${OTHER}"></span><span class="l">${esc(label(c.cat))} refunds</span><b class="num">${signed(c.spent)}</b></a>`).join("");
   const where = `<div class="card c-where"><h2>Where it went <a class="hlink" href="#/spending${s.current ? "" : `?month=${s.month}`}">Spending</a></h2>
     ${s.categories.length ? `<div class="sub">You've spent <b class="num">${money(total)}</b> ${s.current ? "so far this month" : `in ${m}`}</div>
-    <div class="dl"><div class="ring" style="width:124px;height:124px">${donut(s.categories, 124, 18, s.month)}<div class="c"><b class="num">${money(total)}</b></div></div>
-      <div class="vleg">${sl.map((c) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent)}</b></a>`).join("")}</div></div>
+    <div class="dl"><div class="ring" style="width:124px;height:124px">${donut(s.categories, 124, 18, s.month)}<div class="c"><b class="num">${money(drawn)}</b></div></div>
+      <div class="vleg">${sl.map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}${refundRows}</div></div>
     <div class="stackbar" role="img" aria-label="${esc(sl.map((c) => `${c.label} ${money(c.spent)}`).join(", "))}">${stackSegs(sl, total)}</div>
-    <div class="top3">${sl.slice(0, 3).map((c) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent)}</b></a>`).join("")}
+    <div class="top3">${sl.slice(0, 3).map((c, i) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(whole[i])}</b></a>`).join("")}
       <a class="more" href="#/spending${s.current ? "" : `?month=${s.month}`}">All categories</a></div>`
       : `<div class="empty" style="margin-top:8px">No spending in ${m} yet.</div>`}</div>`;
 
-  const over = s.budgets.filter((b) => b.spent > b.budget).sort((a, b) => (b.spent - b.budget) - (a.spent - a.budget));
+  const over = s.budgets.filter((b) => b.spent > b.budget).sort((a, b) => used(b) - used(a));
   const ok = s.budgets.filter((b) => b.spent <= b.budget);
   // "Within budget" is all the code knows: spent is at or under the limit. It doesn't judge pace.
   const budgetsCard = `<div class="card span2 c-budgets"><h2>Budgets <a href="#/budgets${s.current ? "" : `?month=${s.month}`}">All budgets</a></h2>
@@ -354,7 +369,7 @@ PAGES.transactions = async (q) => {
     if (!append) lastDay = null;
     // Rows sit under a header per day instead of repeating the date on every row.
     const html = r.rows.map((t) => `${t.date !== lastDay ? `<tr class="day"><th colspan="4" scope="rowgroup">${dayName((lastDay = t.date))}</th></tr>` : ""}<tr class="${t.pending ? "pending" : ""}">
-      <td><div class="nm"><span>${esc(nice(t.who))}</span>${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${catBtn(t)}</div></td>
+      <td><div class="nm"><span title="${esc(nice(t.who))}">${esc(nice(t.who))}</span>${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${catBtn(t)}</div></td>
       <td class="cat-col">${catBtn(t)}</td>
       <td class="acct-col muted">${esc(short(t.account_name))}</td>
       <td class="amt">${amt(t.amount)}<small class="acct-sub">${esc(short(t.account_name))}</small></td></tr>`).join("");
@@ -370,11 +385,12 @@ PAGES.transactions = async (q) => {
   }
   const refilter = () => { offset = 0; history.replaceState(null, "", `#/transactions${[...params()].length ? "?" + params() : ""}`); load(false); };
   let t;
-  document.getElementById("fq").addEventListener("input", () => { clearTimeout(t); t = setTimeout(refilter, 250); });
+  const pageGen = GEN;
+  document.getElementById("fq").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { if (!stale(pageGen)) refilter(); }, 250); });
   for (const id of ["fmonth", "fcat", "facct"]) document.getElementById(id).addEventListener("change", refilter);
   document.getElementById("rows").addEventListener("click", (e) => {
     const b = e.target.closest(".catbtn");
-    if (b) openPicker(b, async () => { offset = 0; await load(false); });
+    if (b) openPicker(b, async () => { if (stale(pageGen)) return; offset = 0; await load(false); });
   });
   await load(false);
 };
@@ -433,11 +449,18 @@ PAGES.spending = async (q) => {
   $page.innerHTML = `<div class="stack">
     <div class="card"><h2>Where it went</h2>
       ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">Spent<b class="num">${money(total)}</b></div></div>
-        <table class="rank">${r.categories.map((c) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${money(c.spent)}</td></tr>`).join("")}</table></div>`
+        <table class="rank">${r.categories.map((c, i, all) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${signed(wholeDollars(all.map((x) => x.spent))[i])}</td></tr>`).join("")}</table></div>`
         : `<div class="empty" style="margin-top:8px">No spending in ${monthName(r.month)}. <a class="more" href="#/spending">Back to this month</a></div>`}</div>
     <div class="card" id="chart"><h2>By month</h2></div></div>`;
   const chartCard = document.getElementById("chart");
-  chartCard.append(barChart(r.history, { width: chartCard.clientWidth - 2 * parseFloat(getComputedStyle(chartCard).paddingLeft), current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
+  // The chart is drawn for its card's width, and drawn again when that width changes (a rotated phone, a resized window).
+  const draw = () => {
+    chartCard.querySelector(".chart")?.remove();
+    chartCard.append(barChart(r.history, { width: chartCard.clientWidth - 2 * parseFloat(getComputedStyle(chartCard).paddingLeft), current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
+  };
+  draw();
+  let drawnAt = chartCard.clientWidth;
+  new ResizeObserver(() => { if (chartCard.isConnected && Math.abs(chartCard.clientWidth - drawnAt) > 8) { drawnAt = chartCard.clientWidth; draw(); } }).observe(chartCard);
   wireMonthMenu(); wireTips($page);
 };
 
@@ -489,7 +512,6 @@ PAGES.budgets = async (q, saved, pre) => {
   $hero.innerHTML = budgetHero(s, "budgets");
   const tick = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
   const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value != null ? value.toLocaleString("en-US") : ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></span></label>`;
-  const used = (b) => b.budget > 0 ? b.spent / b.budget : Infinity;
   const set = s.budgets.slice().sort((a, b) => used(b) - used(a));
   const unset = s.unset.slice().sort((a, b) => b.spent - a.spent || (b.suggested ?? 0) - (a.suggested ?? 0));
   $page.innerHTML = `<div class="layout"><div class="stack">
@@ -497,7 +519,7 @@ PAGES.budgets = async (q, saved, pre) => {
       ${set.length ? set.map((b) => {
         const over = b.spent > b.budget;
         return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${money(Math.abs(b.budget - b.spent))}</b> ${over ? "over" : "left"}</span></div>
-          <div class="bar ${over ? "over" : ""}"><i style="width:${b.budget > 0 ? Math.max(0, Math.min(100, (b.spent / b.budget) * 100)) : 100}%"></i>${over ? "" : tick}</div>
+          <div class="bar ${over ? "over" : ""}"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${over ? "" : tick}</div>
           <div class="l2"><span class="num"><b>${money(b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
     </div>
@@ -544,6 +566,12 @@ PAGES.bills = async () => {
   const perMonth = bills.reduce((s, r) => s + r.monthly, 0);
   const next = bills.find((r) => r.predicted_next_date);
   // Bills under a subhead per month with its total: what still leaves this month, then next month. (Fable, round 3.)
+  const STEP = { WEEKLY: 7, BIWEEKLY: 14, SEMI_MONTHLY: 15 };
+  const restOfMonth = (r) => {
+    let n = 0, d = new Date(r.predicted_next_date + "T12:00:00");
+    while (d.toLocaleDateString("en-CA").slice(0, 7) === thisMonth()) { n++; if (!STEP[r.frequency]) break; d = new Date(d.getTime() + STEP[r.frequency] * 864e5); }
+    return n * Math.abs(r.average_amount);
+  };
   const groups = [];
   for (const r of bills) {
     const m = (r.predicted_next_date ?? "").slice(0, 7) || "later";
@@ -554,7 +582,7 @@ PAGES.bills = async () => {
     <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(Math.abs(next.average_amount))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
   const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(Math.abs(r.average_amount), true)}<small>average</small></span></div>`;
   $page.innerHTML = `<div class="layout"><div class="stack">
-      <div class="card">${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : monthYear(m).replace(` ${new Date().getFullYear()}`, "")}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + Math.abs(r.average_amount), 0))}</span>` : ""}</div>
+      <div class="card"><h2>Expected charges</h2>${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : monthYear(m).replace(` ${new Date().getFullYear()}`, "")}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + restOfMonth(r), 0))}</span>` : ""}</div>
         ${list.map((r) => billRow(r, true, true)).join("")}</div>`).join("") || `<div class="empty">None found yet.</div>`}</div>
       ${ended.length ? `<div class="card"><h2>Stopped charging</h2><div style="margin-top:8px">${ended.map((r) => billRow(r)).join("")}</div></div>` : ""}
     </div><aside class="side stack"><div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
@@ -574,19 +602,22 @@ PAGES.accounts = async () => {
   const groupCard = ([t, name]) => {
     const owes = t === "credit" || t === "loan", sign = (n) => owes ? -n : n;
     const list = accounts.filter((a) => a.type === t), total = list.filter((a) => !a.closed_at).reduce((x, a) => x + (a.current ?? 0), 0);
-    return `<div class="card"><h2>${name} <span class="aside num tot">${signed(sign(total), true)}</span></h2><div style="margin-top:8px">
+    return `<div class="card"><h2>${name} <span class="aside num tot">${signed(sign(total))}</span></h2><div style="margin-top:8px">
       ${list.map((a) => `<div class="row${a.closed_at ? " closed" : ""}"><span class="w"><b>${esc(short(a.name))}${a.closed_at ? '<span class="tag">closed</span>' : ""}</b><small>${esc(a.inst)}${a.mask ? `, ending ${esc(a.mask)}` : ""}${a.closed_at ? `, closed ${shortDate(a.closed_at.slice(0, 10))}` : t === "credit" && a.credit_limit ? `, ${money(a.credit_limit)} limit` : ""}</small></span><span class="amt num">${a.closed_at ? "" : signed(sign(a.current ?? 0), true)}</span></div>`).join("")}</div></div>`;
   };
   const groups = GROUPS.filter(([t]) => accounts.some((a) => a.type === t)).map(groupCard).join("");
+  // When every connection synced cleanly in the same minute, the time is said once at the top.
+  const when = (iso) => iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "never";
+  const together = s.items.length > 1 && s.items.every((it) => !it.last_error && it.last_sync && when(it.last_sync) === when(s.items[0].last_sync));
   $page.innerHTML = `<div id="msg"></div>
     ${!s.keys ? `<div class="notice bad">No Plaid keys. Put PLAID_CLIENT_ID and PLAID_SECRET in ${esc(s.keysPath)}.</div>` : ""}
     <div class="layout"><div class="stack">${groups}</div>
-    <aside class="side stack"><div class="card"><h2>Connections <span class="aside">${s.used} of ${s.cap} used</span></h2><div style="margin-top:8px">${s.items.map((it) => {
+    <aside class="side stack"><div class="card"><h2>Connections <span class="aside">${s.used} of ${s.cap} used</span></h2>${together ? `<div class="sub">All synced ${esc(when(s.items[0].last_sync))}</div>` : ""}<div style="margin-top:8px">${s.items.map((it) => {
       const broken = /ITEM_LOGIN_REQUIRED|PENDING_EXPIRATION|PENDING_DISCONNECT/.test(it.last_error ?? "");
       // Two lines per connection: the name with its Sync button, then status and what it holds.
       const what = it.tx.n || !it.holdings.n ? plural(it.tx.n, "transaction") : plural(it.holdings.n, "holding");
       return `<div class="conn"><div class="top"><b>${esc(it.institution_name)}</b><button class="more" data-sync="${esc(it.item_id)}" aria-label="Sync ${esc(it.institution_name)} now">Sync</button></div>
-        <div class="state ${it.last_error ? "bad" : ""}">${it.last_error ? (broken ? "Sign in again" : "Sync failed") : `Synced ${esc(it.last_sync ? new Date(it.last_sync).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "never")} · ${what}`}</div>
+        <div class="state ${it.last_error ? "bad" : ""}">${it.last_error ? (broken ? "Sign in again" : "Sync failed") : together ? what : `Synced ${esc(when(it.last_sync))} · ${what}`}</div>
         ${it.last_error ? `<div class="err">${esc(it.last_error)}</div>` : ""}
         ${broken ? `<div class="actions"><button class="btn primary" data-fix="${esc(it.item_id)}">Fix connection</button></div>` : ""}</div>`;
     }).join("") || `<div class="empty">Nothing linked yet.</div>`}</div>
@@ -599,7 +630,7 @@ PAGES.accounts = async () => {
     b.disabled = true; msg("Syncing…");
     const g = GEN;
     try { const { results } = await api("/api/sync", { item_id: b.dataset.sync }); if (stale(g)) return; const e = results.flatMap((r) => r.errors); await PAGES.accounts(); if (e.length) msg(e.join("\n"), true); }
-    catch (e) { msg(e.message, true); b.disabled = false; }
+    catch (e) { if (!stale(g)) { msg(e.message, true); b.disabled = false; } }
   };
   for (const b of document.querySelectorAll("[data-fix]")) b.onclick = () => link({ itemId: b.dataset.fix }, msg);
   document.getElementById("bank").onclick = () => link({ kind: "bank" }, msg);
