@@ -10,6 +10,8 @@ const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD"
 const usd2 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const money = (n, cents = false) => (cents ? usd2 : usd0).format(n ?? 0);
 // Plaid: positive is money out. Money in shows with a plus, in teal.
+// A balance that can go either way, with a real minus sign: signed(-954.35) is "−$954.35".
+const signed = (n, cents = false) => `${n < 0 ? "−" : ""}${money(Math.abs(n), cents)}`;
 const amt = (n) => n < 0 ? `<span class="num in">+${money(-n, true)}</span>` : `<span class="num">${money(n, true)}</span>`;
 const label = (c) => META?.labels[c] ?? c;
 const mdate = (m) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
@@ -123,14 +125,14 @@ function budgetHero(s, page) {
   if (!s.hasData) return `${monthMenu(s.month, s.history, page, "budget")}<div class="big">No data</div><p>tally has no transactions from ${monthYear(s.month)}.</p>`;
   if (s.budgets.length) {
     const p = plan(s), outside = s.spent - p.spent;
-    const line = (s.current
+    const line = s.current
       ? (p.left >= 0 ? `You have <b class="num">${money(p.left)}</b> left${daysLeft ? ` for the next ${plural(daysLeft, "day")}` : " today"}.` : `You're <b class="num">${money(-p.left)}</b> over${daysLeft ? ` with ${plural(daysLeft, "day")} to go` : ""}.`)
-      : (p.left >= 0 ? `You finished <b class="num">${money(p.left)}</b> under.` : `You finished <b class="num">${money(-p.left)}</b> over.`))
-      // The band counts budgeted categories only, so spending elsewhere is named rather than silently left out.
-      + (outside >= 1 ? ` <b class="num">${money(outside)}</b> more went to categories without a budget.` : "");
+      : (p.left >= 0 ? `You finished <b class="num">${money(p.left)}</b> under.` : `You finished <b class="num">${money(-p.left)}</b> over.`);
+    // The band counts budgeted categories only, so spending elsewhere gets its own short line instead of being left out.
+    const also = outside >= 1 ? `<p class="also"><b class="num">${money(outside)}</b> spent without a budget.</p>` : "";
     return `${monthMenu(s.month, s.history, page, "budget")}
       <div class="big num">${money(p.spent)} <span>of ${money(p.limit)}</span></div>
-      <p>${line}</p>
+      <p${also ? ' class="has-also"' : ""}>${line}</p>${also}
       <div class="track"><i class="${p.left < 0 ? "over" : ""}" style="width:${p.limit > 0 ? Math.min(100, (p.spent / p.limit) * 100) : 100}%"></i>${p.left < 0 ? "" : todayMark}</div>`;
   }
   // No budgets yet: measure the month against last month instead.
@@ -156,8 +158,11 @@ function slices(all) {
   const categories = all.filter((c) => c.spent > 0);
   const mapped = categories.filter((c) => CAT_COLOR[c.cat]).sort((a, b) => b.spent - a.spent).map((c) => ({ ...c, color: CAT_COLOR[c.cat], label: label(c.cat) }));
   const rest = categories.filter((c) => !CAT_COLOR[c.cat]);
-  if (rest.length) mapped.push({ cat: null, label: "Other", color: OTHER, spent: rest.reduce((t, c) => t + c.spent, 0), n: rest.reduce((t, c) => t + c.n, 0), parts: rest });
-  return mapped;
+  // One uncolored category keeps its own name (gray Medical, as on Spending); two or more become gray "Other".
+  if (rest.length === 1) mapped.push({ ...rest[0], color: OTHER, label: label(rest[0].cat) });
+  else if (rest.length) mapped.push({ cat: null, label: "Other", color: OTHER, spent: rest.reduce((t, c) => t + c.spent, 0), n: rest.reduce((t, c) => t + c.n, 0), parts: rest });
+  // Spend order, gray included, so the ring, the legend, and a top three agree.
+  return mapped.sort((a, b) => b.spent - a.spent);
 }
 function donut(categories, size, stroke, month) {
   const s = slices(categories), total = s.reduce((t, c) => t + c.spent, 0);
@@ -198,9 +203,10 @@ const activityRow = (t) => `<div class="row">${catDot(t.cat)}<span class="w"><b>
 const FREQ = { WEEKLY: "Weekly", BIWEEKLY: "Every 2 weeks", SEMI_MONTHLY: "Twice a month", MONTHLY: "Monthly", ANNUALLY: "Yearly", UNKNOWN: "Irregular" };
 // Plaid predicts the next date from past charges, so it's "expected", not a due date. Most bills are monthly,
 // so only other frequencies are named.
-const billRow = (r) => `<div class="row"><span class="av${r.is_active ? "" : " off"}">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>
+// Summary cards (Coming up) show whole dollars; record lists (the Bills page) show cents.
+const billRow = (r, cents = true) => `<div class="row${r.is_active ? "" : " off"}"><span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>
   <span class="w"><b>${esc(nice(r.who))}</b><small>${r.is_active && r.predicted_next_date ? `Expected ${shortDate(r.predicted_next_date)}` : r.last_date ? `Last charged ${shortDate(r.last_date)}` : ""}</small></span>
-  <span class="amt num">${money(Math.abs(r.average_amount), true)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
+  <span class="amt num">${money(Math.abs(r.average_amount), cents)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
 const byNextDue = (a, b) => (a.predicted_next_date ?? "9999") < (b.predicted_next_date ?? "9999") ? -1 : 1;
 
 function netWorthCard(nw, hist) {
@@ -215,23 +221,29 @@ function netWorthCard(nw, hist) {
       <div class="kv"><span>${change >= 0 ? "Up" : "Down"} since ${shortDate(hist[0].date)}</span><b class="num">${money(Math.abs(change))}</b></div>`;
   }
   return `<div class="card c-nw"><h2>Net worth <a href="#/accounts">Accounts</a></h2><div class="nw num">${money(nw.total, true)}</div>
-    ${line}<div class="groups">${parts.map((p) => `<div class="kv"><span>${p[0]}</span><b class="num">${p[1] < 0 ? "-" : ""}${money(Math.abs(p[1]), true)}</b></div>`).join("")}</div></div>`;
+    ${line}<div class="groups">${parts.map((p) => `<div class="kv"><span>${p[0]}</span><b class="num">${signed(p[1])}</b></div>`).join("")}</div></div>`;
 }
-function incomeCard(s) {
+// Budgets against a month of income. Income so far would compare half a month of pay with a whole month of budgets,
+// so this month uses expected income: Plaid's repeating deposits, else last month's income. "Over" stays a budget word.
+function incomeCard(s, streams) {
   if (!s.budgets.length) return "";
-  const p = plan(s), left = s.income - p.limit;
+  const p = plan(s);
+  const expected = streams.filter((r) => r.direction === "inflow" && r.is_active && !r.is_transfer).reduce((t, r) => t + r.monthly, 0);
+  const last = s.history.find((h) => h.month === shiftMonth(s.month, -1));
+  const [name, income] = !s.current ? [`Income in ${monthName(s.month)}`, s.income]
+    : expected > 0 ? ["Expected income", expected] : [`Income in ${monthName(shiftMonth(s.month, -1))}`, last?.income ?? 0];
+  const left = income - p.limit;
   return `<div class="card"><h2>Budgets and income</h2><div style="margin-top:8px">
-    <div class="kv"><span>Income${s.current ? " so far" : ""}</span><b class="num">${money(s.income, true)}</b></div>
+    <div class="kv"><span>${name}</span><b class="num">${money(income)}</b></div>
     <div class="kv"><span>Budgeted</span><b class="num">${money(p.limit)}</b></div>
-    <div class="kv total">${left >= 0 ? `<span>Not budgeted yet</span><b class="num">${money(left)}</b>`
-      : `<span>Budgets past income</span><span class="num over"><b>${money(-left)}</b> over</span>`}</div></div></div>`;
+    <div class="kv total"><span>${left >= 0 ? "Left to budget" : "Budgeted past income"}</span><b class="num">${money(Math.abs(left))}</b></div></div></div>`;
 }
 const GROUPS = [["depository", "Cash"], ["credit", "Credit cards"], ["investment", "Investments"], ["loan", "Loans"]];
 function comingUpCard(bills) {
   const list = bills.slice().sort(byNextDue).slice(0, 6);
   const perMonth = bills.reduce((t, r) => t + r.monthly, 0);
   return `<div class="card c-coming"><h2>Coming up <a href="#/bills">All bills</a></h2>
-    ${list.length ? `<div class="sub">${plural(bills.length, "bill")}, <b class="num">${money(perMonth)}</b> a month</div>${list.map(billRow).join("")}` : `<div class="empty" style="margin-top:8px">No repeating bills found yet.</div>`}</div>`;
+    ${list.length ? `<div class="sub">${plural(bills.length, "bill")}, <b class="num">${money(perMonth)}</b> a month</div>${list.map((r) => billRow(r, false)).join("")}` : `<div class="empty" style="margin-top:8px">No repeating bills found yet.</div>`}</div>`;
 }
 
 // ---------- overview ----------
@@ -244,15 +256,16 @@ PAGES.overview = async (q) => {
 
   const net = s.income - s.spent, mx = Math.max(s.income, s.spent, 1);
   const cash = `<div class="card c-cash"><h2>Cash flow</h2>
-    <div class="sub"><b class="num">${money(Math.abs(net), true)}</b> more ${net < 0 ? "out than in" : "in than out"}${s.current ? " so far" : ""}</div>
-    <div class="cfr">${[["Earned", s.income, "#00CDA9"], ["Spent", s.spent, "#F877A5"]].map(([k, v, c]) => `<div class="lab"><span>${k}</span><b class="num">${money(v, true)}</b></div><div class="t"><i style="width:${(v / mx) * 100}%;background:${c}"></i></div>`).join("")}</div>
-    <div class="note">${s.current ? `Last month by this day you'd spent <b class="num">${money(s.spentLastMonthSoFar, true)}</b>.` : `${pm} came to <b class="num">${money(s.spentLastMonth, true)}</b> in all.`}</div></div>`;
+    <div class="sub"><b class="num">${money(Math.abs(net))}</b> more ${net < 0 ? "out than in" : "in than out"}${s.current ? " so far" : ""}</div>
+    <div class="cfr">${[["Earned", s.income, "#00CDA9"], ["Spent", s.spent, "#F877A5"]].map(([k, v, c]) => `<div class="lab"><span>${k}</span><b class="num">${money(v)}</b></div><div class="t"><i style="width:${(v / mx) * 100}%;background:${c}"></i></div>`).join("")}</div>
+    <div class="note">${s.current ? `Last month by this day you'd spent <b class="num">${money(s.spentLastMonthSoFar)}</b>.` : `${pm} came to <b class="num">${money(s.spentLastMonth)}</b> in all.`}</div></div>`;
 
+  // Summary cards on Home show whole dollars; the Activity list keeps cents.
   const sl = slices(s.categories), total = s.categories.reduce((t, c) => t + c.spent, 0);
-  const where = `<div class="card c-where"><h2>Where it went <a href="#/spending${s.current ? "" : `?month=${s.month}`}">Spending</a></h2>
-    ${s.categories.length ? `<div class="sub">You've spent <b class="num">${money(total, true)}</b> ${s.current ? "so far this month" : `in ${m}`}</div>
+  const where = `<div class="card c-where"><h2>Where it went <a class="hlink" href="#/spending${s.current ? "" : `?month=${s.month}`}">Spending</a></h2>
+    ${s.categories.length ? `<div class="sub">You've spent <b class="num">${money(total)}</b> ${s.current ? "so far this month" : `in ${m}`}</div>
     <div class="dl"><div class="ring" style="width:124px;height:124px">${donut(s.categories, 124, 18, s.month)}<div class="c"><b class="num">${money(total)}</b></div></div>
-      <div class="vleg">${sl.map((c) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent, true)}</b></a>`).join("")}</div></div>
+      <div class="vleg">${sl.map((c) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent)}</b></a>`).join("")}</div></div>
     <div class="stackbar" role="img" aria-label="${esc(sl.map((c) => `${c.label} ${money(c.spent)}`).join(", "))}">${sl.map((c) => `<span style="flex:${c.spent};background:${c.color}"></span>`).join("")}</div>
     <div class="top3">${sl.slice(0, 3).map((c) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent)}</b></a>`).join("")}
       <a class="more" href="#/spending${s.current ? "" : `?month=${s.month}`}">All categories ${icon("chev", 14, 2.4)}</a></div>`
@@ -271,8 +284,8 @@ PAGES.overview = async (q) => {
   const activity = `<div class="card span2 c-activity"><h2>Recent activity <a href="#/transactions${s.current ? "" : `?month=${s.month}`}">All activity</a></h2>
     <div style="margin-top:8px">${s.recent.map(activityRow).join("") || `<div class="empty">Nothing yet.</div>`}</div></div>`;
 
-  $page.innerHTML = `<div class="layout ov"><div class="cols2">${cash}${where}${budgetsCard}${activity}</div>
-    <aside class="side stack">${netWorthCard(s.netWorth, s.netWorthHistory)}${comingUpCard(s.bills)}</aside></div>`;
+  // The markup is in the phone's reading order; the desktop grid places the same cards by area.
+  $page.innerHTML = `<div class="home">${budgetsCard}${where}${activity}${comingUpCard(s.bills)}${netWorthCard(s.netWorth, s.netWorthHistory)}${cash}</div>`;
   wireMonthMenu(); wireTips($page); wireFill(s, () => PAGES.overview(q));
 };
 
@@ -401,13 +414,15 @@ PAGES.spending = async (q) => {
 function barChart(all, { onPick, current, picked, width = 760 } = {}) {
   // Months before the first transaction have no data, which isn't $0, so the chart starts at the first month with data.
   const first = all.findIndex((h) => h.hasData), history = first < 0 ? all : all.slice(first);
-  const W = Math.max(300, Math.round(width)), H = 220, pad = { l: 48, r: 4, t: 10, b: 26 };
+  const W = Math.max(300, Math.round(width)), H = 220, pad = { l: 4, r: 4, t: 28, b: 26 };
   const max = Math.max(1, ...history.map((h) => h.spent));
   const step = niceStep(max / 3), top = Math.ceil(max / step) * step;
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, bw = iw / history.length;
   const y = (v) => pad.t + ih - (v / top) * ih;
   let g = "";
-  for (let v = 0; v <= top + 0.001; v += step) g += `<line class="grid-line" x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${pad.l - 8}" y="${y(v) + 4}" text-anchor="end">${v >= 1000 ? `$${v / 1000}k` : `$${v}`}</text>`;
+  // Each bar carries its own value, readable without hover (a tap on a phone opens the month), so there's no y axis.
+  g += `<line class="grid-line" x1="${pad.l}" x2="${W - pad.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+  const kfmt = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : money(v);
   history.forEach((h, i) => {
     const x = pad.l + i * bw, w = Math.min(44, bw * 0.56), bx = x + (bw - w) / 2;
     const v = Math.max(0, h.spent), t0 = y(v), hgt = Math.max(0, pad.t + ih - t0);
@@ -416,6 +431,7 @@ function barChart(all, { onPick, current, picked, width = 760 } = {}) {
     const fill = h.month === picked ? "#1B8382" : "#A9D9D3";
     g += `<g data-m="${h.month}" data-tip="${esc(tip)}" tabindex="0" role="link" aria-label="${esc(tip)}"><rect class="hit" x="${x}" y="${pad.t}" width="${bw}" height="${ih}"/>`
       + (h.hasData && hgt > 0 ? `<path class="b-path" fill="${fill}" d="${roundTop(bx, t0, w, hgt, Math.min(4, hgt))}"/>` : "")
+      + (h.hasData ? `<text class="val${h.month === picked ? " on" : ""}" x="${x + bw / 2}" y="${t0 - 8}" text-anchor="middle">${h.month === picked ? money(v) : kfmt(v)}</text>` : "")
       + `<text class="axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" ${h.month === picked ? 'style="font-weight:700;fill:#24272C"' : ""}>${monthName(h.month, bw < 40 ? "narrow" : "short")}${h.month === current ? " so far" : ""}</text></g>`;
   });
   const el = document.createElement("div");
@@ -438,10 +454,10 @@ function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(Math.max(raw, 1))
 // ---------- budgets ----------
 PAGES.budgets = async (q, saved) => {
   const month = q.get("month") ?? "";
-  const s = await api(`/api/summary${month ? `?month=${month}` : ""}`);
+  const [s, streams] = await Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/recurring")]);
   $hero.innerHTML = budgetHero(s, "budgets");
   const tick = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
-  const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" aria-hidden="true">Saved</span><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value ?? ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></label>`;
+  const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value ?? ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></span></label>`;
   const set = s.budgets.slice().sort((a, b) => (b.spent - b.budget) - (a.spent - a.budget));
   const unset = s.unset.slice().sort((a, b) => b.spent - a.spent || (b.suggested ?? 0) - (a.suggested ?? 0));
   $page.innerHTML = `<div class="layout"><div class="stack">
@@ -455,14 +471,24 @@ PAGES.budgets = async (q, saved) => {
     </div>
     ${unset.length ? `<div class="card"><h2>Not budgeted <span class="aside num">${money(unset.reduce((t, b) => t + b.spent, 0), true)} spent</span></h2>
       ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${money(b.spent, true)} spent${b.suggested ? `, about ${money(b.suggested)} a month lately` : ""}</div></div>${field(b, null, b.suggested)}</div>`).join("")}</div>` : ""}
-    </div><aside class="side stack">${incomeCard(s)}</aside></div>`;
+    </div><aside class="side stack">${incomeCard(s, streams)}</aside></div>`;
   for (const inp of $page.querySelectorAll(".amtin input")) {
+    const box = inp.closest(".amtin"), status = box.querySelector(".ok");
     const save = async () => {
       const v = inp.value.replace(/[$,\s]/g, "");
       if (v === String(inp.defaultValue)) return;
       if (v !== "" && !(Number(v) >= 0)) { const typed = inp.value; inp.value = inp.defaultValue; return notice(`"${typed}" isn't an amount. Type a number like 120, or clear the field to remove the budget.`); }
-      try { await api("/api/budget", { category: inp.dataset.cat, monthly: v === "" ? null : Number(v) }); await PAGES.budgets(q, inp.dataset.cat); }
-      catch (e) { notice(e.message); }
+      box.classList.remove("bad", "saved"); box.classList.add("saving"); status.textContent = "Saving";
+      try { await api("/api/budget", { category: inp.dataset.cat, monthly: v === "" ? null : Number(v) }); }
+      catch { box.classList.replace("saving", "bad"); status.textContent = "Couldn't save"; return; }
+      // The page redraws with the new totals. Whatever field the owner moved on to keeps its text, caret, and focus.
+      const act = document.activeElement?.matches?.(".amtin input") && document.activeElement !== inp ? document.activeElement : null;
+      const keep = act && { cat: act.dataset.cat, value: act.value, from: act.selectionStart, to: act.selectionEnd };
+      await PAGES.budgets(q, inp.dataset.cat);
+      if (keep) {
+        const el = $page.querySelector(`.amtin input[data-cat="${keep.cat}"]`);
+        if (el) { el.value = keep.value; el.focus(); el.setSelectionRange(keep.from, keep.to); }
+      }
     };
     inp.addEventListener("change", save);
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
@@ -495,17 +521,18 @@ PAGES.accounts = async () => {
   const accounts = s.items.flatMap((it) => it.accounts.map((a) => ({ ...a, inst: it.institution_name })));
   $hero.innerHTML = `<div class="k">Net worth</div><div class="big num">${money(nw.total, true)}</div>
     <p><b class="num">${money(nw.cash)}</b> cash, <b class="num">${money(nw.investments)}</b> invested, <b class="num">${money(nw.owed)}</b> owed on cards.</p>`;
-  // Two columns that stack on their own: cash and investments on the left, what's owed on the right.
+  // One full-width card per account type in the main column, connections in the side column, like the other pages.
+  // What's owed is a negative balance, formatted once as a signed number.
   const groupCard = ([t, name]) => {
+    const owes = t === "credit" || t === "loan", sign = (n) => owes ? -n : n;
     const list = accounts.filter((a) => a.type === t), total = list.filter((a) => !a.closed_at).reduce((x, a) => x + (a.current ?? 0), 0);
-    return `<div class="card"><h2>${name} <span class="aside num">${t === "credit" || t === "loan" ? "-" : ""}${money(total, true)}</span></h2><div style="margin-top:8px">
-      ${list.map((a) => `<div class="row${a.closed_at ? " closed" : ""}"><span class="w"><b>${esc(short(a.name))}${a.closed_at ? '<span class="tag">closed</span>' : ""}</b><small>${esc(a.inst)}${a.mask ? `, ending ${esc(a.mask)}` : ""}${a.closed_at ? `, closed ${shortDate(a.closed_at.slice(0, 10))}` : t === "credit" && a.credit_limit ? `, ${money(a.credit_limit)} limit` : ""}</small></span><span class="amt num">${a.closed_at ? "" : `${(t === "credit" || t === "loan") && a.current ? "-" : ""}${money(a.current, true)}`}</span></div>`).join("")}</div></div>`;
+    return `<div class="card"><h2>${name} <span class="aside num tot">${signed(sign(total), true)}</span></h2><div style="margin-top:8px">
+      ${list.map((a) => `<div class="row${a.closed_at ? " closed" : ""}"><span class="w"><b>${esc(short(a.name))}${a.closed_at ? '<span class="tag">closed</span>' : ""}</b><small>${esc(a.inst)}${a.mask ? `, ending ${esc(a.mask)}` : ""}${a.closed_at ? `, closed ${shortDate(a.closed_at.slice(0, 10))}` : t === "credit" && a.credit_limit ? `, ${money(a.credit_limit)} limit` : ""}</small></span><span class="amt num">${a.closed_at ? "" : signed(sign(a.current ?? 0), true)}</span></div>`).join("")}</div></div>`;
   };
-  const col = (types) => GROUPS.filter(([t]) => types.includes(t) && accounts.some((a) => a.type === t)).map(groupCard).join("");
-  const groups = `<div class="stack">${col(["depository", "investment"])}</div><div class="stack">${col(["credit", "loan"])}</div>`;
+  const groups = GROUPS.filter(([t]) => accounts.some((a) => a.type === t)).map(groupCard).join("");
   $page.innerHTML = `<div id="msg"></div>
     ${!s.keys ? `<div class="notice bad">No Plaid keys. Put PLAID_CLIENT_ID and PLAID_SECRET in ${esc(s.keysPath)}.</div>` : ""}
-    <div class="layout"><div class="cols2 top">${groups}</div>
+    <div class="layout"><div class="stack">${groups}</div>
     <aside class="side stack"><div class="card"><h2>Connections <span class="aside">${s.used} of ${s.cap} used</span></h2><div style="margin-top:8px">${s.items.map((it) => {
       const broken = /ITEM_LOGIN_REQUIRED|PENDING_EXPIRATION|PENDING_DISCONNECT/.test(it.last_error ?? "");
       return `<div class="conn"><div class="top"><b>${esc(it.institution_name)}</b>

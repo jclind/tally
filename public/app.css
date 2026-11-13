@@ -40,7 +40,9 @@ button, input, select { font: inherit; color: inherit; }
 .hero .k { font-size: 17px; font-weight: 600; }
 .hero .big { font-size: 56px; line-height: 64px; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 2px; }
 .hero .big span { font-size: 24px; font-weight: 600; letter-spacing: 0; color: #fff; }
-.hero p { margin: 0 0 22px; font-size: 17px; }
+.hero p { margin: 0 0 22px; font-size: 17px; text-wrap: pretty; }
+.hero p.has-also { margin-bottom: 2px; }
+.hero p.also { font-size: 15px; }
 .track + p { margin-top: 18px; }
 .hero .hbtn { background: #fff; color: var(--deep); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 700; cursor: pointer; }
 .hero .hbtn:hover { background: var(--tint); }
@@ -68,14 +70,22 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .cols2.top { align-items: start; }
 .stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .span2 { grid-column: span 2; }
+/* Home: one grid, so cards in a row share edges. The markup is in phone order; areas place it on wider screens. */
+.home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 340px; gap: 20px; align-items: start;
+  grid-template-areas: "cash where nw" "budgets budgets coming" "activity activity coming"; }
+.c-cash { grid-area: cash; } .c-where { grid-area: where; } .c-nw { grid-area: nw; }
+.c-budgets { grid-area: budgets; } .c-activity { grid-area: activity; } .c-coming { grid-area: coming; }
+.c-cash, .c-where, .c-nw { align-self: stretch; }
 
 .card { background: #fff; border-radius: 16px; padding: 22px 24px; box-shadow: var(--shadow); min-width: 0; }
 .card h2 { font-size: 18px; line-height: 24px; margin: 0; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .card h2 a, .card h2 .aside { font-size: 15px; font-weight: 600; color: var(--deep); }
 .card h2 .aside { color: var(--ink2); font-weight: 500; }
+.card h2 .aside.tot { color: var(--ink); font-weight: 600; }
 .card h2 a:hover { text-decoration: underline; }
 .sub { color: var(--ink2); margin: 2px 0 16px; font-size: 15px; }
 .sub b { color: var(--ink); }
+.sub b.over { color: var(--danger); }
 .more { display: inline-flex; align-items: center; gap: 4px; color: var(--deep); font-weight: 600; font-size: 15px; margin-top: 12px; background: none; border: 0; padding: 0; cursor: pointer; }
 .more:hover { text-decoration: underline; }
 .empty { color: var(--ink2); padding: 4px 0; }
@@ -134,20 +144,24 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .top3 .l { flex: 1; }
 .top3 .more { margin-top: 8px; }
 /* The budgets page: every row has its amount field */
-.erow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+.erow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
 .erow:has(> .brow) { grid-template-columns: minmax(0, 1fr); }
 .erow:first-child, h2 + .erow { border-top: 0; }
 h2 + .erow { margin-top: 6px; }
 .erow .brow { padding: 0; }
 /* A budget field: "$" inside, the saved amount in ink, a suggestion as a pale placeholder, and "Saved" after a save. */
 .amtin { position: relative; display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 15px; }
-.amtin .cur { position: absolute; right: 86px; color: var(--ink2); pointer-events: none; }
-.amtin input { width: 104px; text-align: right; border: 1px solid #C9D1D6; border-radius: 8px; padding: 7px 12px 7px 24px; background: #fff; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.amtin .fld { position: relative; display: inline-flex; align-items: center; }
+.amtin .cur { position: absolute; left: 12px; color: var(--ink2); pointer-events: none; }
+.amtin input { width: 104px; min-height: 40px; text-align: left; border: 1px solid #C9D1D6; border-radius: 8px; padding: 7px 12px 7px 25px; background: #fff; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .amtin input::placeholder { color: #A9B0B6; font-weight: 400; }
 .amtin .ok { color: var(--deep); font-size: 14px; font-weight: 600; opacity: 0; }
+.amtin.saving .ok { opacity: 1; color: var(--ink2); font-weight: 500; }
 .amtin.saved .ok { animation: saved 1.8s ease-out; }
+.amtin.bad .ok { opacity: 1; color: var(--danger); }
+.amtin.bad input { border-color: var(--danger); }
 @keyframes saved { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
-.erow .brow .l2 { margin-top: 2px; }
+.erow .bar { margin-bottom: 8px; }
 .amtin input:focus { border-color: var(--teal); outline: 2px solid rgba(27, 131, 130, .25); outline-offset: 0; }
 
 /* ---------- rows: activity, bills, accounts ---------- */
@@ -158,9 +172,10 @@ h2 + .erow { margin-top: 6px; }
 .row .w small, .row .amt small { color: var(--ink2); font-size: 14px; }
 .row .amt { text-align: right; font-weight: 600; white-space: nowrap; }
 .row .amt small { display: block; font-weight: 400; font-size: 13px; }
+.row.off .amt { color: var(--ink2); font-weight: 400; }
 .cav { width: 36px; height: 36px; border-radius: 50%; display: grid; place-content: center; flex: none; }
 .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-content: center; font-weight: 700; flex: none; font-size: 15px; background: var(--tint); color: var(--deep); }
-.av.off { background: var(--track); color: var(--ink2); }
+.row.off .av { background: var(--track); color: var(--ink2); }
 .row.closed .w b { color: var(--ink2); }
 .tag { font-size: 12px; font-weight: 600; color: var(--ink2); background: var(--track); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
 
@@ -181,6 +196,8 @@ h2 + .erow { margin-top: 6px; }
 .chart { position: relative; margin-top: 10px; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart .axis { fill: var(--ink2); font: 12px var(--font); }
+.chart .val { fill: var(--ink2); font: 600 12px var(--font); font-variant-numeric: tabular-nums; }
+.chart .val.on { fill: var(--ink); font-size: 13px; font-weight: 700; }
 .chart g:hover .b-path[fill="#A9D9D3"] { fill: #7FC4BC; }
 .chart .grid-line { stroke: var(--line); stroke-width: 1; }
 .chart rect.hit { fill: transparent; cursor: pointer; }
@@ -209,9 +226,10 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
 .tx tr.day + tr td { border-top: 0; }
 .tx td { padding: 10px; border-top: 1px solid var(--line); vertical-align: middle; }
 .tx td.amt, .tx th.amt { text-align: right; white-space: nowrap; }
+.tx td.amt { font-weight: 600; }
 .tx tr.pending td { color: var(--ink2); }
 .tx .who-sub { display: none; font-size: 13px; color: var(--ink2); }
-.catbtn { background: none; border: 0; padding: 4px 8px; margin: -4px -8px; border-radius: 6px; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 8px; color: var(--ink2); }
+.catbtn { background: none; border: 0; padding: 10px 8px; margin: -10px -8px; border-radius: 6px; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 8px; color: var(--ink2); }
 .catbtn:hover { background: var(--hover); color: var(--ink); }
 .catbtn .cv { opacity: .4; margin-left: -2px; }
 .catbtn:hover .cv, .catbtn:focus-visible .cv { opacity: 1; }
@@ -243,6 +261,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
 
 /* ---------- smaller screens ---------- */
 @media (max-width: 1080px) {
+  .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "cash where" "budgets budgets" "activity activity" "nw coming"; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
 }
@@ -271,10 +290,9 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
   .cols2 { grid-template-columns: minmax(0, 1fr); }
   .span2 { grid-column: auto; }
   .card { padding: 20px; }
-  /* Home on a phone: one column in the order Fable picked, with a short spending preview and five recent rows. */
-  .layout.ov { display: flex; flex-direction: column; align-items: stretch; }
-  .layout.ov .cols2, .layout.ov .side { display: contents; }
-  .c-budgets { order: 1; } .c-where { order: 2; } .c-activity { order: 3; } .c-coming { order: 4; } .c-nw { order: 5; } .c-cash { order: 6; }
+  /* Home on a phone: one column in markup order, with a short spending preview and five recent rows. */
+  .home { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+  .c-where .hlink { display: none; }
   .c-activity .row:nth-child(n+6) { display: none; }
   .c-where .dl { display: none; }
   .c-where .stackbar { display: flex; }
@@ -282,10 +300,9 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 15px; }
   .need { grid-template-columns: minmax(0, 1fr); }
   .rank .n, .row .amt small.acct { display: none; }
   .erow { gap: 8px 14px; }
-  .amtin input { width: 96px; font-size: 16px; }
-  .amtin .cur { right: 78px; }
+  .amtin input { width: 96px; min-height: 44px; font-size: 16px; }
   .tx .acct-col, .tx .cat-col, .tx thead { display: none; }
-  .tx .who-sub .catbtn { margin: 0 0 0 -4px; padding: 0 4px; font-size: 13px; gap: 5px; }
+  .tx .who-sub .catbtn { margin: -10px 0 -10px -4px; padding: 10px 4px; font-size: 14px; gap: 5px; }
   .tx .who-sub { display: block; }
   .tx td { padding: 10px 6px; } .tx tr.day th { padding: 20px 0 6px; }
   .tx td:first-child { padding-left: 0; } .tx td:last-child { padding-right: 0; }
