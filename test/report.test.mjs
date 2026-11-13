@@ -158,6 +158,20 @@ test("bad budget and category requests are 400s, and a month before any history 
   assert.equal(r.summary(db, "2026-11-12", "2026-10").hasData, true);
 });
 
+test("search ignores case, spaces, and punctuation, and finds amounts and category names", () => {
+  const db = fixture();
+  db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, category_detail) VALUES (?, 'i1', 'card', '2026-11-09', ?, ?, ?, 0, 'FOOD_AND_DRINK', 'FOOD_AND_DRINK_FAST_FOOD')")
+    .run("t9", "MCDONALD'S F1234", "McDonald's", 6.75);
+  const ids = (q) => r.transactions(db, { q }).rows.map((t) => t.transaction_id).sort();
+  assert.deepEqual(ids("mcdonalds"), ["t9"]);
+  assert.deepEqual(ids("Mc Donald's"), ["t9"]);
+  assert.deepEqual(ids("6.75"), ["t9"]);
+  assert.deepEqual(ids("$250"), ["t7"]);
+  assert.deepEqual(ids("300"), ["t3", "t4"]);
+  assert.deepEqual(ids("groc"), ["t2"]);
+  assert.equal(r.transactions(db, { q: "'" }).total, r.transactions(db, {}).total);
+});
+
 test("a merchant rule is flagged, so the page can offer to undo it", () => {
   const db = fixture();
   r.setCategory(db, { transaction_id: "t1", category: "TRAVEL", merchant: true });

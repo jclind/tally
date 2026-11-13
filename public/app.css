@@ -3,6 +3,7 @@
 :root {
   --teal: #1B8382; --deep: #006B68; --mint: #00CDA9; --tint: #E5FAF5; --pink: #F877A5; --danger: #B4234D;
   --ink: #24272C; --ink2: #5E656C; --line: #E4E9EC; --track: #EDF1F2; --hover: #F4F8F8;
+  --field: #C9D1D6; --placeholder: #A9B0B6; --field-hover: #F4FBF9;
   --font: "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shadow: 0 1px 2px rgba(20, 60, 60, .06), 0 8px 24px rgba(20, 90, 90, .07);
   color-scheme: light;
@@ -23,9 +24,10 @@ button, input, select { font: inherit; color: inherit; }
 .bar-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 72px; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; }
 .seg { display: flex; background: rgba(0, 0, 0, .14); border-radius: 10px; padding: 4px; gap: 2px; }
-.seg a { padding: 7px 15px; border-radius: 7px; font-weight: 500; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+/* One weight for every item: a bolder active item made the nav wider and shifted it on every page change. */
+.seg a { padding: 7px 15px; border-radius: 7px; font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; }
 .seg a:hover:not(.on) { background: rgba(0, 0, 0, .12); }
-.seg a.on { background: #fff; color: var(--deep); font-weight: 700; }
+.seg a.on { background: #fff; color: var(--deep); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); display: inline-block; box-shadow: 0 0 0 1.5px var(--teal); }
 .icon-btn { background: none; border: 0; color: #fff; padding: 11px; border-radius: 8px; cursor: pointer; display: inline-flex; margin-right: -11px; }
 .icon-btn:hover { background: rgba(255, 255, 255, .12); }
@@ -134,8 +136,12 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .rank .v { text-align: right; width: 96px; font-weight: 600; }
 /* Spending's side card: one row per month on a shared zero-based scale. */
 .months { margin-top: 10px; }
-.mrow { display: grid; grid-template-columns: 76px minmax(0, 1fr) 72px; gap: 12px; align-items: center; padding: 8px 0; border-radius: 6px; font-size: 15px; color: var(--ink2); }
-.mrow:hover .ml { color: var(--deep); text-decoration: underline; }
+/* Each month is a link: deep teal labels like the app's other links, a tint and underline on hover or focus. */
+.mrow { display: grid; grid-template-columns: 76px minmax(0, 1fr) 72px; gap: 12px; align-items: center; padding: 8px; margin: 0 -8px; border-radius: 8px; font-size: 15px; color: var(--ink2); }
+.mrow .ml { color: var(--deep); font-weight: 600; }
+.mrow.on .ml { font-weight: 700; }
+.mrow:hover, .mrow:focus-visible { background: var(--hover); }
+.mrow:hover .ml, .mrow:focus-visible .ml { text-decoration: underline; text-underline-offset: 3px; }
 .mrow .mb { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .mrow .mb i { display: block; height: 100%; background: #A9D9D3; border-radius: 4px; }
 .mrow .mv { color: var(--ink); font-weight: 600; text-align: right; }
@@ -163,6 +169,7 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .top3 .l { flex: 1; }
 .top3 .more { margin-top: 2px; min-height: 44px; }
 #loadmore { min-height: 44px; }
+#loadmore[aria-disabled="true"] { opacity: .6; cursor: progress; }
 /* The budgets page: every row has its amount field */
 .erow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
 .erow:has(> .brow) { grid-template-columns: minmax(0, 1fr); }
@@ -173,8 +180,8 @@ h2 + .erow { margin-top: 6px; }
 .amtin { position: relative; display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 15px; }
 .amtin .fld { position: relative; display: inline-flex; align-items: center; }
 .amtin .cur { position: absolute; left: 12px; color: var(--ink2); pointer-events: none; }
-.amtin input { width: 104px; min-height: 40px; text-align: left; border: 1px solid #C9D1D6; border-radius: 8px; padding: 7px 12px 7px 25px; background: #fff; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
-.amtin input::placeholder { color: #A9B0B6; font-weight: 400; }
+.amtin input { width: 104px; min-height: 40px; text-align: left; border: 1px solid var(--field); border-radius: 8px; padding: 7px 12px 7px 25px; background: #fff; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.amtin input::placeholder { color: var(--placeholder); font-weight: 400; }
 .amtin input:placeholder-shown { border-style: dashed; }
 .amtin .ok { color: var(--deep); font-size: 14px; font-weight: 600; opacity: 0; }
 .amtin.saving .ok { opacity: 1; color: var(--ink2); font-weight: 500; }
@@ -231,9 +238,17 @@ h2 + .erow { margin-top: 6px; }
   /* The browser's own arrow sits against the edge, so draw ours with room on the right. */
   appearance: none; -webkit-appearance: none; padding-right: 40px;
   background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23006B68' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 16px; }
-.filters select:hover { background-color: #F4FBF9; }
+.filters select:hover { background-color: var(--field-hover); }
 /* 16px body text, the research folder's type ramp (body 16/24): Activity is the longest reading surface. */
-table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
+table.tx { width: 100%; border-collapse: collapse; font-size: 16px; table-layout: fixed; }
+/* Fixed columns: a search or "Show more" changed the automatic widths and moved Category and Account sideways. */
+.tx col.c-name { width: 35%; } .tx col.c-cat { width: 25%; } .tx col.c-acct { width: 28%; } .tx col.c-amt { width: 12%; }
+.tx .nm > span:first-child, .tx .clip { display: inline-block; max-width: 100%; vertical-align: bottom; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx tr.msg td { padding: 16px 0; }
+.tx tr.msg .more { min-height: 44px; margin-top: 4px; }
+/* The Activity card takes focus only as a fallback after a redraw; keyboard users still see where they are. */
+.card:focus { outline: none; }
+.card:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
 .tx th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 13px; padding: 4px 10px 10px; }
 .tx tr.day th { font-size: 14px; font-weight: 700; color: var(--ink); padding: 22px 0 8px; border-top: 0; }
 .tx .nm { font-weight: 500; }
@@ -293,6 +308,9 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
 }
 @media (max-width: 860px) {
+  /* Keyboard focus never lands behind the fixed tab bar. */
+  html { scroll-padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+  a, button, input, select { scroll-margin-bottom: 8px; }
   .seg { display: none; }
   .need { grid-template-columns: 1fr; }
   .spend { grid-template-columns: 1fr; justify-items: center; }
@@ -329,6 +347,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .erow { gap: 8px 14px; }
   .amtin input { width: 96px; min-height: 44px; font-size: 16px; }
   .tx .acct-col, .tx .cat-col, .tx thead { display: none; }
+  table.tx { table-layout: auto; } .tx colgroup { display: none; }
   .tx .who-sub .catbtn { margin: -10px 0 -10px -4px; padding: 10px 4px; font-size: 14px; line-height: 20px; gap: 5px; max-width: 100%; }
   /* The category button keeps its 44px target and focus ring; only its label truncates. */
   .tx .who-sub { min-width: 0; max-width: 48%; }
@@ -340,15 +359,15 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .tx td:first-child { padding-left: 0; } .tx td:last-child { padding-right: 0; }
   /* Each phone row is a two-by-two grid: merchant and amount, then category and account. The account no longer sizes
      the amount's column, so the merchant gets the width. */
-  .tx tbody tr:not(.day) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name amt" "cat cat";
+  .tx tbody tr:not(.day):not(.msg) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name amt" "cat cat";
     column-gap: 12px; row-gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); }
   .tx tbody tr.day + tr { border-top: 0; }
-  .tx tbody tr:not(.day) > td { display: contents; }
+  .tx tbody tr:not(.day):not(.msg) > td { display: contents; }
   .tx .nm { grid-area: name; } .tx .who-sub { grid-area: cat; }
   .tx td.amt > .num { grid-area: amt; text-align: right; align-self: center; }
   /* The account spans the row's second line from the right, so only the amount sizes the right column. */
   .tx tr .acct-sub { grid-column: 1 / -1; grid-row: 2; justify-self: end; align-self: center; max-width: 48%; text-align: right; font-size: 14px; line-height: 20px; }
-  .tx tbody tr:not(.day) > td.cat-col, .tx tbody tr:not(.day) > td.acct-col { display: none; }
+  .tx tbody tr:not(.day):not(.msg) > td.cat-col, .tx tbody tr:not(.day):not(.msg) > td.acct-col { display: none; }
   .tx tbody tr.day { display: block; } .tx tbody tr.day th { display: block; }
   .tx .nm { display: flex; align-items: center; min-width: 0; }
   .tx .nm > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -358,6 +377,7 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; }
   .filters { flex-wrap: wrap; margin-bottom: 20px; }
   .filters input[type=search] { flex: 1 1 0; }
   .ftoggle { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: var(--deep); border: 0; border-radius: 8px; padding: 9px 14px; font-weight: 700; cursor: pointer; }
+  .fcount.off { visibility: hidden; }
   .fcount { background: var(--teal); color: #fff; border-radius: 9px; min-width: 18px; height: 18px; font-size: 12px; line-height: 18px; text-align: center; padding: 0 5px; }
   .fsel { display: none; }
   .fsel.open { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; width: 100%; }

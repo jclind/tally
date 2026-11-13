@@ -119,10 +119,13 @@ function monthMenu(month, history, page, suffix) {
   return `<div class="month" id="month"><button aria-haspopup="true" aria-expanded="false">${esc(monthName(month))}${month.slice(0, 4) !== thisMonth().slice(0, 4) ? ` ${month.slice(0, 4)}` : ""} ${suffix} ${icon("down", 16, 2.4)}</button>
     <div class="menu" hidden>${months.map((h) => `<a href="${href(page)}${h.month === thisMonth() ? "" : `?month=${h.month}`}" class="${h.month === month ? "on" : ""}">${monthYear(h.month)}<small class="num">${money(h.spent)}</small></a>`).join("")}</div></div>`;
 }
+let focusMonth = false;
 function wireMonthMenu() {
   const m = document.getElementById("month");
   if (!m) return;
   const btn = m.querySelector("button"), menu = m.querySelector(".menu");
+  if (focusMonth) { focusMonth = false; btn.focus(); }
+  for (const a of menu.querySelectorAll("a")) a.addEventListener("click", () => { focusMonth = true; });
   btn.onclick = (e) => {
     e.stopPropagation();
     if (menuOpen) return closeMenu();
@@ -344,78 +347,119 @@ PAGES.overview = async (q) => {
 PAGES.transactions = async (q) => {
   const months = Array.from({ length: 24 }, (_, i) => shiftMonth(thisMonth(), -i));
   const cats = Object.keys(META.labels).sort((a, b) => label(a).localeCompare(label(b)));
+  const KEYS = [["fq", "q"], ["fmonth", "month"], ["fcat", "cat"], ["facct", "account"]];
+  // The first page of results is fetched before anything is drawn, like the other pages, so the page never shows an
+  // empty table while data arrives.
+  const g0 = GEN, first = new URLSearchParams();
+  for (const [, key] of KEYS) if (q.get(key)) first.set(key, q.get(key));
+  first.set("limit", "100");
+  let initial;
+  try { initial = await api(`/api/transactions?${first}`); } catch (e) { initial = { error: e }; }
+  if (stale(g0)) return;
   // No all-time count in the band: the list is what this page is for. A net sum shows under the search row only
   // when a filter or search is set, inside the band's bottom padding so the list doesn't move. (Fable, round 3.)
   $hero.innerHTML = `<div class="k">Activity</div>
     <div class="filters">
-      <input type="search" id="fq" placeholder="Search" aria-label="Search transactions" value="${esc(q.get("q") ?? "")}">
-      <button class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fsel">Filters<span id="fcount" class="fcount" hidden></span></button>
+      <input type="search" id="fq" placeholder="Search names or amounts" aria-label="Search transactions by name, amount, or category" value="${esc(q.get("q") ?? "")}">
+      <button class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fsel">Filters<span id="fcount" class="fcount off"></span></button>
       <div class="fsel" id="fsel"><select id="fmonth" aria-label="Month"><option value="">All months</option>${months.map((m) => `<option value="${m}">${monthYear(m)}</option>`).join("")}</select>
       <select id="fcat" aria-label="Category"><option value="">All categories</option>${cats.map((c) => `<option value="${c}">${esc(label(c))}</option>`).join("")}</select>
       <select id="facct" aria-label="Account"><option value="">All accounts</option>${META.accounts.filter((a) => a.type !== "investment").map((a) => `<option value="${a.account_id}">${esc(short(a.name))}${a.mask ? ` ${esc(a.mask)}` : ""}</option>`).join("")}</select></div>
     </div><p class="fsum" id="sum"></p>`;
-  $page.innerHTML = `<div class="card"><table class="tx"><thead><tr><th>Name</th><th class="cat-col">Category</th><th class="acct-col">Account</th><th class="amt">Amount</th></tr></thead><tbody id="rows"></tbody></table>
+  $page.innerHTML = `<div class="card" tabindex="-1"><table class="tx"><colgroup><col class="c-name"><col class="c-cat"><col class="c-acct"><col class="c-amt"></colgroup>
+    <thead><tr><th>Name</th><th class="cat-col">Category</th><th class="acct-col">Account</th><th class="amt">Amount</th></tr></thead><tbody id="rows"></tbody></table>
     <div id="more"></div></div>`;
-  for (const [id, key] of [["fmonth", "month"], ["fcat", "cat"], ["facct", "account"]]) document.getElementById(id).value = q.get(key) ?? "";
+  for (const [id, key] of KEYS.slice(1)) document.getElementById(id).value = q.get(key) ?? "";
+  const $rows = document.getElementById("rows"), $more = document.getElementById("more"), $card = $rows.closest(".card");
   let offset = 0, seq = 0, lastDay = null;
   const fsel = document.getElementById("fsel"), ftoggle = document.getElementById("ftoggle");
-  // On a phone the three selects fold behind one Filters button that counts what's set.
+  // On a phone the three selects fold behind one Filters button that counts what's set. The count's space is always
+  // kept, so setting the first filter doesn't narrow the search field.
   const markFilters = () => {
     const n = ["fmonth", "fcat", "facct"].filter((id) => document.getElementById(id).value).length, c = document.getElementById("fcount");
-    c.hidden = !n; c.textContent = n;
+    c.classList.toggle("off", !n); c.textContent = n || "";
   };
   ftoggle.onclick = () => { const open = !fsel.classList.contains("open"); fsel.classList.toggle("open", open); ftoggle.setAttribute("aria-expanded", String(open)); };
   if (["month", "cat", "account"].some((k) => q.get(k))) { fsel.classList.add("open"); ftoggle.setAttribute("aria-expanded", "true"); }
   const params = () => {
     const p = new URLSearchParams();
-    for (const [id, key] of [["fq", "q"], ["fmonth", "month"], ["fcat", "cat"], ["facct", "account"]]) { const v = document.getElementById(id).value.trim(); if (v) p.set(key, v); }
+    for (const [id, key] of KEYS) { const v = document.getElementById(id).value.trim(); if (v) p.set(key, v); }
     return p;
   };
-  async function load(append) {
-    const p = params(), mine = ++seq, g = GEN; p.set("limit", "100"); p.set("offset", String(offset));
-    const card = document.getElementById("rows").closest(".card");
-    card.setAttribute("aria-busy", "true");
-    let r;
-    try { r = await api(`/api/transactions?${p}`); }
-    catch (e) {
-      if (mine !== seq || stale(g)) return;
-      card.removeAttribute("aria-busy");
-      // Old rows under new filters would look like results, so a failed load replaces them with the error.
-      if (!append) { document.getElementById("sum").innerHTML = ""; document.getElementById("more").innerHTML = ""; markFilters(); }
-      if (!append) document.getElementById("rows").innerHTML = `<tr><td colspan="4" class="empty">Couldn't load transactions. <button class="more" id="retry">Try again</button></td></tr>`;
-      else document.getElementById("more").innerHTML = `<span class="muted">Couldn't load more.</span> <button class="more" id="retry">Try again</button>`;
-      document.getElementById("retry").onclick = () => load(append);
-      return;
-    }
-    if (mine !== seq || stale(g)) return; // a newer filter, or another page, took over
-    card.removeAttribute("aria-busy");
-    if (!append) lastDay = null;
-    // Rows sit under a header per day instead of repeating the date on every row.
-    const html = r.rows.map((t) => `${t.date !== lastDay ? `<tr class="day"><th colspan="4" scope="rowgroup">${dayName((lastDay = t.date))}</th></tr>` : ""}<tr class="${t.pending ? "pending" : ""}">
+  const rowHtml = (t) => `${t.date !== lastDay ? `<tr class="day"><th colspan="4" scope="rowgroup">${dayName((lastDay = t.date))}</th></tr>` : ""}<tr class="${t.pending ? "pending" : ""}" data-id="${esc(t.transaction_id)}">
       <td><div class="nm"><span title="${esc(nice(t.who))}">${esc(nice(t.who))}</span>${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${catBtn(t)}</div></td>
       <td class="cat-col">${catBtn(t)}</td>
-      <td class="acct-col muted">${esc(short(t.account_name))}</td>
-      <td class="amt">${amt(t.amount)}<small class="acct-sub">${esc(short(t.account_name))}</small></td></tr>`).join("");
-    const rows = document.getElementById("rows");
-    if (append) rows.insertAdjacentHTML("beforeend", html); else rows.innerHTML = html || `<tr><td colspan="4" class="empty">No transactions match. <button class="more" id="clear">Clear the filters</button></td></tr>`;
+      <td class="acct-col muted"><span class="clip">${esc(short(t.account_name))}</span></td>
+      <td class="amt">${amt(t.amount)}<small class="acct-sub">${esc(short(t.account_name))}</small></td></tr>`;
+  // A message row (no results, an error) is a plain block, not the phone's two-line transaction grid.
+  const msgRow = (html) => `<tr class="msg"><td colspan="4" class="empty">${html}</td></tr>`;
+  // Draw a result set. "Show more" is one button updated in place, so keyboard focus stays on it.
+  function paint(r, append) {
+    if (!append) { lastDay = null; offset = 0; }
+    const html = r.rows.map(rowHtml).join("");
+    if (append) $rows.insertAdjacentHTML("beforeend", html);
+    else $rows.innerHTML = html || msgRow(`No transactions match.<br><button class="more" id="clear">Clear the filters</button>`);
     document.getElementById("clear")?.addEventListener("click", () => go("transactions"));
     offset += r.rows.length;
     // The net figure only means something for a filtered set, so it shows only then.
     document.getElementById("sum").innerHTML = [...params()].length ? `<b class="num">${money(Math.abs(r.sum), true)}</b> ${r.sum >= 0 ? "out" : "in"}, net <span>· ${plural(r.total, "transaction")}</span>` : "";
     markFilters();
-    document.getElementById("more").innerHTML = offset < r.total ? `<button class="more" id="loadmore">Show ${Math.min(100, r.total - offset)} more</button>` : "";
-    document.getElementById("loadmore")?.addEventListener("click", (e) => { e.currentTarget.disabled = true; load(true); });
+    let btn = document.getElementById("loadmore");
+    if (offset < r.total) {
+      if (!btn) { $more.innerHTML = `<button class="more" id="loadmore"></button>`; btn = document.getElementById("loadmore"); btn.addEventListener("click", () => { if (btn.getAttribute("aria-disabled") === "true") return; btn.setAttribute("aria-disabled", "true"); load(true); }); }
+      // aria-disabled, not disabled: a disabled button drops keyboard focus.
+      btn.textContent = `Show ${Math.min(100, r.total - offset)} more`; btn.removeAttribute("aria-disabled");
+    } else {
+      const had = btn && document.activeElement === btn;
+      $more.innerHTML = "";
+      if (had) $card.focus();
+    }
   }
-  const refilter = () => { offset = 0; history.replaceState(null, "", `#/transactions${[...params()].length ? "?" + params() : ""}`); load(false); };
+  function fail(append) {
+    // Old rows under new filters would look like results, so a failed load replaces them with the error.
+    if (!append) { document.getElementById("sum").innerHTML = ""; $more.innerHTML = ""; markFilters(); $rows.innerHTML = msgRow(`Couldn't load transactions.<br><button class="more" id="retry">Try again</button>`); }
+    else $more.innerHTML = `<span class="muted">Couldn't load more.</span> <button class="more" id="retry">Try again</button>`;
+    document.getElementById("retry").onclick = () => load(append);
+  }
+  // keep: how many rows to fetch on a fresh load (a category change reloads everything already shown, in pages of
+  // 100, so the list doesn't shrink back to 100 and drop the reader 2,000px up the page).
+  async function load(append, keep = 100) {
+    const mine = ++seq, g = GEN;
+    $card.setAttribute("aria-busy", "true");
+    const all = { rows: [], total: 0, sum: 0 };
+    try {
+      do {
+        const p = params(); p.set("limit", "100"); p.set("offset", String((append ? offset : 0) + all.rows.length));
+        const r = await api(`/api/transactions?${p}`);
+        all.rows.push(...r.rows); all.total = r.total; all.sum = r.sum;
+        if (!r.rows.length) break;
+      } while (!append && all.rows.length < Math.min(keep, all.total));
+    } catch {
+      if (mine !== seq || stale(g)) return;
+      $card.removeAttribute("aria-busy"); fail(append); return;
+    }
+    if (mine !== seq || stale(g)) return; // a newer filter, or another page, took over
+    $card.removeAttribute("aria-busy");
+    paint(all, append);
+  }
+  if (initial.error) fail(false); else paint(initial, false);
+  const refilter = () => { history.replaceState(null, "", `#/transactions${[...params()].length ? "?" + params() : ""}`); load(false); };
   let t;
   const pageGen = GEN;
   document.getElementById("fq").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { if (!stale(pageGen)) refilter(); }, 250); });
   for (const id of ["fmonth", "fcat", "facct"]) document.getElementById(id).addEventListener("change", refilter);
-  document.getElementById("rows").addEventListener("click", (e) => {
+  $rows.addEventListener("click", (e) => {
     const b = e.target.closest(".catbtn");
-    if (b) openPicker(b, async () => { if (stale(pageGen)) return; offset = 0; await load(false); });
+    if (!b) return;
+    openPicker(b, async () => {
+      if (stale(pageGen)) return;
+      // Reload what's shown, then put the edited row back where it was on screen.
+      const id = b.dataset.id, top = b.closest("tr")?.getBoundingClientRect().top;
+      await load(false, offset);
+      const row = $rows.querySelector(`tr[data-id="${CSS.escape(id)}"]`);
+      if (row && top != null) window.scrollBy(0, row.getBoundingClientRect().top - top);
+    });
   });
-  await load(false);
 };
 
 const dayName = (d) => {
@@ -429,7 +473,8 @@ const catBtn = (t) => `<button class="catbtn${t.overridden ? " set" : ""}" data-
 // ---------- category picker ----------
 let picker = null, pickerFor = null;
 // After the picker closes, focus returns to its category button, or to the list if a filter removed that row.
-const refocus = (id) => (document.querySelector(`.catbtn[data-id="${CSS.escape(id ?? "")}"]`) ?? document.getElementById("rows")?.closest(".card"))?.focus();
+const refocus = (id) => ([...document.querySelectorAll(`.catbtn[data-id="${CSS.escape(id ?? "")}"]`)].find((b) => b.getClientRects().length && b.offsetWidth)
+  ?? document.getElementById("rows")?.closest(".card"))?.focus({ preventScroll: true });
 function closePicker() { picker?.remove(); picker = null; document.removeEventListener("mousedown", outside); }
 function outside(e) { if (picker && !picker.contains(e.target)) closePicker(); }
 function openPicker(btn, done) {
@@ -481,7 +526,7 @@ PAGES.spending = async (q) => {
   // Main column: the ring and the category table. Side column: each month with data as a row with a bar on one
   // zero-based scale, newest first, the open month dark and bold. (Fable, round 6.)
   const months = r.history.filter((h) => h.hasData).reverse(), top = Math.max(1, ...months.map((h) => h.spent));
-  const monthRows = months.map((h) => `<a class="mrow${h.month === r.month ? " on" : ""}" href="#/spending${h.month === thisMonth() ? "" : `?month=${h.month}`}"${h.month === r.month ? ' aria-current="true"' : ""}>
+  const monthRows = months.map((h) => `<a class="mrow${h.month === r.month ? " on" : ""}" data-m="${h.month}" href="#/spending${h.month === thisMonth() ? "" : `?month=${h.month}`}"${h.month === r.month ? ' aria-current="true"' : ""}>
       <span class="ml">${monthName(h.month, "short")}${h.month.slice(0, 4) !== thisMonth().slice(0, 4) ? ` ${h.month.slice(2, 4)}` : ""}${h.month === thisMonth() ? " so far" : ""}</span>
       <span class="mb"><i style="width:${Math.max(0, h.spent) / top * 100}%"></i></span><span class="mv num">${money(h.spent)}</span></a>`).join("");
   $page.innerHTML = `<div class="layout"><div class="stack">
@@ -489,12 +534,20 @@ PAGES.spending = async (q) => {
       ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">${drawn - total >= 0.5 ? "Before refunds" : "Spent"}<b class="num">${money(drawn)}</b></div></div>
         <table class="rank">${r.categories.map((c) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "transaction")}</td><td class="v num">${signed(dollars.get(c.cat))}</td></tr>`).join("")}</table></div>`
         : `<div class="empty" style="margin-top:8px">No spending in ${monthName(r.month)}. <a class="more" href="#/spending">Back to this month</a></div>`}</div>
-    </div><aside class="side stack"><div class="card"><h2>By month</h2><div class="months">${monthRows}</div></div></aside></div>`;
+    </div><aside class="side stack"><div class="card"><h2>By month</h2><div class="months" id="months">${monthRows}</div></div></aside></div>`;
+  if (keepRow) {
+    const row = document.querySelector(`.mrow[data-m="${keepRow.month}"]`);
+    if (row) { window.scrollBy(0, row.getBoundingClientRect().top - keepRow.top); row.focus({ preventScroll: true }); }
+    keepRow = null;
+  }
+  // Only a click that opens a different month redraws; the open month's own link changes nothing.
+  for (const a of document.querySelectorAll(".mrow")) a.addEventListener("click", () => { if (a.dataset.m !== r.month) keepRow = { month: a.dataset.m, top: a.getBoundingClientRect().top }; });
   wireMonthMenu(); wireTips($page);
 };
+let keepRow = null;
 
 // ---------- budgets ----------
-let budgetRev = 0;
+let budgetRev = 0, budgetOrder = null;
 const budgetData = (month) => Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/recurring")]);
 PAGES.budgets = async (q, saved, pre) => {
   const month = q.get("month") ?? "", g = GEN;
@@ -504,7 +557,10 @@ PAGES.budgets = async (q, saved, pre) => {
   const dollars = dollarsByCat(s.categories);
   const tick = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
   const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value != null ? value.toLocaleString("en-US") : ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></span></label>`;
+  // Most used first on a fresh visit. A redraw after a save keeps that order, so the row just edited stays put.
   const set = s.budgets.slice().sort((a, b) => used(b) - used(a));
+  if (saved && budgetOrder) { const at = (c) => { const i = budgetOrder.indexOf(c); return i < 0 ? Infinity : i; }; set.sort((a, b) => at(a.category) - at(b.category)); }
+  budgetOrder = set.map((b) => b.category);
   const unset = s.unset.slice().sort((a, b) => b.spent - a.spent || (b.suggested ?? 0) - (a.suggested ?? 0));
   $page.innerHTML = `<div class="layout"><div class="stack">
     <div class="card"><h2>Budgets</h2>
