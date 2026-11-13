@@ -39,15 +39,15 @@
         <option value="#before">Before you start</option>
         <option value="#plaid">1 Get Plaid keys</option>
         <option value="#install">2 Install tally</option>
-        <option value="#keys">&#8195;Add your keys</option>
-        <option value="#start">&#8195;Start and check it</option>
+        <option value="#keys">Add your keys</option>
+        <option value="#start">Start and check it</option>
         <option value="#link">3 Link an account</option>
         <option value="#real">4 Switch to your real banks</option>
       </optgroup>
       <optgroup label="Running it">
         <option value="#background">Keep it running</option>
         <option value="#backup">Backups and updates</option>
-        <option value="#update">&#8195;Update tally</option>
+        <option value="#update">Update tally</option>
         <option value="#phone">Use it on your phone</option>
         <option value="#alerts">Discord alerts</option>
       </optgroup>
@@ -133,7 +133,8 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <div class="code" data-label="~/.config/tally/plaid.env"><pre><code>PLAID_CLIENT_ID=your-client-id
 PLAID_SECRET=your-production-secret
 PLAID_ENV=production</code></pre></div>
-      <p>Start tally again with <code>npm start</code>. In Settings, <b>Your setup</b> should now say production. Then link your banks from <b>Accounts</b> the same way.</p>
+      <p>Start tally again with <code>npm start</code>. In Settings, <b>Your setup</b> should now say production.</p>
+      <p>Then link your banks from <b>Accounts</b> the same way.</p>
       <div class="note warn"><b>The Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back. If a bank stops syncing, <a href="#bank-error">use Fix connection</a> on the Accounts page instead of linking it again.</div>
     </section>
     </div>
@@ -142,7 +143,7 @@ PLAID_ENV=production</code></pre></div>
     <section id="background">
       <h2>Keep it running</h2>
       <h3>On a Mac</h3>
-      <p>One script starts tally at login, restarts it if it stops, and runs the daily sync at 7:00, or when the Mac wakes if it was asleep then:</p>
+      <p>Stop tally (Ctrl+C) first. One script then starts it at login, restarts it if it stops, and runs the daily sync at 7:00, or when the Mac wakes if it was asleep then:</p>
       <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
       <p>The log is <code>tally.log</code> in the tally folder.</p>
       <h3>On Linux</h3>
@@ -154,10 +155,10 @@ PLAID_ENV=production</code></pre></div>
       <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs.</p>
       <p>The snapshot holds your Plaid access tokens. Without it you'd <a href="#real">link every bank again</a>.</p>
       <h3 id="update">Update tally</h3>
-      <p>On a Mac, from your tally folder, pull the new code and restart tally:</p>
+      <p><b>On a Mac</b>, from your tally folder, pull the new code and restart tally:</p>
       <div class="code"><pre><code>git pull
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
-      <p>On Linux, run <code>git pull</code> and restart the service you set up.</p>
+      <p><b>On Linux</b>, run <code>git pull</code> and restart the service you set up.</p>
     </section>
 
     <section id="phone">
@@ -169,19 +170,19 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
         <li>On the computer, serve tally on port 8400:
           <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400</code></pre></div>
         </li>
-        <li>Tell tally its new address. <code>tailscale status</code> shows your computer's name. On a Mac:
+        <li>Tell tally its new address. <code>tailscale status</code> shows your computer's name. <b>On a Mac</b>:
           <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
-          On Linux, add this environment variable to the service you set up, then restart it:
+          <b>On Linux</b>, add this environment variable to the service you set up, then restart it:
           <div class="code" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
         </li>
       </ol>
-      <p>Open <code class="long">https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen.</p>
+      <p>Open <code class="long"><span>https://your-computer.</span><wbr><span>your-tailnet.ts.net:8400</span></code> on your phone and add it to your home screen.</p>
       <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
     </section>
 
     <section id="alerts">
       <h2>Discord alerts<span class="opt">Optional</span></h2>
-      <p>The 7:00 job can post to a Discord channel when a charge reaches your alert amount ($200 unless you change it in Settings), a budget goes over, or a bank stops syncing (weekly until it's fixed).</p>
+      <p>The daily job can post to a Discord channel when a charge reaches your alert amount ($200 unless you change it in Settings), a budget goes over, or a bank stops syncing (weekly until it's fixed).</p>
       <ol>
         <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
         <li>In tally, open Settings, turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
@@ -251,7 +252,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
   // A command too wide for its box fades at the right edge, so it reads as scrollable.
   const atEnd = (pre) => pre.parentElement.classList.toggle("end", pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2);
   const markScroll = () => {
-    for (const box of document.querySelectorAll(".code")) {
+    for (const box of document.querySelectorAll(".code, .output")) {
       const pre = box.querySelector("pre");
       box.classList.remove("scrolls");
       // Measured with Copy beside the command. On phones a command that overflows then moves under Copy, and may fit.
@@ -263,11 +264,12 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
   };
   addEventListener("load", markScroll); addEventListener("resize", markScroll);
   // The fade goes once the command is scrolled to its end.
-  for (const pre of document.querySelectorAll(".code pre")) pre.addEventListener("scroll", () => atEnd(pre), { passive: true });
+  for (const pre of document.querySelectorAll(".code pre, .output pre")) pre.addEventListener("scroll", () => atEnd(pre), { passive: true });
   const jump = document.querySelector(".jump");
   jump.addEventListener("change", () => { location.hash = jump.value; });
   const links = [...document.querySelectorAll(".side nav a")];
   // The current place is the last section or subheading whose top has passed a quarter of the way down the window.
+  const side = document.querySelector(".side");
   const marks = [...document.querySelectorAll("article section, article h3[id]")].filter((m) => links.some((a) => a.getAttribute("href") === "#" + m.id));
   let queued = false;
   const mark = () => {
@@ -278,6 +280,11 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       const on = a.getAttribute("href") === "#" + cur.id;
       a.classList.toggle("on", on);
       if (on) a.setAttribute("aria-current", "location"); else a.removeAttribute("aria-current");
+      // A short desktop window scrolls the outline on its own, so keep the current link in view.
+      if (on && side.scrollHeight > side.clientHeight) {
+        const r = a.getBoundingClientRect(), b = side.getBoundingClientRect();
+        if (r.top < b.top || r.bottom > b.bottom) side.scrollTop += r.top - b.top - b.height / 2;
+      }
     }
     jump.value = "#" + cur.id;
   };

@@ -127,7 +127,7 @@ article section { padding-bottom: 40px; margin-bottom: 40px; border-bottom: 1px 
 article > section:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
 article h2 { font-size: 28px; line-height: 36px; margin-bottom: 12px; text-wrap: balance; }
 article h2 + dl.faq { margin-top: 20px; }
-article h3 { font-size: 18px; margin: 28px 0 6px; }
+article h3 { font-size: 18px; margin: 28px 0 6px; text-wrap: balance; }
 /* Desktop sub-headings sit a clear step above body text: 28, 20, 17 (judge, round 2). Phones keep 18px under their 24px h2s. */
 @media (min-width: 761px) { article h3:not(.q) { font-size: 20px; line-height: 28px; margin: 32px 0 8px; } }
 #before { padding-bottom: 32px; }
@@ -160,6 +160,7 @@ pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 .output { margin: 8px 0 18px; border-left: 2px solid var(--mint); padding: 2px 0 2px 16px; }
 .olabel { display: block; font-size: 13px; font-weight: 600; color: var(--ink2); margin-bottom: 2px; }
 .output pre { background: none; color: var(--ink); padding: 0; font-size: 14px; }
+.output pre:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .output samp { font-family: var(--mono); }
 .note { background: var(--warn-tint); border-radius: 12px; padding: 16px 20px; margin: 18px 0; font-size: 16px; line-height: 25px; }
 .note > b:first-child { color: var(--warn); }
@@ -208,7 +209,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .term { font-size: 12px; line-height: 21px; padding: 12px 16px; }
   .reqs { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .code.one { align-items: center; }
-  .code.one .bar { padding: 0 8px 0 0; }
+  .code.one .bar { padding: 0 6px 0 0; }
   .code.one pre { padding: 13px 16px; }
   /* A one-line command too wide for the phone takes the multi-line layout, so the part to edit isn't under Copy (judge, round 2). */
   .code.one.scrolls { grid-template-columns: minmax(0, 1fr); align-items: start; }
@@ -238,8 +239,10 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .code.labeled .clabel { padding: 13px 0 0 16px; }
   .code.labeled pre, .code.labeled.one pre { grid-row: 2; grid-column: 1 / -1; padding-top: 6px; }
   pre:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
-  article code.long { white-space: normal; overflow-wrap: anywhere; }
-  .code.scrolls:not(.end) pre { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  /* The address breaks only after a dot, never at a hyphen that belongs to it. */
+  article code.long { white-space: normal; }
+  article code.long span { white-space: nowrap; }
+  .code.scrolls:not(.end) pre, .output.scrolls:not(.end) pre { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
   /* A 32px button with a 44px tap area. */
   .copybtn { height: 32px; position: relative; }
   .copybtn::after { content: ""; position: absolute; inset: -6px 0; }
