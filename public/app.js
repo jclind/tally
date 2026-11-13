@@ -120,6 +120,7 @@ function budgetHero(s, page) {
   const pm = monthName(shiftMonth(s.month, -1)), daysLeft = s.days - s.day;
   const todayMark = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
   const canFill = s.unset.some((b) => b.suggested);
+  if (!s.hasData) return `${monthMenu(s.month, s.history, page, "budget")}<div class="big">No data</div><p>tally has no transactions from ${monthYear(s.month)}.</p>`;
   if (s.budgets.length) {
     const p = plan(s);
     const line = s.current
@@ -128,7 +129,7 @@ function budgetHero(s, page) {
     return `${monthMenu(s.month, s.history, page, "budget")}
       <div class="big num">${money(p.spent)} <span>of ${money(p.limit)}</span></div>
       <p>${line}</p>
-      <div class="track"><i style="width:${p.limit > 0 ? Math.min(100, (p.spent / p.limit) * 100) : 100}%"></i>${todayMark}</div>`;
+      <div class="track"><i class="${p.left < 0 ? "over" : ""}" style="width:${p.limit > 0 ? Math.min(100, (p.spent / p.limit) * 100) : 100}%"></i>${todayMark}</div>`;
   }
   // No budgets yet: measure the month against last month instead.
   const line = s.spentLastMonth > 0
@@ -149,20 +150,21 @@ function wireFill(s, rerender) {
 }
 
 // ---------- pieces ----------
-function slices(categories) {
+function slices(all) {
+  const categories = all.filter((c) => c.spent > 0);
   const mapped = Object.keys(CAT_COLOR).map((c) => categories.find((x) => x.cat === c)).filter(Boolean).map((c) => ({ ...c, color: CAT_COLOR[c.cat], label: label(c.cat) }));
   const rest = categories.filter((c) => !CAT_COLOR[c.cat]);
   if (rest.length) mapped.push({ cat: null, label: "Other", color: OTHER, spent: rest.reduce((t, c) => t + c.spent, 0), n: rest.reduce((t, c) => t + c.n, 0), parts: rest });
   return mapped;
 }
-function donut(categories, size, stroke) {
+function donut(categories, size, stroke, month) {
   const s = slices(categories), total = s.reduce((t, c) => t + c.spent, 0);
   const r = (size - stroke) / 2, C = 2 * Math.PI * r, gap = s.length > 1 ? 2 : 0;
   let off = 0;
   const arcs = s.map((c) => {
     const len = (c.spent / total) * C, dash = Math.max(len - gap, 0.5);
     const tip = `${c.label}: ${money(c.spent, true)}${c.parts ? ` (${c.parts.map((p) => label(p.cat)).join(", ")})` : ""}`;
-    const el = `<circle r="${r}" cx="${size / 2}" cy="${size / 2}" fill="none" stroke="${c.color}" stroke-width="${stroke}" stroke-dasharray="${dash} ${C - dash}" stroke-dashoffset="${-off}" transform="rotate(-90 ${size / 2} ${size / 2})" data-tip="${esc(tip)}"></circle>`;
+    const el = `<a href="${sliceLink(c, month)}" aria-label="${esc(tip)}"><circle r="${r}" cx="${size / 2}" cy="${size / 2}" fill="none" stroke="${c.color}" stroke-width="${stroke}" stroke-dasharray="${dash} ${C - dash}" stroke-dashoffset="${-off}" transform="rotate(-90 ${size / 2} ${size / 2})" data-tip="${esc(tip)}"></circle></a>`;
     off += len; return el;
   }).join("");
   return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Spending by category: ${esc(s.map((c) => `${c.label} ${money(c.spent)}`).join(", "))}">${arcs}</svg>`;
@@ -181,6 +183,8 @@ function showTip(e, text) {
 }
 const hideTip = () => { $tip.hidden = true; };
 
+// "Other" is several categories, so it opens the Spending page, which lists each one.
+const sliceLink = (c, month) => c.cat ? txLink({ cat: c.cat, month }) : `#/spending${month === thisMonth() ? "" : `?month=${month}`}`;
 const txLink = (params) => `#/transactions?${new URLSearchParams(Object.entries(params).filter(([, v]) => v))}`;
 const catDot = (c) => `<span class="cav" style="background:${catColor(c)}24"><span class="sw" style="background:${catColor(c)}"></span></span>`;
 const short = (name) => String(name ?? "").replace(/ Visa Signature Card \d+$/, " Visa");
@@ -254,8 +258,8 @@ PAGES.overview = async (q) => {
   const sl = slices(s.categories), total = s.categories.reduce((t, c) => t + c.spent, 0);
   const where = `<div class="card"><h2>Where it went <a href="#/spending${s.current ? "" : `?month=${s.month}`}">Spending</a></h2>
     ${s.categories.length ? `<div class="sub">You've spent <b class="num">${money(total, true)}</b> ${s.current ? "so far this month" : `in ${m}`}</div>
-    <div class="dl"><div class="ring" style="width:150px;height:150px">${donut(s.categories, 150, 20)}<div class="c"><b class="num">${money(total)}</b></div></div>
-      <div class="vleg">${sl.slice().sort((a, b) => b.spent - a.spent).map((c) => `<a href="${txLink({ cat: c.cat, month: s.month })}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent, true)}</b></a>`).join("")}</div></div>`
+    <div class="dl"><div class="ring" style="width:150px;height:150px">${donut(s.categories, 150, 20, s.month)}<div class="c"><b class="num">${money(total)}</b></div></div>
+      <div class="vleg">${sl.slice().sort((a, b) => b.spent - a.spent).map((c) => `<a href="${sliceLink(c, s.month)}"><span class="sw" style="background:${c.color}"></span><span class="l">${esc(c.label)}</span><b class="num">${money(c.spent, true)}</b></a>`).join("")}</div></div>`
       : `<div class="empty" style="margin-top:8px">No spending in ${m} yet.</div>`}</div>`;
 
   const over = s.budgets.filter((b) => b.spent > b.budget).sort((a, b) => (b.spent - b.budget) - (a.spent - a.budget));
@@ -265,8 +269,8 @@ PAGES.overview = async (q) => {
     ${s.budgets.length ? `<div class="sub">${over.length ? `<b>${over.length} over</b>, ` : ""}${ok.length} on track</div>
       ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${money(b.spent - b.budget)}</b> over</span></div>
         <div class="bar over"><i style="width:100%"></i>${tick}</div><div class="l2"><span class="num"><b>${money(b.spent, true)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>` : ""}
-      ${ok.length ? `<details class="ontrack"${over.length ? "" : " open"}><summary><span>${icon("chev", 16, 2.2).replace("<svg", '<svg class="chev"')}${plural(ok.length, "budget")} on track</span><span class="minis" aria-hidden="true">${ok.map((b) => `<i><b style="width:${b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 0}%"></b></i>`).join("")}</span></summary>
-        ${ok.map((b) => `<div class="mini"><a href="${txLink({ cat: b.category, month: s.month })}">${esc(b.label)}</a><span class="t"><i style="width:${b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 0}%"></i></span><span class="v num"><b>${money(b.budget - b.spent)}</b> left</span></div>`).join("")}</details>` : ""}`
+      ${ok.length ? `<details class="ontrack"${over.length ? "" : " open"}><summary><span>${icon("chev", 16, 2.2).replace("<svg", '<svg class="chev"')}${plural(ok.length, "budget")} on track</span><span class="minis" aria-hidden="true">${ok.map((b) => `<i><b style="width:${b.budget > 0 ? Math.max(0, Math.min(100, (b.spent / b.budget) * 100)) : 0}%"></b></i>`).join("")}</span></summary>
+        ${ok.map((b) => `<div class="mini"><a href="${txLink({ cat: b.category, month: s.month })}">${esc(b.label)}</a><span class="t"><i style="width:${b.budget > 0 ? Math.max(0, Math.min(100, (b.spent / b.budget) * 100)) : 0}%"></i></span><span class="v num"><b>${money(b.budget - b.spent)}</b> left</span></div>`).join("")}</details>` : ""}`
       : `<div class="empty" style="margin-top:8px">No budgets yet.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Set them from the last 3 months</button>` : ""}</div>`}</div>`;
 
   const activity = `<div class="card span2"><h2>Recent activity <a href="#/transactions${s.current ? "" : `?month=${s.month}`}">All transactions</a></h2>
@@ -291,15 +295,16 @@ PAGES.transactions = async (q) => {
   $page.innerHTML = `<div class="card"><table class="tx"><thead><tr><th class="d">Date</th><th>Name</th><th class="cat-col">Category</th><th class="acct-col">Account</th><th class="amt">Amount</th></tr></thead><tbody id="rows"></tbody></table>
     <div id="more"></div></div>`;
   for (const [id, key] of [["fmonth", "month"], ["fcat", "cat"], ["facct", "account"]]) document.getElementById(id).value = q.get(key) ?? "";
-  let offset = 0;
+  let offset = 0, seq = 0;
   const params = () => {
     const p = new URLSearchParams();
     for (const [id, key] of [["fq", "q"], ["fmonth", "month"], ["fcat", "cat"], ["facct", "account"]]) { const v = document.getElementById(id).value.trim(); if (v) p.set(key, v); }
     return p;
   };
   async function load(append) {
-    const p = params(); p.set("limit", "100"); p.set("offset", String(offset));
+    const p = params(), mine = ++seq; p.set("limit", "100"); p.set("offset", String(offset));
     const r = await api(`/api/transactions?${p}`);
+    if (mine !== seq) return; // a newer filter is already loading
     const html = r.rows.map((t) => `<tr class="${t.pending ? "pending" : ""}">
       <td class="d num">${shortDate(t.date)}</td>
       <td><div>${esc(nice(t.who))}${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${shortDate(t.date)}, ${catBtn(t)}</div></td>
@@ -326,7 +331,7 @@ PAGES.transactions = async (q) => {
   await load(false);
 };
 
-const catBtn = (t) => `<button class="catbtn${t.overridden ? " set" : ""}" data-id="${esc(t.transaction_id)}" data-cat="${esc(t.cat)}" data-who="${esc(t.who)}" data-ov="${t.overridden ? 1 : 0}" aria-label="Category: ${esc(label(t.cat))}. Change it"><span class="sw" style="background:${catColor(t.cat)}"></span>${esc(label(t.cat))}</button>`;
+const catBtn = (t) => `<button class="catbtn${t.overridden ? " set" : ""}" data-id="${esc(t.transaction_id)}" data-cat="${esc(t.cat)}" data-who="${esc(t.who)}" data-ov="${t.overridden ? 1 : 0}" data-rule="${t.ruled ? 1 : 0}" aria-label="Category: ${esc(label(t.cat))}. Change it"><span class="sw" style="background:${catColor(t.cat)}"></span>${esc(label(t.cat))}</button>`;
 
 // ---------- category picker ----------
 let picker = null;
@@ -340,7 +345,8 @@ function openPicker(btn, done) {
   picker.setAttribute("role", "dialog");
   picker.setAttribute("aria-label", `Category for ${btn.dataset.who}`);
   picker.innerHTML = `<div class="opts">${cats.map((c) => `<button class="opt${c === btn.dataset.cat ? " on" : ""}" data-c="${c}"><span class="sw" style="background:${catColor(c)}"></span>${esc(label(c))}</button>`).join("")}
-      ${btn.dataset.ov === "1" ? `<button class="opt muted" data-c="">Back to automatic</button>` : ""}</div>
+      ${btn.dataset.ov === "1" ? `<button class="opt muted" data-c="">Back to automatic</button>` : ""}
+      ${btn.dataset.rule === "1" && btn.dataset.ov !== "1" ? `<button class="opt muted" data-c="" data-all="1">Back to automatic for every ${esc(btn.dataset.who)}</button>` : ""}</div>
     <label><input type="checkbox" id="pall"> Every ${esc(btn.dataset.who)} transaction</label>`;
   document.body.append(picker);
   const r = btn.getBoundingClientRect();
@@ -351,7 +357,7 @@ function openPicker(btn, done) {
     const o = e.target.closest(".opt");
     if (!o) return;
     try {
-      await api("/api/category", { transaction_id: btn.dataset.id, category: o.dataset.c || null, merchant: picker.querySelector("#pall").checked });
+      await api("/api/category", { transaction_id: btn.dataset.id, category: o.dataset.c || null, merchant: o.dataset.all === "1" || picker.querySelector("#pall").checked });
       closePicker(); await done();
     } catch (err) { notice(err.message); }
   });
@@ -369,16 +375,17 @@ PAGES.spending = async (q) => {
     <p>${n ? `${plural(n, "purchase")} in ${plural(r.categories.length, "category", "categories")}.` : "No spending yet."}${prev?.hasData ? ` ${monthName(prev.month)} came to <b class="num">${money(prev.spent)}</b>.` : ""}</p>`;
   $page.innerHTML = `<div class="stack">
     <div class="card"><h2>Where it went</h2>
-      ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26)}<div class="c">Spent<b class="num">${money(total, true)}</b></div></div>
+      ${r.categories.length ? `<div class="spend"><div class="ring" style="width:220px;height:220px">${donut(r.categories, 220, 26, r.month)}<div class="c">Spent<b class="num">${money(total, true)}</b></div></div>
         <table class="rank">${r.categories.map((c) => `<tr><td><span class="sw" style="background:${catColor(c.cat)}"></span><a href="${txLink({ cat: c.cat, month: r.month })}">${esc(label(c.cat))}</a></td><td class="n">${plural(c.n, "purchase")}</td><td class="v num">${money(c.spent, true)}</td></tr>`).join("")}</table></div>`
         : `<div class="empty" style="margin-top:8px">No spending in ${monthName(r.month)}. <a class="more" href="#/spending">Back to this month</a></div>`}</div>
     <div class="card" id="chart"><h2>By month <span class="aside">Click a month to open it</span></h2></div></div>`;
-  document.getElementById("chart").append(barChart(r.history, { current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
+  const chartCard = document.getElementById("chart");
+  chartCard.append(barChart(r.history, { width: chartCard.clientWidth - 48, current: thisMonth(), picked: r.month, onPick: (mm) => go("spending", mm === thisMonth() ? null : new URLSearchParams({ month: mm })) }));
   wireMonthMenu(); wireTips($page);
 };
 
-function barChart(history, { onPick, current, picked } = {}) {
-  const W = 760, H = 220, pad = { l: 48, r: 4, t: 10, b: 26 };
+function barChart(history, { onPick, current, picked, width = 760 } = {}) {
+  const W = Math.max(300, Math.round(width)), H = 220, pad = { l: 48, r: 4, t: 10, b: 26 };
   const max = Math.max(1, ...history.map((h) => h.spent));
   const step = niceStep(max / 3), top = Math.ceil(max / step) * step;
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, bw = iw / history.length;
@@ -390,9 +397,9 @@ function barChart(history, { onPick, current, picked } = {}) {
     const v = Math.max(0, h.spent), t0 = y(v), hgt = Math.max(0, pad.t + ih - t0);
     const tip = !h.hasData ? `${monthYear(h.month)}: no data` : `${monthYear(h.month)}: ${money(h.spent)}${h.month === current ? " so far" : ""}`;
     const fill = h.month === picked ? "#00A88B" : "#1B8382";
-    g += `<g data-m="${h.month}" data-tip="${esc(tip)}"><rect class="hit" x="${x}" y="${pad.t}" width="${bw}" height="${ih}"/>`
+    g += `<g data-m="${h.month}" data-tip="${esc(tip)}" tabindex="0" role="link" aria-label="${esc(tip)}"><rect class="hit" x="${x}" y="${pad.t}" width="${bw}" height="${ih}"/>`
       + (h.hasData && hgt > 0 ? `<path class="b-path" fill="${fill}" ${h.month === current ? 'opacity=".6"' : ""} d="${roundTop(bx, t0, w, hgt, Math.min(4, hgt))}"/>` : "")
-      + `<text class="axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" ${h.month === picked ? 'style="font-weight:700;fill:#24272C"' : ""}>${monthName(h.month, "short")}</text></g>`;
+      + `<text class="axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" ${h.month === picked ? 'style="font-weight:700;fill:#24272C"' : ""}>${monthName(h.month, bw < 40 ? "narrow" : "short")}</text></g>`;
   });
   const el = document.createElement("div");
   el.className = "chart";
@@ -401,7 +408,10 @@ function barChart(history, { onPick, current, picked } = {}) {
   for (const node of el.querySelectorAll("g[data-m]")) {
     node.addEventListener("mousemove", (e) => showTip(e, node.dataset.tip));
     node.addEventListener("mouseleave", hideTip);
-    if (onPick) node.addEventListener("click", () => onPick(node.dataset.m));
+    if (onPick) {
+      node.addEventListener("click", () => onPick(node.dataset.m));
+      node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(node.dataset.m); } });
+    }
   }
   return el;
 }
@@ -422,7 +432,7 @@ PAGES.budgets = async (q) => {
       ${set.length ? set.map((b) => {
         const over = b.spent > b.budget;
         return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${money(Math.abs(b.budget - b.spent))}</b> ${over ? "over" : "left"}</span></div>
-          <div class="bar ${over ? "over" : ""}"><i style="width:${b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 100}%"></i>${tick}</div>
+          <div class="bar ${over ? "over" : ""}"><i style="width:${b.budget > 0 ? Math.max(0, Math.min(100, (b.spent / b.budget) * 100)) : 100}%"></i>${tick}</div>
           <div class="l2"><span class="num"><b>${money(b.spent, true)}</b> spent</span></div></div>${field(b, b.budget)}</div>`;
       }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
     </div>
@@ -433,6 +443,7 @@ PAGES.budgets = async (q) => {
     const save = async () => {
       const v = inp.value.replace(/[$,\s]/g, "");
       if (v === String(inp.defaultValue)) return;
+      if (v !== "" && !(Number(v) >= 0)) { const typed = inp.value; inp.value = inp.defaultValue; return notice(`"${typed}" isn't an amount. Type a number like 120, or clear the field to remove the budget.`); }
       try { await api("/api/budget", { category: inp.dataset.cat, monthly: v === "" ? null : Number(v) }); await PAGES.budgets(q); }
       catch (e) { notice(e.message); }
     };

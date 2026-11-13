@@ -140,3 +140,28 @@ test("only YYYY-MM is a month", () => {
   assert.ok(r.isMonth("2026-11"));
   for (const m of ["2026-13", "2026-1", "x", "", null, "2026-11-01"]) assert.ok(!r.isMonth(m), String(m));
 });
+
+test("a category with only refunds still counts, so category totals match the month's spending", () => {
+  const db = fixture();
+  db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, category_detail) VALUES ('t9', 'i1', 'card', '2026-11-09', 'SPA REFUND', 'Spa', -15, 0, 'PERSONAL_CARE', 'PERSONAL_CARE_OTHER')").run();
+  const cats = r.byCategory(db, "2026-11");
+  assert.equal(cats.find((c) => c.cat === "PERSONAL_CARE").spent, -15);
+  assert.equal(Math.round(cats.reduce((s, c) => s + c.spent, 0) * 100) / 100, r.spentBetween(db, "2026-11-01", "2026-11-30"));
+});
+
+test("bad budget and category requests are 400s, and a month before any history has no data", () => {
+  const db = fixture();
+  for (const f of [() => r.setBudget(db, { category: "GAS", monthly: "abc" }), () => r.setBudget(db, { category: "NOPE", monthly: 5 }), () => r.setCategory(db, { transaction_id: "nope", category: "GAS" })]) {
+    assert.throws(f, (e) => e.status === 400);
+  }
+  assert.equal(r.summary(db, "2026-11-12", "2025-01").hasData, false);
+  assert.equal(r.summary(db, "2026-11-12", "2026-10").hasData, true);
+});
+
+test("a merchant rule is flagged, so the page can offer to undo it", () => {
+  const db = fixture();
+  r.setCategory(db, { transaction_id: "t1", category: "TRAVEL", merchant: true });
+  const row = r.transactions(db, { cat: "TRAVEL" }).rows[0];
+  assert.equal(row.ruled, 1);
+  assert.equal(row.overridden, 0);
+});

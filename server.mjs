@@ -300,7 +300,7 @@ const server = http.createServer(async (req, res) => {
     if (!res.headersSent) send(res, 200, out);
   } catch (e) {
     console.error(now(), req.method, req.url, e.code ?? "", e.message);
-    send(res, e.code === "NO_KEYS" ? 412 : 500, { error: e.message, code: e.code ?? null });
+    send(res, e.status ?? (e.code === "NO_KEYS" ? 412 : 500), { error: e.message, code: e.code ?? null });
   }
 });
 

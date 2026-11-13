@@ -45,6 +45,7 @@ button, input, select { font: inherit; color: inherit; }
 .hero .hbtn:hover { background: var(--tint); }
 .track { height: 12px; border-radius: 6px; background: rgba(255, 255, 255, .22); position: relative; margin-bottom: 30px; }
 .track i { position: absolute; inset: 0 auto 0 0; background: var(--mint); border-radius: 6px; }
+.track i.over { background: var(--pink); }
 .track .today { position: absolute; top: -6px; bottom: -6px; width: 2px; background: #fff; }
 .track .today::after { content: "Today"; position: absolute; top: 26px; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 600; }
 .track .today::before { content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-bottom-color: #fff; }
@@ -178,6 +179,10 @@ h2 + .erow { margin-top: 6px; }
 .chart .grid-line { stroke: var(--line); stroke-width: 1; }
 .chart rect.hit { fill: transparent; cursor: pointer; }
 .chart g:hover .b-path { filter: brightness(1.12); }
+.chart g:focus { outline: none; }
+.chart g:focus-visible .b-path, .chart g:focus-visible rect.hit { stroke: var(--deep); stroke-width: 2; }
+.ring a { cursor: pointer; }
+.ring a:hover circle, .ring a:focus-visible circle { filter: brightness(1.08); }
 .sr { position: absolute; left: -9999px; }
 .tip { position: fixed; z-index: 30; pointer-events: none; background: var(--ink); color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, .2); }
 
