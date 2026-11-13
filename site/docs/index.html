@@ -40,7 +40,7 @@
         <option value="#plaid">1 Get Plaid keys</option>
         <option value="#install">2 Install tally</option>
         <option value="#keys">&#8195;Add your keys</option>
-        <option value="#start">&#8195;Start it</option>
+        <option value="#start">&#8195;Start and check it</option>
         <option value="#link">3 Link an account</option>
         <option value="#real">4 Switch to your real banks</option>
       </optgroup>
@@ -62,7 +62,7 @@
       <a href="#plaid">1 Get Plaid keys</a>
       <a href="#install">2 Install tally</a>
       <a class="sub" href="#keys">Add your keys</a>
-      <a class="sub" href="#start">Start it</a>
+      <a class="sub" href="#start">Start and check it</a>
       <a href="#link">3 Link an account</a>
       <a href="#real">4 Switch to your real banks</a>
       <p class="grp">Running it</p>
@@ -100,7 +100,7 @@
 
     <section id="install">
       <h2><span class="step">2</span>Install tally</h2>
-      <p>Download it. No <code>npm install</code> needed.</p>
+      <p>There's no <code>npm install</code> step.</p>
       <div class="code"><pre><code>git clone https://github.com/jclind/tally.git
 cd tally</code></pre></div>
       <h3 id="keys">Add your keys</h3>
@@ -144,8 +144,7 @@ PLAID_ENV=production</code></pre></div>
       <h3>On a Mac</h3>
       <p>One script starts tally at login, restarts it if it stops, and runs the daily sync at 7:00, or when the Mac wakes if it was asleep then:</p>
       <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
-      <p>The log is <code>tally.log</code> in the tally folder. To restart tally after a change:</p>
-      <div class="code"><pre><code>launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
+      <p>The log is <code>tally.log</code> in the tally folder.</p>
       <h3>On Linux</h3>
       <p>Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
     </section>
@@ -155,7 +154,7 @@ PLAID_ENV=production</code></pre></div>
       <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. The daily job writes the snapshot, and it's safe to copy while tally runs.</p>
       <p>The snapshot holds your Plaid access tokens. Without it you'd <a href="#real">link every bank again</a>.</p>
       <h3 id="update">Update tally</h3>
-      <p>Pull the new code, then restart tally. On a Mac:</p>
+      <p>On a Mac, from your tally folder, pull the new code and restart tally:</p>
       <div class="code"><pre><code>git pull
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <p>On Linux, run <code>git pull</code> and restart the service you set up.</p>
@@ -255,9 +254,10 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     for (const box of document.querySelectorAll(".code")) {
       const pre = box.querySelector("pre");
       box.classList.remove("scrolls");
+      // Measured with Copy beside the command. On phones a command that overflows then moves under Copy, and may fit.
       if (pre.scrollWidth > pre.clientWidth + 1) box.classList.add("scrolls");
-      // A command that scrolls takes keyboard focus, so arrow keys can reach its end.
-      if (box.classList.contains("scrolls")) pre.tabIndex = 0; else pre.removeAttribute("tabindex");
+      // A command that still scrolls takes keyboard focus, so arrow keys can reach its end.
+      if (pre.scrollWidth > pre.clientWidth + 1) pre.tabIndex = 0; else pre.removeAttribute("tabindex");
       atEnd(pre);
     }
   };
@@ -274,7 +274,11 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     queued = false;
     let cur = marks[0];
     for (const m of marks) if (m.getBoundingClientRect().top <= innerHeight * 0.25) cur = m;
-    for (const a of links) a.classList.toggle("on", a.getAttribute("href") === "#" + cur.id);
+    for (const a of links) {
+      const on = a.getAttribute("href") === "#" + cur.id;
+      a.classList.toggle("on", on);
+      if (on) a.setAttribute("aria-current", "location"); else a.removeAttribute("aria-current");
+    }
     jump.value = "#" + cur.id;
   };
   addEventListener("scroll", () => { if (!queued) { queued = true; requestAnimationFrame(mark); } }, { passive: true });
