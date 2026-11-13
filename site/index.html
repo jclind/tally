@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tally: your money, on your own computer</title>
+<meta name="description" content="tally is a free, open-source money app you run yourself. Budgets, spending, bills, and net worth from your real accounts, kept in a file on your machine.">
+<meta property="og:title" content="tally: your money, on your own computer">
+<meta property="og:description" content="Budgets, spending, bills, and net worth from your real accounts, kept in a file on your machine.">
+<meta property="og:image" content="https://tally.jesselind.com/img/home.png">
+<meta name="theme-color" content="#1B8382">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2300CDA9'/%3E%3Cg stroke='%23fff' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M10 9v14M14 9v14M18 9v14M22 9v14'/%3E%3Cpath d='M7.5 20.5 24.5 11.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="band">
+  <header class="wrap top">
+    <a class="brand" href="/"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#fff"/><g stroke="#1B8382" stroke-width="2.4" stroke-linecap="round"><path d="M10 9v14M14 9v14M18 9v14M22 9v14"/><path d="M7.5 20.5 24.5 11.5"/></g></svg>tally</a>
+    <nav aria-label="Site">
+      <a href="#features">Features</a>
+      <a href="#need">What you need</a>
+      <a class="keep" href="/docs/">Install guide</a>
+      <a class="gh keep" href="https://github.com/jclind/tally" aria-label="tally on GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+    </nav>
+  </header>
+
+  <section class="wrap hero">
+    <h1>Your money, on your own computer.</h1>
+    <p class="lede">tally links your bank, cards, and investments and shows where every dollar went. It runs on your machine, and the data never leaves it.</p>
+    <div class="ctas">
+      <a class="btn light" href="/docs/">Set it up</a>
+      <a class="btn line" href="https://github.com/jclind/tally">See the code</a>
+    </div>
+    <p class="fine">Free and open source. No account, no ads, no one else holding your data.</p>
+  </section>
+
+  <div class="stage">
+    <div class="wrap" style="position:relative">
+      <div class="browser">
+        <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>localhost:3400</span></div>
+        <img src="/img/home.png" width="2560" height="1600" alt="tally's Home page: this month's budget with $930 left, cash flow, spending by category in a ring chart, and net worth.">
+      </div>
+      <div class="phone"><img src="/img/phone-home.png" width="780" height="1688" alt="tally's Home page on a phone."></div>
+    </div>
+  </div>
+</div>
+
+<section class="tint section" id="features">
+  <div class="wrap center">
+    <div class="eyebrow">Why tally</div>
+    <h2>Everything a money app does, minus the company in the middle</h2>
+    <p class="intro">Banks connect through Plaid, the same service most finance apps use. Instead of going to someone's servers, your transactions land in one SQLite file you own.</p>
+    <div class="pillars">
+      <div class="pillar">
+        <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3>Private by default</h3>
+        <p>It listens on your own computer only. Nothing is uploaded, and there's no tally account to sign up for.</p>
+      </div>
+      <div class="pillar">
+        <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4M4 13a8 8 0 0 0 14.5 4M5 3v4h4M19 21v-4h-4"/></svg></div>
+        <h3>Updates itself</h3>
+        <p>Every morning it syncs your accounts. Big charges, broken connections, and blown budgets can ping you on Discord.</p>
+      </div>
+      <div class="pillar">
+        <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+        <h3>Free to run</h3>
+        <p>Plaid's Trial plan covers 10 bank connections at no cost. tally has no dependencies to buy or install beyond Node.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="feature">
+    <div class="copy">
+      <div class="eyebrow">Budgets</div>
+      <h3>See what's left before you spend it</h3>
+      <p>Set a monthly limit per category, or fill them all in from your last three months. Each bar shows where today falls in the month, so you know if you're ahead or behind.</p>
+      <ul><li>Over budget is always marked in pink, with the amount</li><li>Spending outside a budget still shows up</li></ul>
+    </div>
+    <div class="frame"><picture><source media="(max-width: 760px)" srcset="/img/phone-budgets.png" width="780" height="1688"><img src="/img/budgets.png" width="2560" height="1600" alt="The Budgets page: each category with a progress bar, the amount spent, and what's left." loading="lazy"></picture></div>
+  </div>
+  <div class="feature flip">
+    <div class="copy">
+      <div class="eyebrow">Spending</div>
+      <h3>Where it went, month by month</h3>
+      <p>Every category in one ring, with the last several months beside it. Tap a category to see the transactions behind it, or a month to look back at it.</p>
+      <ul><li>Refunds lower spending instead of hiding</li><li>Card payments and transfers don't count twice</li></ul>
+    </div>
+    <div class="frame"><picture><source media="(max-width: 760px)" srcset="/img/phone-spending.png" width="780" height="1688"><img src="/img/spending.png" width="2560" height="1600" alt="The Spending page: a ring chart of categories and a list of monthly totals." loading="lazy"></picture></div>
+  </div>
+  <div class="feature">
+    <div class="copy">
+      <div class="eyebrow">Activity</div>
+      <h3>Every transaction, easy to fix</h3>
+      <p>Search by name, amount, or category. Change a category for one charge, or for every charge from that merchant from now on.</p>
+      <ul><li>Search ignores case and punctuation: "mcdonalds" finds McDonald's</li><li>Filter by account, category, or month</li></ul>
+    </div>
+    <div class="frame"><picture><source media="(max-width: 760px)" srcset="/img/phone-activity.png" width="780" height="1688"><img src="/img/activity.png" width="2560" height="1600" alt="The Activity page: transactions grouped by day, with search and filters." loading="lazy"></picture></div>
+  </div>
+  <div class="feature flip">
+    <div class="copy">
+      <div class="eyebrow">Bills and net worth</div>
+      <h3>What's coming, and what you're worth</h3>
+      <p>tally spots your recurring bills and subscriptions and lists what's due next. Accounts adds up cash, investments, and card balances into one number that it tracks over time.</p>
+      <ul><li>Brokerages and retirement accounts included</li><li>Works on your phone through Tailscale</li></ul>
+    </div>
+    <div class="frame"><picture><source media="(max-width: 760px)" srcset="/img/phone-accounts.png" width="780" height="1688"><img src="/img/accounts.png" width="2560" height="1600" alt="The Accounts page: net worth with cash, investment, and card accounts, and the linked connections." loading="lazy"></picture></div>
+  </div>
+</section>
+
+<section class="tint section" id="need">
+  <div class="wrap">
+    <div class="eyebrow">What you need</div>
+    <h2>Four things, most of which you already have</h2>
+    <div class="needs">
+      <div class="need"><b>A computer that stays on</b><span>A Mac is easiest, since a script keeps tally running. Linux works too.</span></div>
+      <div class="need"><b>Node 24 or newer</b><span>tally uses Node's built-in SQLite. Nothing else to install.</span></div>
+      <div class="need"><b>A free Plaid account</b><span>Plaid's Trial plan gives 10 bank connections. US and Canada only.</span></div>
+      <div class="need"><b>Tailscale, if you want it on your phone</b><span>Optional. It reaches tally from your devices without opening it to the internet.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="cta">
+      <div>
+        <h2>Ready when you are</h2>
+        <p>The guide walks through Plaid, install, and linking your first account.</p>
+      </div>
+      <a class="btn light" href="/docs/">Open the install guide</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>tally is MIT licensed. Made by <a href="https://jesselind.com">Jesse Lind</a>. Not affiliated with Plaid.</span>
+    <span><a href="/docs/">Install guide</a> · <a href="https://github.com/jclind/tally">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

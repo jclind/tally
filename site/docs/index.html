@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install guide · tally</title>
+<meta name="description" content="Set up tally: get free Plaid keys, install it, link your accounts, and keep it running.">
+<meta property="og:title" content="tally install guide">
+<meta property="og:image" content="https://tally.jesselind.com/img/home.png">
+<meta name="theme-color" content="#1B8382">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2300CDA9'/%3E%3Cg stroke='%23fff' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M10 9v14M14 9v14M18 9v14M22 9v14'/%3E%3Cpath d='M7.5 20.5 24.5 11.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="band">
+  <header class="wrap top">
+    <a class="brand" href="/"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#fff"/><g stroke="#1B8382" stroke-width="2.4" stroke-linecap="round"><path d="M10 9v14M14 9v14M18 9v14M22 9v14"/><path d="M7.5 20.5 24.5 11.5"/></g></svg>tally</a>
+    <nav aria-label="Site">
+      <a href="/#features">Features</a>
+      <a class="keep on" href="/docs/" aria-current="page">Install guide</a>
+      <a class="gh keep" href="https://github.com/jclind/tally" aria-label="tally on GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+    </nav>
+  </header>
+  <div class="wrap docs-band">
+    <h1>Install guide</h1>
+    <p>From nothing to your own accounts in tally. Plan on about 20 minutes, most of it in Plaid's dashboard.</p>
+  </div>
+</div>
+
+<div class="wrap docs">
+  <aside class="side">
+    <select class="jump" aria-label="Jump to a section">
+      <option value="#before">Before you start</option>
+      <option value="#plaid">1. Get Plaid keys</option>
+      <option value="#install">2. Install tally</option>
+      <option value="#link">3. Link an account</option>
+      <option value="#real">4. Switch to your real banks</option>
+      <option value="#background">Keep it running</option>
+      <option value="#phone">Use it on your phone</option>
+      <option value="#alerts">Daily alerts</option>
+      <option value="#backup">Backups and updates</option>
+      <option value="#using">Using tally</option>
+      <option value="#help">Troubleshooting</option>
+    </select>
+    <nav aria-label="Guide">
+      <h4>Getting started</h4>
+      <a href="#before">Before you start</a>
+      <a href="#plaid">1. Get Plaid keys</a>
+      <a href="#install">2. Install tally</a>
+      <a href="#link">3. Link an account</a>
+      <a href="#real">4. Switch to your real banks</a>
+      <h4>Running it</h4>
+      <a href="#background">Keep it running</a>
+      <a href="#phone">Use it on your phone</a>
+      <a href="#alerts">Daily alerts</a>
+      <a href="#backup">Backups and updates</a>
+      <h4>Everyday</h4>
+      <a href="#using">Using tally</a>
+      <a href="#help">Troubleshooting</a>
+    </nav>
+  </aside>
+
+  <article>
+    <section id="before">
+      <h2>Before you start</h2>
+      <ul>
+        <li><b>A computer that stays on.</b> tally syncs every morning and serves the page you open. A Mac is easiest, because a script sets it up to run in the background. Linux works with any process manager.</li>
+        <li><b>Node 24 or newer.</b> Check with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or <code>brew install node</code>.</li>
+        <li><b>git</b>, to download tally and update it later.</li>
+        <li><b>A US or Canadian bank.</b> Plaid's free plan is only offered there.</li>
+      </ul>
+    </section>
+
+    <section id="plaid">
+      <h2><span class="step">1</span>Get Plaid keys</h2>
+      <p>Plaid is the service that connects to your bank. tally talks to it with your own keys, so your data goes from Plaid straight to your computer.</p>
+      <ol>
+        <li>Create an account at <a href="https://dashboard.plaid.com/signup">dashboard.plaid.com/signup</a> and verify your email.</li>
+        <li>Open <a href="https://dashboard.plaid.com/trial-plan">dashboard.plaid.com/trial-plan</a> and fill in the Trial plan form. It's free and covers 10 bank connections with Transactions, Investments, and Liabilities, which is everything tally uses.</li>
+        <li>Go to <b>Developers → Keys</b>. Copy your <b>client_id</b> and your <b>Sandbox</b> secret. You'll use the Production secret in step 4.</li>
+      </ol>
+      <div class="note warn"><b>Don't apply for full Production access.</b> Plaid ends the free Trial once you submit a Production application, and you can't go back.</div>
+      <p>Plaid offers the Trial to teams created on or after April 15, 2026. If your Plaid account is older, check the plans on your dashboard home page.</p>
+    </section>
+
+    <section id="install">
+      <h2><span class="step">2</span>Install tally</h2>
+      <p>Download it and save your keys where tally looks for them, outside the code folder. Swap in your client_id and Sandbox secret before you run this:</p>
+      <div class="code"><pre><code>git clone https://github.com/jclind/tally.git
+cd tally
+mkdir -p ~/.config/tally
+cat &gt; ~/.config/tally/plaid.env &lt;&lt;'EOF'
+PLAID_CLIENT_ID=your-client-id
+PLAID_SECRET=your-sandbox-secret
+PLAID_ENV=sandbox
+EOF
+chmod 600 ~/.config/tally/plaid.env</code></pre></div>
+      <p>Then start it:</p>
+      <div class="code"><pre><code>npm start</code></pre></div>
+      <p>The log line should end in <code>(keys found)</code>. Open <a href="http://localhost:3400">localhost:3400</a>.</p>
+      <div class="note"><b>Nothing to install.</b> tally has no npm dependencies, so there's no <code>npm install</code> step. <code>npm test</code> runs its checks against a fake Plaid if you want to confirm everything works.</div>
+    </section>
+
+    <section id="link">
+      <h2><span class="step">3</span>Link an account</h2>
+      <p>Open <b>Accounts</b> and choose <b>Link a bank or card</b>, or <b>Link a brokerage</b> for investments. Plaid's window opens.</p>
+      <p>In sandbox, pick any bank and sign in with the test login <code>user_good</code> and password <code>pass_good</code>. tally pulls in Plaid's made-up accounts and transactions so you can look around.</p>
+      <picture><source media="(max-width: 760px)" srcset="/img/phone-accounts.png" width="780" height="1688"><img class="shot" src="/img/accounts.png" width="2560" height="1600" alt="The Accounts page with linked connections and the Link a bank or card button." loading="lazy"></picture>
+    </section>
+
+    <section id="real">
+      <h2><span class="step">4</span>Switch to your real banks</h2>
+      <p>Once you've seen it work, start fresh with your own accounts. Stop tally (Ctrl+C) and set the sandbox data aside:</p>
+      <div class="code"><pre><code>mv data data-sandbox</code></pre></div>
+      <p>In <code>~/.config/tally/plaid.env</code>, change <code>PLAID_SECRET</code> to your Production secret and <code>PLAID_ENV</code> to <code>production</code>. Then start tally again with <code>npm start</code>.</p>
+      <p>Link your banks from <b>Accounts</b> the same way. The first sync brings in as much history as your bank gives Plaid, up to two years.</p>
+      <div class="note warn"><b>You get 10 connections, for good.</b> On the Trial plan, removing a connection doesn't give the slot back. If a bank stops syncing, use <b>Fix connection</b> on the Accounts page instead of linking it again. tally shows how many you've used.</div>
+      <p>Some large banks sign you in on their own site (OAuth). If one won't connect, check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first.</p>
+    </section>
+
+    <section id="background">
+      <h2>Keep it running</h2>
+      <p>On a Mac, one script starts tally at login, restarts it if it stops, and runs the daily sync at 7:00:</p>
+      <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
+      <p>It installs two launchd agents, <code>local.tally</code> and <code>local.tally-daily</code>, pointing at this folder. The log is <code>tally.log</code> in the same folder. To restart tally after a change:</p>
+      <div class="code"><pre><code>launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
+      <p>On Linux, run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
+    </section>
+
+    <section id="phone">
+      <h2>Use it on your phone</h2>
+      <p>tally has no login, so it only listens on your computer. <a href="https://tailscale.com">Tailscale</a> gives your phone a private path to it without opening anything to the internet.</p>
+      <ol>
+        <li>Install Tailscale on the computer and your phone, and sign in to both with the same account.</li>
+        <li>In Tailscale's admin console, under <b>DNS</b>, turn on MagicDNS and HTTPS certificates.</li>
+        <li>On the computer, serve tally on port 8400 and tell tally its new address:</li>
+      </ol>
+      <div class="code"><pre><code>tailscale serve --bg --https=8400 http://127.0.0.1:3400
+bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
+      <p>Open <code>https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
+      <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
+      <img class="shot" src="/img/phone-budgets.png" width="780" height="1688" alt="tally's Budgets page on a phone." loading="lazy" style="max-width:300px">
+    </section>
+
+    <section id="alerts">
+      <h2>Daily alerts</h2>
+      <p>The 7:00 job syncs every account. If you give it a Discord webhook, it also posts when something needs you:</p>
+      <ul>
+        <li>a charge of $200 or more</li>
+        <li>a budget that went over</li>
+        <li>a bank that stopped syncing (once a week until it's fixed)</li>
+      </ul>
+      <p>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy the URL into a file:</p>
+      <div class="code"><pre><code>echo 'DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...' &gt; ~/.config/tally/discord.env
+chmod 600 ~/.config/tally/discord.env</code></pre></div>
+      <p>A quiet day posts nothing. Without the file, alerts go to the log only.</p>
+    </section>
+
+    <section id="backup">
+      <h2>Backups and updates</h2>
+      <h3>Back up the data folder</h3>
+      <p>Everything lives in <code>data/tally.db</code>, including the tokens that keep your banks connected. Lose it and you'd link every bank again, using up more of your 10 connections. The daily job writes a safe copy to <code>data/tally-snapshot.db</code>; copy that file somewhere else, encrypted, on a schedule.</p>
+      <h3>Update tally</h3>
+      <div class="code"><pre><code>git pull
+launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
+    </section>
+
+    <section id="using">
+      <h2>Using tally</h2>
+      <h3>Budgets</h3>
+      <p>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</p>
+      <picture><source media="(max-width: 760px)" srcset="/img/phone-budgets.png" width="780" height="1688"><img class="shot" src="/img/budgets.png" width="2560" height="1600" alt="The Budgets page." loading="lazy"></picture>
+      <h3>Fix a category</h3>
+      <p>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</p>
+      <h3>Search</h3>
+      <p>Search finds names, amounts, and categories, and ignores case, spaces, and punctuation. <code>mcdonalds</code> finds McDonald's, <code>6.75</code> finds that exact charge, and <code>groc</code> finds Groceries.</p>
+      <h3>Look back</h3>
+      <p>The month name at the top of Home, Spending, and Budgets is a menu. Pick any past month to see it whole.</p>
+    </section>
+
+    <section id="help">
+      <h2>Troubleshooting</h2>
+      <dl class="faq">
+        <dt>The log says "keys missing"</dt>
+        <dd>tally reads <code>~/.config/tally/plaid.env</code>. Check that the file exists and has both <code>PLAID_CLIENT_ID</code> and <code>PLAID_SECRET</code>.</dd>
+        <dt>A bank shows an error on the Accounts page</dt>
+        <dd>Its sign-in expired or changed. Click <b>Fix connection</b> and sign in again. This reuses the same connection and doesn't cost a slot.</dd>
+        <dt>A bank has only a few months of history</dt>
+        <dd>That's what the bank gives Plaid. Some send two years, some about 90 days.</dd>
+        <dt>The page won't load on my phone</dt>
+        <dd>Run <code>tailscale serve status</code> on the computer, and make sure the address you passed to <code>--host</code> matches it exactly, port included.</dd>
+        <dt>Something else</dt>
+        <dd>Open an issue on <a href="https://github.com/jclind/tally/issues">GitHub</a> with the lines from <code>tally.log</code>. Leave out anything with your account details.</dd>
+      </dl>
+    </section>
+  </article>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>tally is MIT licensed. Made by <a href="https://jesselind.com">Jesse Lind</a>. Not affiliated with Plaid.</span>
+    <span><a href="/">Home</a> · <a href="https://github.com/jclind/tally">GitHub</a></span>
+  </div>
+</footer>
+
+<script>
+  // Copy buttons on code blocks, the phone's section menu, and the sidebar's current section.
+  for (const box of document.querySelectorAll(".code")) {
+    const b = document.createElement("button");
+    b.className = "copybtn"; b.type = "button"; b.textContent = "Copy";
+    b.addEventListener("click", async () => {
+      const text = [...box.querySelectorAll("pre code")].map((c) => c.innerText).join("\n");
+      try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; } catch { b.textContent = "Select and copy"; }
+      setTimeout(() => (b.textContent = "Copy"), 1600);
+    });
+    box.append(b);
+  }
+  const jump = document.querySelector(".jump");
+  jump.addEventListener("change", () => document.querySelector(jump.value)?.scrollIntoView());
+  const links = [...document.querySelectorAll(".side nav a")];
+  const seen = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) {
+      for (const a of links) a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id);
+      jump.value = "#" + e.target.id;
+    }
+  }, { rootMargin: "-20% 0px -70% 0px" });
+  for (const s of document.querySelectorAll("article section")) seen.observe(s);
+</script>
+</body>
+</html>

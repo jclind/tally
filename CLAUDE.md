@@ -2,7 +2,7 @@
 
 A Mint-style money app you run yourself. Plaid links your bank, card, and brokerage accounts, and the data lives in
 SQLite at `data/tally.db` on your machine. Pages: Home, Activity, Spending, Budgets, Bills, Accounts.
-The install guide is https://tally.jesselind.com. A gitignored `CLAUDE.local.md` holds rules for one person's setup.
+The install guide is https://tally.jesselind.com. Its source is `site/`, published with `site/publish.sh`; its screenshots come from made-up data (`site/tools/shoot.mjs`). A gitignored `CLAUDE.local.md` holds rules for one person's setup.
 
 ## Rules
 
