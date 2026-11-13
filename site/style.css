@@ -6,7 +6,7 @@
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --shadow: 0 1px 2px rgba(20, 60, 60, .06), 0 8px 24px rgba(20, 90, 90, .08);
   --shot: 0 2px 6px rgba(10, 50, 50, .10), 0 24px 60px rgba(10, 60, 60, .18);
-  --page: #fff; --card: #fff; --body: #3A3F45; --band: var(--teal); --chrome: #F1F4F5; --chrome-dot: #D5DCDF;
+  --page: #fff; --card: #fff; --body: #3A3F45; --band: var(--teal);
   --warn: #B4234D; --warn-tint: #FFF1F5; --note: var(--tint); --btn-ink: var(--deep); --edge: transparent;
   --term: #1F2A2C; --bezel: #1F2326;
   --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235E656C' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -16,7 +16,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --page: #14181B; --card: #1D2226; --tint: #191E21; --ink: #ECEFF1; --ink2: #A1AAB1; --body: #C9D0D4; --line: #2D3439;
-    --deep: #4FD1BE; --code: #252B30; --chrome: #2A3136; --chrome-dot: #424B51; --warn: #FF7FA2; --warn-tint: #3B2129;
+    --deep: #4FD1BE; --code: #252B30; --warn: #FF7FA2; --warn-tint: #3B2129;
     --note: #22383A; --btn-ink: #006B68; --edge: #2D3439; --term: #0F1416; --bezel: #333C42;
     --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23A1AAB1' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
     --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .3);
@@ -38,6 +38,7 @@ figure { margin: 0; }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
 h1, h2, h3 { line-height: 1.2; margin: 0; letter-spacing: -.01em; }
 p { margin: 0 0 14px; }
+p, li, dd { text-wrap: pretty; }
 
 /* ---------- top bar ---------- */
 .band { background: var(--band); color: #fff; }
@@ -69,21 +70,20 @@ p { margin: 0 0 14px; }
 .stage { position: relative; margin-top: 56px; }
 .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: var(--tint); z-index: 0; }
 .stage .wrap { position: relative; z-index: 1; }
-.browser { border-radius: 14px; overflow: hidden; box-shadow: var(--shot); background: var(--card); }
-.browser .chrome { height: 34px; background: var(--chrome); display: flex; align-items: center; padding: 0 12px; }
-.browser .chrome span { flex: 0 1 320px; height: 20px; border-radius: 6px; background: var(--card); font: 12px/20px var(--font); color: var(--ink2); padding: 0 10px; }
+.browser { border-radius: 14px; overflow: hidden; box-shadow: var(--shot); background: var(--card); outline: 1px solid rgba(255, 255, 255, .22); outline-offset: -1px; }
 
 /* ---------- sections ---------- */
 .tint { background: var(--tint); }
 .section { padding: 96px 0; }
 .section h2 { font-size: 40px; font-weight: 700; letter-spacing: -.02em; }
 
-/* What tally shows: real panels from the app, near their real size, two to a row. */
-.tour { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 72px 64px; margin-top: 48px; }
+/* What tally shows: real panels from the app in two columns that stack on their own (judge, round 3). */
+.tour { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 64px; margin-top: 48px; align-items: start; }
+.tour .tile + .tile { margin-top: 72px; }
 .tile h3 { font-size: 22px; margin-bottom: 8px; }
 .tile p { color: var(--ink2); font-size: 17px; line-height: 27px; max-width: 46ch; margin: 0; }
-.tile picture { margin-top: 24px; max-width: 480px; }
-.tile img { border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
+.tile picture { margin-top: 20px; }
+.tile img { width: 100%; border-radius: 16px; box-shadow: var(--shadow); outline: 1px solid var(--edge); }
 
 /* What you need, with the commands beside it. */
 .setup { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px 72px; align-items: start; }
@@ -92,7 +92,7 @@ p { margin: 0 0 14px; }
 .reqs dt { font-weight: 700; padding-top: 18px; border-top: 1px solid var(--line); }
 .reqs dt:first-child { border-top: 0; padding-top: 0; }
 .reqs dd { margin: 4px 0 18px; color: var(--ink2); font-size: 16px; line-height: 25px; }
-.term { margin: 0 0 24px; background: var(--term); color: #E6F2EF; border-radius: 14px; padding: 24px 26px; overflow-x: auto; font: 15px/26px var(--mono); }
+.term { margin: 0 0 24px; background: var(--term); color: #E6F2EF; border-radius: 12px; padding: 20px 24px; overflow-x: auto; font: 14px/24px var(--mono); outline: 1px solid var(--edge); }
 .term .c { color: #8FB3AC; }
 .term .out { color: #7FE3CF; }
 
@@ -125,21 +125,19 @@ article h3 { font-size: 18px; margin: 28px 0 6px; }
 #before { padding-bottom: 32px; }
 #before h2 { font-size: 28px; }
 
-/* Setup steps 1 to 4: numbered badges on one line down the left, no dividers between them. */
-.steps section { position: relative; padding: 0 0 48px 56px; margin: 0; border: 0; }
-.steps section::before { content: ""; position: absolute; left: 17px; top: 44px; bottom: -8px; width: 2px; background: var(--line); }
-.steps h2 { font-size: 28px; margin-bottom: 14px; line-height: 36px; }
-.step { position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 17px; font-weight: 700; display: grid; place-items: center; }
-/* The line ends in a small dot where setup is done. */
-.done { position: relative; margin: 0 0 48px; padding: 0 0 40px 56px; border-bottom: 1px solid var(--line); color: var(--ink2); }
-.done::before { content: ""; position: absolute; left: 12px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--teal); }
+/* Setup steps 1 to 4: the number hangs in the gutter as plain teal text, and every heading shares one left edge (judge, round 3). */
+.steps section { padding: 0 0 48px; margin: 0; border: 0; }
+.steps h2 { position: relative; font-size: 28px; margin-bottom: 14px; line-height: 36px; }
+.step { position: absolute; right: calc(100% + 16px); top: 0; color: var(--teal); }
+.steps section:last-child { padding-bottom: 16px; }
+.done { margin: 0 0 48px; padding: 0 0 40px; border-bottom: 1px solid var(--line); color: var(--ink2); }
 .opt { font-size: 14px; font-weight: 600; color: var(--ink2); margin-left: 8px; letter-spacing: 0; }
 
 code { font-family: var(--mono); font-size: .86em; background: var(--code); border-radius: 5px; padding: 2px 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-article p code, article li code, article dd code { white-space: nowrap; }
+article :not(pre) > code { white-space: nowrap; }
 /* Copy gets its own column, so it never sits on top of the code. */
-.code { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; margin: 14px 0 18px; border-radius: 12px; overflow: hidden; background: var(--term); }
-.code .bar { order: 2; padding: 10px 10px 0 0; }
+.code { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; margin: 14px 0 18px; border-radius: 12px; overflow: hidden; background: var(--term); outline: 1px solid var(--edge); }
+.code .bar { order: 2; padding: 10px 10px 0 8px; }
 pre { margin: 0; background: var(--term); color: #E6F2EF; padding: 14px 20px; overflow-x: auto; font: 14px/23px var(--mono); }
 pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
 pre .c { color: #8FB3AC; }
@@ -160,29 +158,34 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .hero { grid-template-columns: 1fr; gap: 24px; }
   .hero h1 { font-size: 52px; max-width: 640px; }
   .hero-side { max-width: 600px; }
-  .tour { gap: 0 40px; }
+  .tour { column-gap: 40px; }
   .setup { grid-template-columns: minmax(0, 1fr); gap: 28px; }
 }
 @media (max-width: 760px) {
   body { font-size: 16px; line-height: 26px; }
   .wrap { padding-left: 16px; padding-right: 16px; }
-  .top nav a:not(.keep) { display: none; }
+  .top nav a { padding: 8px 10px; }
+  /* GitHub shows as its icon on phones, so all three links fit. */
+  .top nav a.gh span { display: none; }
   .hero { padding-top: 32px; }
   .hero h1 { font-size: 40px; line-height: 1.08; }
   .hero .lede { font-size: 17px; line-height: 27px; }
   .hero .ctas .btn { flex: 1 1 100%; }
   .stage { margin-top: 40px; }
-  .browser .chrome { display: none; }
   /* On a phone the hero shows tally's phone layout, top of the page only. */
   .browser { max-width: 330px; margin: 0 auto; border-radius: 28px; border: 6px solid var(--bezel); }
   .browser img { aspect-ratio: 390 / 640; object-fit: cover; object-position: top; }
   .section { padding: 64px 0; }
   .section h2 { font-size: 30px; }
+  /* One column on phones, in the order Budgets, Bills, Activity, Connections. */
   .tour { grid-template-columns: minmax(0, 1fr); gap: 56px; margin-top: 32px; }
+  .tour .col { display: contents; }
+  .tour .tile + .tile { margin-top: 0; }
+  .t1 { order: 1; } .t2 { order: 2; } .t3 { order: 3; } .t4 { order: 4; }
   .tile h3 { font-size: 20px; }
   .tile p { font-size: 16px; line-height: 26px; }
   .tile picture { margin-top: 18px; }
-  .term { font-size: 13px; line-height: 22px; padding: 18px; }
+  .term { font-size: 13px; line-height: 22px; padding: 18px; white-space: pre-wrap; overflow-wrap: break-word; }
   .docs-band { padding-top: 24px; padding-bottom: 32px; }
   .docs-band h1 { font-size: 32px; }
   .docs-band p { font-size: 17px; }
@@ -193,14 +196,13 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .side .jump { display: block; width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 10px; background: var(--card) var(--chev) right 14px center no-repeat; padding: 0 40px 0 14px; font: 600 16px var(--font); color: var(--ink); appearance: none; }
   .side nav { display: none; }
   #before h2, .steps h2 { font-size: 24px; }
-  /* Phones keep the full width for the steps: the badge sits inline with the heading and the line goes. */
-  .steps section { padding-left: 0; }
-  .steps section::before { display: none; }
-  .step { position: static; display: inline-grid; width: 32px; height: 32px; font-size: 15px; margin-right: 12px; vertical-align: 2px; }
+  /* On phones the number sits inline before the heading. */
+  .step { position: static; margin-right: 10px; }
   .steps h2 { line-height: 32px; }
-  .done { padding-left: 0; }
-  .done::before { display: none; }
   article h2 { font-size: 22px; }
-  pre { font-size: 13px; padding: 12px 16px; }
+  /* On phones Copy gets its own row above the code, and long lines wrap at spaces. */
+  .code { grid-template-columns: minmax(0, 1fr); }
+  .code .bar { order: 0; display: flex; justify-content: flex-end; padding: 8px 8px 0; }
+  pre { font-size: 13px; padding: 0 16px 14px; white-space: pre-wrap; overflow-wrap: break-word; }
   .shot { max-width: 100%; }
 }

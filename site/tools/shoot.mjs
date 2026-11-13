@@ -9,11 +9,8 @@ const [BASE, out, mode] = process.argv.slice(2);
 // "dark" as a third argument shoots the dark theme and names each file name-dark.png.
 const suffix = mode === "dark" ? "-dark" : "";
 mkdirSync(out, { recursive: true });
-const SHOTS = [
-  ["home", "#/", "desk"], ["spending", "#/spending", "desk"], ["budgets", "#/budgets", "desk"],
-  ["activity", "#/transactions", "desk"], ["bills", "#/bills", "desk"], ["accounts", "#/accounts", "desk"],
-  ["phone-home", "#/", "phone", 0], ["phone-budgets", "#/budgets", "phone", 0], ["phone-activity", "#/transactions", "phone", 0], ["phone-spending", "#/spending", "phone", 0], ["phone-accounts", "#/accounts", "phone", 0],
-];
+// The site uses only the phone Home shot; the panels come from crops (see the site's README in tools).
+const SHOTS = [["phone-home", "#/", "phone", 0]];
 const PORT = Number(process.env.SHOOT_PORT || 9334);
 const profile = mkdtempSync(join(tmpdir(), "council-chrome-"));
 const chrome = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",

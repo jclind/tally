@@ -57,7 +57,7 @@
       <a href="#phone">Use it on your phone</a>
       <a href="#alerts">Discord alerts</a>
       <a href="#backup">Backups and updates</a>
-      <p class="grp">Everyday</p>
+      <p class="grp">Reference</p>
       <a href="#using">Using tally</a>
       <a href="#help">Troubleshooting</a>
     </nav>
@@ -80,16 +80,15 @@
       <p>Plaid connects to your banks. tally uses your own keys, so your data goes from Plaid straight to your computer.</p>
       <ol>
         <li><a href="https://dashboard.plaid.com/signup">Create a Plaid account</a> and verify your email.</li>
-        <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. It covers 10 bank connections with Transactions, Investments, and Liabilities.</li>
+        <li><a href="https://dashboard.plaid.com/trial-plan">Apply for the free Trial plan</a>. It covers 10 bank connections with Transactions, Investments, and Liabilities. Plaid offers it to teams created on or after April 15, 2026; if yours is older, check the plans on your dashboard home page.</li>
         <li>Go to <b>Developers → Keys</b>. Copy your <b>client_id</b> and your <b>Sandbox</b> secret. You'll use the Production secret in step 4.</li>
       </ol>
       <div class="note warn"><b>Don't apply for full Production access.</b> Plaid ends the free Trial once you submit a Production application, and you can't go back.</div>
-      <p>Plaid offers the Trial to teams created on or after April 15, 2026. If your Plaid account is older, check the plans on your dashboard home page.</p>
     </section>
 
     <section id="install">
       <h2><span class="step">2</span>Install tally</h2>
-      <p>Swap in your client_id and Sandbox secret, then run:</p>
+      <p>Swap in your client_id and Sandbox secret, then run this. There's no npm install step.</p>
       <div class="code"><pre><code>git clone https://github.com/jclind/tally.git
 cd tally
 mkdir -p ~/.config/tally
@@ -102,7 +101,6 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <p>Then start it:</p>
       <div class="code"><pre><code>npm start</code></pre></div>
       <p>The log line should end in <code>(keys found)</code>. Open <a href="http://localhost:3400">localhost:3400</a>.</p>
-      <div class="note"><b>No npm install step.</b> tally has no npm dependencies.</div>
     </section>
 
     <section id="link">
@@ -118,7 +116,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <div class="code"><pre><code>mv data data-sandbox</code></pre></div>
       <p>In <code>~/.config/tally/plaid.env</code>, change <code>PLAID_SECRET</code> to your Production secret and <code>PLAID_ENV</code> to <code>production</code>. Then start tally again with <code>npm start</code>.</p>
       <p>Link your banks from <b>Accounts</b> the same way. The first sync brings in as much history as your bank gives Plaid, up to two years.</p>
-      <div class="note warn"><b>The Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back. If a bank stops syncing, use <b>Fix connection</b> on the Accounts page instead of linking it again. tally shows how many you've used.</div>
+      <div class="note warn"><b>The Trial plan allows 10 connections in total.</b> Removing one doesn't give the slot back. If a bank stops syncing, use <b>Fix connection</b> on the Accounts page instead of linking it again.</div>
       <p>Some large banks sign you in on their own site (OAuth). If one won't connect, check Plaid's dashboard for an <b>OAuth institutions</b> page; a few banks need you to request access there first.</p>
     </section>
     </div>
@@ -129,7 +127,7 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
       <h2>Keep it running</h2>
       <p>On a Mac, one script starts tally at login, restarts it if it stops, and runs the daily sync at 7:00:</p>
       <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
-      <p>It installs two launchd agents, <code>local.tally</code> and <code>local.tally-daily</code>, pointing at this folder. The log is <code>tally.log</code> in the same folder. To restart tally after a change:</p>
+      <p>The log is <code>tally.log</code> in the tally folder. To restart tally after a change:</p>
       <div class="code"><pre><code>launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h3>On a laptop</h3>
       <p>Opening tally, or switching back to its tab, syncs when the data is older than <b>Sync when you open tally</b> in Settings, 12 hours by default. If the Mac is asleep at 7:00, launchd runs the daily sync when it wakes.</p>
@@ -148,25 +146,26 @@ chmod 600 ~/.config/tally/plaid.env</code></pre></div>
 bin/install-mac.sh --host your-computer.your-tailnet.ts.net:8400</code></pre></div>
         </li>
       </ol>
-      <p>On Linux, start tally with <code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code> set instead of running the script.</p>
+      <p>On Linux, set this when you start tally instead of running the script:</p>
+      <div class="code"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net:8400</code></pre></div>
       <p>Open <code>https://your-computer.your-tailnet.ts.net:8400</code> on your phone and add it to your home screen. <code>tailscale status</code> shows your computer's name.</p>
       <div class="note warn"><b>Never use Tailscale Funnel or a port forward for tally.</b> Either one puts your accounts on the public internet with no password.</div>
     </section>
 
     <section id="alerts">
       <h2>Discord alerts<span class="opt">Optional</span></h2>
-      <p>Alerts are off until you turn them on. Then the 7:00 job posts to a Discord channel for these:</p>
+      <p>The 7:00 job can post to a Discord channel for:</p>
       <ul>
         <li>a charge at or above your alert amount, $200 unless you change it in Settings</li>
         <li>a budget that went over</li>
         <li>a bank that stopped syncing (once a week until it's fixed)</li>
       </ul>
-      <p>To turn them on:</p>
+      <p>To turn it on:</p>
       <ol>
         <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
         <li>In tally, open Settings (the gear at the top), turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
       </ol>
-      <p>The URL is saved in tally's database, and the page never shows it again.</p>
+      <p>The webhook URL is hidden after you save it.</p>
     </section>
 
     <section id="backup">
@@ -183,17 +182,19 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
 
     <section id="using">
       <h2>Using tally</h2>
-      <h3>Budgets</h3>
-      <p>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</p>
-      <picture class="shot cut"><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="760" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; the others are under." loading="lazy"></picture>
-      <h3>Fix a category</h3>
-      <p>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</p>
-      <h3>Search</h3>
-      <p>Search finds names, amounts, and categories, and ignores case, spaces, and punctuation. <code>mcdonalds</code> finds McDonald's, <code>6.75</code> finds that exact charge, and <code>groc</code> finds Groceries.</p>
-      <h3>Look back</h3>
-      <p>The month name at the top of Home, Spending, and Budgets is a menu. Pick a past month to see all of it.</p>
-      <h3>Settings</h3>
-      <p>The gear at the top opens Settings, which holds the sync and alert options above. <b>Your setup</b> shows whether Plaid is in sandbox or production, and where the keys and data live.</p>
+      <dl class="faq">
+        <dt>Budgets</dt>
+        <dd>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.
+          <picture class="shot"><source media="(prefers-color-scheme: dark)" srcset="/img/c-budgets-dark.png"><img src="/img/c-budgets.png" width="896" height="768" alt="Budgets: Groceries is $25 over its $240 limit and shows pink; the others are under." loading="lazy"></picture></dd>
+        <dt>Fix a category</dt>
+        <dd>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</dd>
+        <dt>Search</dt>
+        <dd>Search finds names, amounts, and categories, and ignores case, spaces, and punctuation. <code>mcdonalds</code> finds McDonald's, <code>6.75</code> finds that exact charge, and <code>groc</code> finds Groceries.</dd>
+        <dt>Look back</dt>
+        <dd>The month name at the top of Home, Spending, and Budgets is a menu. Pick a past month to see all of it.</dd>
+        <dt>Your setup</dt>
+        <dd>In Settings (the gear at the top), <b>Your setup</b> shows whether Plaid is in sandbox or production, and where the keys and data live.</dd>
+      </dl>
     </section>
 
     <section id="help">
@@ -229,7 +230,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     const b = document.createElement("button");
     b.className = "copybtn"; b.type = "button"; b.textContent = "Copy";
     b.addEventListener("click", async () => {
-      const text = [...box.querySelectorAll("pre code")].map((c) => c.innerText).join("\n");
+      const text = [...box.querySelectorAll("pre code")].map((c) => c.textContent).join("\n");
       try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; } catch { b.textContent = "Select and copy"; }
       setTimeout(() => (b.textContent = "Copy"), 1600);
     });
