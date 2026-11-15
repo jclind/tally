@@ -19,10 +19,17 @@ const PAYOUTS = process.env.TALLY_PAYOUTS || join(homedir(), ".config/tally/payo
 const payoutSources = existsSync(PAYOUTS) ? (await import(pathToFileURL(PAYOUTS).href)).default(report) : {};
 // Plaid's Trial plan allows 10 Items for life. Removing one does not give the slot back.
 
+// Notepad can save a byte-order mark, and Windows PowerShell's Out-File writes UTF-16, so the keys file may be either.
+function readText(file) {
+  const b = readFileSync(file);
+  if (b[0] === 0xff && b[1] === 0xfe) return b.toString("utf16le").slice(1);
+  return b.toString("utf8").replace(/^\uFEFF/, "");
+}
+
 function loadKeys() {
   if (!existsSync(KEYS)) return null;
   const env = {};
-  for (const m of readFileSync(KEYS, "utf8").matchAll(/^([A-Z_]+)=(.*)$/gm)) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  for (const m of readText(KEYS).matchAll(/^([A-Z_]+)=(.*)$/gm)) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
   if (!env.PLAID_CLIENT_ID || !env.PLAID_SECRET) return null;
   // PLAID_HOST is for the tests' fake Plaid server.
   const host = env.PLAID_HOST || ((env.PLAID_ENV || "production") === "sandbox" ? "https://sandbox.plaid.com" : "https://production.plaid.com");
@@ -285,7 +292,7 @@ function webhook() {
   const saved = settings().discordWebhook;
   if (saved) return saved;
   if (!existsSync(DISCORD)) return null;
-  return readFileSync(DISCORD, "utf8").match(/^DISCORD_WEBHOOK_URL=(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "") || null;
+  return readText(DISCORD).match(/^DISCORD_WEBHOOK_URL=(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "") || null;
 }
 // What the Settings page sees: never the webhook itself, only where it comes from.
 function publicSettings() {

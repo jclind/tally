@@ -118,15 +118,44 @@ Budget). Its record and corrected benchmark are in `.council/site-ref/` (`STANDA
 - Only code that isn't a terminal command gets a label (`data-label`): a file's path, or "Service environment".
   Terminal blocks stay unlabeled.
 - Wherever Mac and Linux split, the platform comes first: an "On a Mac" / "On Linux" h3, or a bold lead-in.
+- Since 2026-11-15 the guide also covers Windows. A "Show commands for" switch in Before you start shows one
+  system's commands; anything tagged `data-os="mac"`, `"windows"`, `"linux"`, or a mix like `"mac linux"` hides
+  for the others. The head script picks the reader's own system until they choose, and with no script every system
+  shows, so the platform lead-ins stay.
 - The outline has sub-entries for keys, start, and update, and tracks the current place by scroll position.
 - Judge's calls: every guide h2 is 28px (24px on phones); desktop sub-headings 20px (18px on phones); Using tally
   terms and Troubleshooting answers 17px bold, and each Troubleshooting answer is a linkable `h3.q`; no card grids;
   phone step numerals stay inline; on phones a one-line command that overflows takes Copy in a row above, and the
   Copy row is a 32px button with a 44px tap area.
 
+## Windows
+
+`bin/install-windows.ps1` makes two scheduled tasks in a `\tally\` folder for the signed-in user, with no admin
+rights: `tally` at sign-in and `tally-daily` at 7:00. Both run `bin/run-windows.cmd` through `conhost --headless`,
+which loops the server with a 5-second pause and reads `TALLY_PORT`, `TALLY_HOSTS`, and `TALLY_PAGE_URL` from
+`tally.env` (gitignored, written by the installer). What was learned getting it to work, each one tested on a real
+Windows 11 PC:
+
+- Windows PowerShell's default policy refuses `npm.ps1`, so the guide starts tally with `node server.mjs`, and the
+  installer runs as `powershell -ExecutionPolicy Bypass -File`.
+- Task Scheduler's defaults stop a task after 72 hours and never start it on battery; the installer turns both off.
+- `conhost --headless "path\run-windows.cmd" server` keeps a path with spaces whole; `cmd /c ""path" server"` passed
+  through conhost does not, and fails silently.
+- Stopping a task ends only conhost, so `Stop-Tally` also ends the `run-windows.cmd` tree with `taskkill /T`.
+- Two processes can't append to one log at once, so the daily job writes `tally-daily.log`.
+- Tasks made from an admin PowerShell can't be replaced from a normal one; the installer says so.
+- Windows PowerShell spends 2 seconds on IPv6 for `localhost`, and tally listens on 127.0.0.1, so the installer
+  checks `127.0.0.1`.
+- Windows doesn't use the file modes tally sets, so the data is private only inside the user folder. The installer
+  warns when the checkout is outside it.
+- The keys file may be UTF-16 (Windows PowerShell's `Out-File`) or carry a byte-order mark (Notepad); `readText` in
+  `server.mjs` reads both.
+- The tests run on Windows in GitHub Actions (`.github/workflows/test.yml`). A test that deletes a folder must wait
+  for the server it started to exit, since Windows won't delete an open database.
+
 ## Daily job
 
-`bin/daily.mjs`, run at 7:00 by the agent `bin/install-mac.sh` installs: syncs everything through `POST /api/daily` and posts new alerts (broken connection weekly, a charge at or over the alert amount
+`bin/daily.mjs`, run at 7:00 by the agent `bin/install-mac.sh` installs, or the task `bin/install-windows.ps1` makes: syncs everything through `POST /api/daily` and posts new alerts (broken connection weekly, a charge at or over the alert amount
 dated in the last 10 days, a budget gone over) to Discord when alerts are on in Settings. The webhook comes from
 Settings, or `DISCORD_WEBHOOK_URL` in `~/.config/tally/discord.env` from before the setting. Long posts are split into several messages, and each message's alerts are marked
 sent only after Discord accepts that message.

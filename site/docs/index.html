@@ -6,7 +6,7 @@
 <title>Install guide · tally</title>
 <meta name="description" content="Set up tally: get free Plaid keys, install it, link your accounts, and keep it running.">
 <meta property="og:title" content="tally install guide">
-<meta property="og:description" content="Get free Plaid keys, install tally on a Mac or Linux computer, link your accounts, and keep it running.">
+<meta property="og:description" content="Get free Plaid keys, install tally on a Mac, Windows, or Linux computer, link your accounts, and keep it running.">
 <meta property="og:image" content="https://tally.jesselind.com/img/hero-home.png">
 <meta name="theme-color" content="#136564">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%2300CDA9'/%3E%3Cg stroke='%23fff' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M10 9v14M14 9v14M18 9v14M22 9v14'/%3E%3Cpath d='M7.5 20.5 24.5 11.5'/%3E%3C/g%3E%3C/svg%3E">
@@ -15,6 +15,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 <script src="/theme.js"></script>
+<script>
+  // Commands that differ by computer show only for one system: the reader's pick, or the system they're reading on.
+  try { document.documentElement.dataset.os = localStorage.getItem("os") || (/Windows/.test(navigator.userAgent) ? "windows" : /Linux|X11|CrOS/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent) ? "linux" : "mac"); } catch { document.documentElement.dataset.os = /Windows/.test(navigator.userAgent) ? "windows" : "mac"; }
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -82,9 +86,11 @@
   <article id="main">
     <section id="before">
       <h2>Before you start</h2>
+      <div class="os"><span id="os-label">Show commands for</span><span class="seg" role="group" aria-labelledby="os-label"><button type="button" data-pick="mac">Mac</button><button type="button" data-pick="windows">Windows</button><button type="button" data-pick="linux">Linux</button></span></div>
       <ul>
-        <li><b>A Mac or Linux computer.</b> Windows may work under WSL2, but nobody has tested it.</li>
-        <li><b>Node 24 or newer, and git.</b> Check Node with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a> or, on a Mac, <code>brew install node</code>.</li>
+        <li><b>A Mac, Windows, or Linux computer.</b> Windows 10 or 11.</li>
+        <li><b>Node 24 or newer, and git.</b> Check Node with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a><span data-os="mac"> or, on a Mac, <code>brew install node</code></span>.<span data-os="windows"> On Windows, you can install both from PowerShell, then open a new PowerShell window so it finds them:</span>
+          <div class="code" data-os="windows"><pre><code>winget install OpenJS.NodeJS.LTS Git.Git</code></pre></div></li>
         <li><b>A US bank.</b> tally only links US banks for now.</li>
       </ul>
       <p>Using a coding agent? Open it in an empty folder and paste this:</p>
@@ -104,20 +110,27 @@
 
     <section id="install">
       <h2><span class="step">2</span>Install tally</h2>
-      <p>There's no <code>npm install</code> step.</p>
+      <p>There's no <code>npm install</code> step.<span data-os="windows"> On Windows, run every command in PowerShell. It opens in your user folder, which only your account can read, so keep tally there.</span></p>
       <div class="code"><pre><code>git clone https://github.com/jclind/tally.git
 cd tally</code></pre></div>
       <h3 id="keys">Add your keys</h3>
-      <p>Swap in your client_id and Production secret, then run this. It writes <code>~/.config/tally/plaid.env</code>, readable only by you.</p>
-      <div class="code"><pre><code>mkdir -p ~/.config/tally
+      <p data-os="mac linux">Swap in your client_id and Production secret, then run this. It writes <code>~/.config/tally/plaid.env</code>, readable only by you.</p>
+      <div class="code" data-os="mac linux"><pre><code>mkdir -p ~/.config/tally
 cat &gt; ~/.config/tally/plaid.env &lt;&lt;'EOF'
 PLAID_CLIENT_ID=your-client-id
 PLAID_SECRET=your-production-secret
 PLAID_ENV=production
 EOF
 chmod 600 ~/.config/tally/plaid.env</code></pre></div>
+      <p data-os="windows">Swap in your client_id and Production secret, then run this. It writes <code>.config\tally\plaid.env</code> in your user folder.</p>
+      <div class="code" data-os="windows"><pre><code>mkdir $HOME\.config\tally -Force | Out-Null
+@'
+PLAID_CLIENT_ID=your-client-id
+PLAID_SECRET=your-production-secret
+PLAID_ENV=production
+'@ | Set-Content $HOME\.config\tally\plaid.env</code></pre></div>
       <h3 id="start">Start and check it</h3>
-      <div class="code"><pre><code>npm start</code></pre></div>
+      <div class="code"><pre><code>node server.mjs</code></pre></div>
       <div class="output"><span class="olabel">Expected output</span><pre><samp>tally on http://localhost:3400 (keys found)</samp></pre></div>
       <p>If it says <code>(keys missing)</code>, see <a href="#keys-missing">keys missing</a>. Otherwise open <a href="http://localhost:3400">localhost:3400</a>.</p>
     </section>
@@ -141,12 +154,16 @@ PLAID_ENV=sandbox</code></pre></div>
 
     <section id="background">
       <h2>Keep it running</h2>
-      <h3>On a Mac</h3>
-      <p>Stop tally (Ctrl+C) first. One script then starts it at login, restarts it if it stops, and runs the daily sync at 7:00, or when the Mac wakes if it was asleep then:</p>
-      <div class="code"><pre><code>bin/install-mac.sh</code></pre></div>
-      <p>The log is <code>tally.log</code> in the tally folder. For another sync time or port, add <code>--at 06:30</code> or <code>--port 3500</code>.</p>
-      <h3>On Linux</h3>
-      <p>Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
+      <h3 data-os="mac">On a Mac</h3>
+      <p data-os="mac">Stop tally (Ctrl+C) first. One script then starts it at login, restarts it if it stops, and runs the daily sync at 7:00, or when the Mac wakes if it was asleep then:</p>
+      <div class="code" data-os="mac"><pre><code>bin/install-mac.sh</code></pre></div>
+      <p data-os="mac">The log is <code>tally.log</code> in the tally folder. For another sync time or port, add <code>--at 06:30</code> or <code>--port 3500</code>.</p>
+      <h3 data-os="windows">On Windows</h3>
+      <p data-os="windows">Stop tally (Ctrl+C) first. One script then starts it when you sign in, restarts it if it stops, and runs the daily sync at 7:00, or when the PC is next on if it was off then. It needs no admin rights and opens no window:</p>
+      <div class="code" data-os="windows"><pre><code>powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1</code></pre></div>
+      <p data-os="windows">The logs are <code>tally.log</code> and <code>tally-daily.log</code> in the tally folder. For another sync time or port, add <code>-At 06:30</code> or <code>-Port 3500</code>. To stop it for good, add <code>-Remove</code>.</p>
+      <h3 data-os="linux">On Linux</h3>
+      <p data-os="linux">Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
     </section>
 
     <section id="backup">
@@ -154,10 +171,13 @@ PLAID_ENV=sandbox</code></pre></div>
       <p>Copy <code>data/tally-snapshot.db</code> and the <code>~/.config/tally/</code> folder somewhere else, encrypted, on a schedule. tally writes the snapshot after every full sync, and it's safe to copy while tally runs.</p>
       <p>The snapshot holds your Plaid access tokens. Without it you'd <a href="#link">link every bank again</a>.</p>
       <h3 id="update">Update tally</h3>
-      <p><b>On a Mac</b>, from your tally folder, pull the new code and restart tally:</p>
-      <div class="code"><pre><code>git pull
+      <p data-os="mac"><b>On a Mac</b>, from your tally folder, pull the new code and restart tally:</p>
+      <div class="code" data-os="mac"><pre><code>git pull
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
-      <p><b>On Linux</b>, run <code>git pull</code> and restart the service you set up.</p>
+      <p data-os="windows"><b>On Windows</b>, from your tally folder, pull the new code and restart tally:</p>
+      <div class="code" data-os="windows"><pre><code>git pull
+powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1 -Restart</code></pre></div>
+      <p data-os="linux"><b>On Linux</b>, run <code>git pull</code> and restart the service you set up.</p>
     </section>
 
     <section id="phone">
@@ -170,10 +190,13 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
           <div class="code"><pre><code>tailscale serve --bg 3400</code></pre></div>
           If port 443 is already in use on this computer, add <code>--https=8400</code> before <code>3400</code>, and put <code>:8400</code> after the address in the next step.
         </li>
-        <li>Tell tally its new address. <code>tailscale serve status</code> prints the full address. <b>On a Mac</b>:
-          <div class="code"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net</code></pre></div>
-          <b>On Linux</b>, add this environment variable to the service you set up, then restart it:
-          <div class="code" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net</code></pre></div>
+        <li>Tell tally its new address. <code>tailscale serve status</code> prints the full address.
+          <span data-os="mac"><b>On a Mac</b>:</span>
+          <div class="code" data-os="mac"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net</code></pre></div>
+          <span data-os="windows"><b>On Windows</b>:</span>
+          <div class="code" data-os="windows"><pre><code>powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1 -HostName your-computer.your-tailnet.ts.net</code></pre></div>
+          <span data-os="linux"><b>On Linux</b>, add this environment variable to the service you set up, then restart it:</span>
+          <div class="code" data-os="linux" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net</code></pre></div>
         </li>
       </ol>
       <p>Open <code class="long"><span>https://your-computer.</span><wbr><span>your-tailnet.ts.net</span></code> on your phone and add it to your home screen.</p>
@@ -213,7 +236,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     <section id="help">
       <h2>Troubleshooting</h2>
       <h3 class="q" id="keys-missing">The log says "keys missing"</h3>
-      <p>tally reads <code>~/.config/tally/plaid.env</code>. Check that the file exists and has both <code>PLAID_CLIENT_ID</code> and <code>PLAID_SECRET</code>.</p>
+      <p>tally reads <code>~/.config/tally/plaid.env</code><span data-os="windows">, which is <code>.config\tally\plaid.env</code> in your user folder on Windows</span>. Check that the file exists and has both <code>PLAID_CLIENT_ID</code> and <code>PLAID_SECRET</code>.</p>
       <h3 class="q" id="bank-error">A bank shows an error on the Accounts page</h3>
       <p>Its sign-in expired or changed. Click <b>Fix connection</b> and sign in again.</p>
       <h3 class="q" id="wont-connect">A bank won't connect</h3>
@@ -221,7 +244,7 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <h3 class="q" id="history">A bank has only a few months of history</h3>
       <p>That's what the bank gives Plaid. Some send two years, some about 90 days.</p>
       <h3 class="q" id="phone-load">The page won't load on my phone</h3>
-      <p>Run <code>tailscale serve status</code> on the computer, and make sure the address you passed to <code>--host</code> matches it, with <code>:8400</code> only if you served on 8400. <code>tally.log</code> names any address tally refused.</p>
+      <p>Run <code>tailscale serve status</code> on the computer, and make sure the address you passed to <code>--host</code> (<code>-HostName</code> on Windows) matches it, with <code>:8400</code> only if you served on 8400. <code>tally.log</code> names any address tally refused.</p>
       <h3 class="q" id="other">Something else</h3>
       <p>Open an issue on <a href="https://github.com/jclind/tally/issues">GitHub</a> with the lines from <code>tally.log</code>. Leave out anything with your account details.</p>
     </section>
@@ -267,6 +290,15 @@ launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
     }
   };
   addEventListener("load", markScroll); addEventListener("resize", markScroll);
+  // The switch in Before you start. Hidden blocks measure as zero wide, so the fades are measured again after a switch.
+  const osButtons = [...document.querySelectorAll(".os [data-pick]")];
+  const showOs = (v) => {
+    document.documentElement.dataset.os = v;
+    for (const b of osButtons) b.setAttribute("aria-pressed", String(b.dataset.pick === v));
+    markScroll();
+  };
+  showOs(document.documentElement.dataset.os);
+  for (const b of osButtons) b.addEventListener("click", () => { showOs(b.dataset.pick); try { localStorage.setItem("os", b.dataset.pick); } catch {} });
   // The fade goes once the command is scrolled to its end.
   for (const pre of document.querySelectorAll(".code pre, .output pre")) pre.addEventListener("scroll", () => atEnd(pre), { passive: true });
   const jump = document.querySelector(".jump");

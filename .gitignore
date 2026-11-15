@@ -3,3 +3,4 @@ data/
 .env*
 CLAUDE.local.md
 .council/
+tally.env

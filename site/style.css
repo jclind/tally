@@ -133,6 +133,16 @@ article h3 { font-size: 18px; margin: 28px 0 6px; text-wrap: balance; }
 /* Desktop sub-headings sit a clear step above body text: 28, 20, 17 (judge, round 2). Phones keep 18px under their 24px h2s. */
 @media (min-width: 761px) { article h3:not(.q) { font-size: 20px; line-height: 28px; margin: 32px 0 8px; } }
 #before { padding-bottom: 32px; }
+/* Mac, Windows, or Linux: only the picked system's commands show. With no script, every system's show. */
+html[data-os="mac"] [data-os]:not([data-os~="mac"]),
+html[data-os="windows"] [data-os]:not([data-os~="windows"]),
+html[data-os="linux"] [data-os]:not([data-os~="linux"]) { display: none; }
+.os { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 18px; }
+.os > span:first-child { font-size: 15px; font-weight: 600; color: var(--ink2); }
+.os .seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--code); box-shadow: inset 0 0 0 1px var(--line); }
+.os button { height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--ink2); font: 600 15px var(--font); cursor: pointer; }
+.os button:hover { color: var(--ink); }
+.os button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, .08); }
 
 /* Setup steps 1 to 4: the number hangs in the gutter as plain teal text, and every heading shares one left edge (judge, round 3). */
 .steps { padding-bottom: 24px; margin-bottom: 40px; border-bottom: 1px solid var(--line); }

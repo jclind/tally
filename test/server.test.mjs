@@ -52,7 +52,10 @@ before(async () => {
   throw new Error("server did not start");
 });
 
-after(() => { app?.kill(); fake?.close(); rmSync(dir, { recursive: true, force: true }); });
+// Windows won't delete a database file a process still holds, so wait for the server to exit before cleaning up.
+const stop = (child) => new Promise((done) => { if (!child || child.exitCode !== null) return done(); child.once("exit", done); child.kill(); });
+
+after(async () => { await stop(app); fake?.close(); rmSync(dir, { recursive: true, force: true }); });
 
 const post = (path, body) => fetch(base + path, { method: "POST", headers: { "content-type": "application/json", origin: base }, body: JSON.stringify(body) }).then((r) => r.json());
 
@@ -192,9 +195,11 @@ test("settings save and check their values, and sync on open runs only when it's
   assert.ok(Array.isArray(daily.alerts));
 });
 
-test("sandbox keys keep their data in sandbox.db, apart from tally.db", async () => {
+test("sandbox keys keep their data in sandbox.db, apart from tally.db, read from a UTF-16 keys file", async () => {
   const sdir = mkdtempSync(join(tmpdir(), "tally-sandbox-"));
-  writeFileSync(join(sdir, "plaid.env"), `PLAID_CLIENT_ID=cid\nPLAID_SECRET=sec\nPLAID_ENV=sandbox\nPLAID_HOST=http://127.0.0.1:${fake.address().port}\n`);
+  // Written the way Windows PowerShell's Out-File writes it: UTF-16 with a byte-order mark and CRLF line ends.
+  const keys = `PLAID_CLIENT_ID=cid\r\nPLAID_SECRET=sec\r\nPLAID_ENV=sandbox\r\nPLAID_HOST=http://127.0.0.1:${fake.address().port}\r\n`;
+  writeFileSync(join(sdir, "plaid.env"), Buffer.from("\uFEFF" + keys, "utf16le"));
   const port = 35000 + Math.floor(Math.random() * 1000), sbase = `http://localhost:${port}`;
   const s = spawn(process.execPath, [join(root, "server.mjs")], { env: { ...process.env, TALLY_PORT: String(port), TALLY_KEYS: join(sdir, "plaid.env"), TALLY_DATA: join(sdir, "data"), TALLY_DISCORD: join(sdir, "discord.env"), TALLY_PAYOUTS: join(sdir, "payouts.mjs") }, stdio: "pipe" });
   try {
@@ -204,5 +209,5 @@ test("sandbox keys keep their data in sandbox.db, apart from tally.db", async ()
     assert.match(set.dataPath, /sandbox\.db$/);
     assert.ok(existsSync(join(sdir, "data", "sandbox.db")));
     assert.ok(!existsSync(join(sdir, "data", "tally.db")), "sandbox never creates the real data file");
-  } finally { s.kill(); rmSync(sdir, { recursive: true, force: true }); }
+  } finally { await stop(s); rmSync(sdir, { recursive: true, force: true }); }
 });

@@ -714,8 +714,8 @@ PAGES.accounts = async () => {
 
 // ---------- settings ----------
 // Every setting saves as it changes. The webhook never comes back from the server; the page only learns where one is.
-// A long path wraps at its slashes, not mid-name.
-const path = (p) => esc(p).replaceAll("/", "/<wbr>");
+// A long path wraps at its slashes (either kind, for Windows), not mid-name.
+const path = (p) => esc(p).replace(/[\\/]/g, "$&<wbr>");
 const SYNC_CHOICES = [["1", "If older than 1 hour"], ["6", "If older than 6 hours"], ["12", "If older than 12 hours"], ["24", "If older than a day"], ["off", "Never"]];
 PAGES.settings = async () => {
   const g = GEN;

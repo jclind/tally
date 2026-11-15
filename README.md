@@ -8,25 +8,28 @@ The full guide, with screenshots: **https://tally.jesselind.com**
 
 ## Quick start
 
-You need Node 24 or newer and your own Plaid keys (https://dashboard.plaid.com/signup).
+You need a Mac, Windows, or Linux computer, Node 24 or newer, git, and your own Plaid keys
+(https://dashboard.plaid.com/signup). These commands are for a Mac or Linux; the guide has the PowerShell ones.
 
     git clone https://github.com/jclind/tally.git
     cd tally
     mkdir -p ~/.config/tally
     printf 'PLAID_CLIENT_ID=...\nPLAID_SECRET=...\nPLAID_ENV=production\n' > ~/.config/tally/plaid.env
     chmod 600 ~/.config/tally/plaid.env
-    npm start
+    node server.mjs
 
 Open http://localhost:3400 and link your first bank. To try Plaid's test bank first, use your Sandbox secret and
 `PLAID_ENV=sandbox`, and sign in with `user_good` / `pass_good`. Sandbox data goes in `data/sandbox.db`, so it
 never mixes with your real banks.
 
-On a Mac, `bin/install-mac.sh` keeps tally running in the background and syncs every morning at 7:00.
+To keep tally running in the background and sync every morning at 7:00, run `bin/install-mac.sh` on a Mac, or
+`powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1` on Windows.
 
 ## Good to know
 
 - tally has no login. It listens on localhost only. To use it from your phone, put it behind
-  [Tailscale](https://tailscale.com) with `tailscale serve`, and pass that address to `bin/install-mac.sh --host`.
+  [Tailscale](https://tailscale.com) with `tailscale serve`, and pass that address to `bin/install-mac.sh --host`
+  (`-HostName` on Windows).
   Never expose it to the public internet.
 - Plaid's free Trial plan allows 10 connected institutions for life, and removing one doesn't give the slot back.
   Fix a broken connection with Fix connection on the Accounts page instead of linking the bank again.
