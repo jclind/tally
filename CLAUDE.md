@@ -130,14 +130,15 @@ Budget). Its record and corrected benchmark are in `.council/site-ref/` (`STANDA
 
 ## Windows
 
-`bin/install-windows.ps1` makes two scheduled tasks in a `\tally\` folder for the signed-in user, with no admin
-rights: `tally` at sign-in and `tally-daily` at 7:00. Both run `bin/run-windows.cmd` through `conhost --headless`,
+`bin/install-windows.ps1`, run through `bin\install-windows.cmd`, makes two scheduled tasks in a `\tally\` folder
+for the signed-in user, with no admin rights: `tally` at sign-in and `tally-daily` at 7:00. Both run `bin/run-windows.cmd` through `conhost --headless`,
 which loops the server with a 5-second pause and reads `TALLY_PORT`, `TALLY_HOSTS`, and `TALLY_PAGE_URL` from
 `tally.env` (gitignored, written by the installer). What was learned getting it to work, each one tested on a real
 Windows 11 PC:
 
-- Windows PowerShell's default policy refuses `npm.ps1`, so the guide starts tally with `node server.mjs`, and the
-  installer runs as `powershell -ExecutionPolicy Bypass -File`.
+- Windows PowerShell's default policy refuses any `.ps1`, `npm.ps1` included, so the guide starts tally with
+  `node server.mjs`, and people run the installer through `bin\install-windows.cmd`, which calls it with
+  `-ExecutionPolicy Bypass`.
 - Task Scheduler's defaults stop a task after 72 hours and never start it on battery; the installer turns both off.
 - `conhost --headless "path\run-windows.cmd" server` keeps a path with spaces whole; `cmd /c ""path" server"` passed
   through conhost does not, and fails silently.

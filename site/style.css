@@ -110,6 +110,7 @@ footer .flinks { display: flex; gap: 20px; }
 .docs-band { padding-top: 28px; padding-bottom: 36px; }
 .docs-band h1 { font-size: 40px; letter-spacing: -.02em; }
 .docs-band .lede { margin: 8px 0 0; font-size: 18px; line-height: 28px; color: #fff; max-width: 60ch; }
+.docs-band .lede a { color: #fff; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .6); }
 .docs { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; padding-top: 48px; padding-bottom: 96px; }
 .side { position: sticky; top: 24px; align-self: start; font-size: 15px; max-height: calc(100dvh - 48px); overflow-y: auto; }
 .side .grp { font-size: 14px; font-weight: 700; color: var(--ink2); margin: 24px 0 6px; }

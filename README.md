@@ -23,7 +23,7 @@ Open http://localhost:3400 and link your first bank. To try Plaid's test bank fi
 never mixes with your real banks.
 
 To keep tally running in the background and sync every morning at 7:00, run `bin/install-mac.sh` on a Mac, or
-`powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1` on Windows.
+`bin\install-windows.cmd` on Windows.
 
 ## Good to know
 

@@ -88,7 +88,7 @@
       <h2>Before you start</h2>
       <div class="os"><span id="os-label">Show commands for</span><span class="seg" role="group" aria-labelledby="os-label"><button type="button" data-pick="mac">Mac</button><button type="button" data-pick="windows">Windows</button><button type="button" data-pick="linux">Linux</button></span></div>
       <ul>
-        <li><b>A Mac, Windows, or Linux computer.</b> Windows 10 or 11.</li>
+        <li><b>A Mac, Windows, or Linux computer.</b><span data-os="windows"> Windows 10 or 11.</span></li>
         <li><b>Node 24 or newer, and git.</b> Check Node with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a><span data-os="mac"> or, on a Mac, <code>brew install node</code></span>.<span data-os="windows"> On Windows, you can install both from PowerShell, then open a new PowerShell window so it finds them:</span>
           <div class="code" data-os="windows"><pre><code>winget install OpenJS.NodeJS.LTS Git.Git</code></pre></div></li>
         <li><b>A US bank.</b> tally only links US banks for now.</li>
@@ -160,7 +160,7 @@ PLAID_ENV=sandbox</code></pre></div>
       <p data-os="mac">The log is <code>tally.log</code> in the tally folder. For another sync time or port, add <code>--at 06:30</code> or <code>--port 3500</code>.</p>
       <h3 data-os="windows">On Windows</h3>
       <p data-os="windows">Stop tally (Ctrl+C) first. One script then starts it when you sign in, restarts it if it stops, and runs the daily sync at 7:00, or when the PC is next on if it was off then. It needs no admin rights and opens no window:</p>
-      <div class="code" data-os="windows"><pre><code>powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1</code></pre></div>
+      <div class="code" data-os="windows"><pre><code>bin\install-windows.cmd</code></pre></div>
       <p data-os="windows">The logs are <code>tally.log</code> and <code>tally-daily.log</code> in the tally folder. For another sync time or port, add <code>-At 06:30</code> or <code>-Port 3500</code>. To stop it for good, add <code>-Remove</code>.</p>
       <h3 data-os="linux">On Linux</h3>
       <p data-os="linux">Run <code>node server.mjs</code> under systemd or another process manager, and schedule <code>node bin/daily.mjs</code> for the morning with cron or a timer.</p>
@@ -176,7 +176,7 @@ PLAID_ENV=sandbox</code></pre></div>
 launchctl kickstart -k gui/$(id -u)/local.tally</code></pre></div>
       <p data-os="windows"><b>On Windows</b>, from your tally folder, pull the new code and restart tally:</p>
       <div class="code" data-os="windows"><pre><code>git pull
-powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1 -Restart</code></pre></div>
+bin\install-windows.cmd -Restart</code></pre></div>
       <p data-os="linux"><b>On Linux</b>, run <code>git pull</code> and restart the service you set up.</p>
     </section>
 
@@ -194,7 +194,7 @@ powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1 -Restart</code>
           <span data-os="mac"><b>On a Mac</b>:</span>
           <div class="code" data-os="mac"><pre><code>bin/install-mac.sh --host your-computer.your-tailnet.ts.net</code></pre></div>
           <span data-os="windows"><b>On Windows</b>:</span>
-          <div class="code" data-os="windows"><pre><code>powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1 -HostName your-computer.your-tailnet.ts.net</code></pre></div>
+          <div class="code" data-os="windows"><pre><code>bin\install-windows.cmd -HostName your-computer.your-tailnet.ts.net</code></pre></div>
           <span data-os="linux"><b>On Linux</b>, add this environment variable to the service you set up, then restart it:</span>
           <div class="code" data-os="linux" data-label="Service environment"><pre><code>TALLY_HOSTS=your-computer.your-tailnet.ts.net</code></pre></div>
         </li>

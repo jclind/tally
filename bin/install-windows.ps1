@@ -1,7 +1,8 @@
 # Installs tally as two scheduled tasks on Windows: the server, which starts when you sign in and restarts if it stops,
 # and the daily sync at 7:00, which runs as soon as the PC is on if it was off then. Neither needs admin rights or
 # opens a window.
-# Usage: powershell -ExecutionPolicy Bypass -File bin\install-windows.ps1 [-HostName NAME[:PORT]] [-Port N] [-At HH:MM] [-Print] [-Restart] [-Remove]
+# Usage: bin\install-windows.cmd, which runs this past PowerShell's script policy, with any of
+#   [-HostName NAME[:PORT]] [-Port N] [-At HH:MM] [-Print] [-Restart] [-Remove]
 #   -HostName  a hostname tally should answer to besides localhost, like your tailscale serve address
 #   -Port      the local port, 3400 unless that one is taken
 #   -At        when the daily sync runs, 07:00 unless you pick another time
@@ -12,6 +13,8 @@ param([string]$HostName = "", [int]$Port = 3400, [string]$At = "07:00", [switch]
 $ErrorActionPreference = "Stop"
 $Dir = Split-Path -Parent $PSScriptRoot
 $TaskPath = "\tally\"
+# One plain line instead of PowerShell's red error block.
+function Fail($message, $code = 1) { [Console]::Error.WriteLine($message); exit $code }
 
 $run = Join-Path $Dir "bin\run-windows.cmd"
 # Stopping a task ends only the process it started, so end run-windows.cmd and the node under it too.
@@ -30,12 +33,12 @@ function Wait-Tally($port, $done) {
   for ($i = 0; $i -lt 30; $i++) {
     try { Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$port/api/status" -TimeoutSec 2 | Out-Null; Write-Output $done; exit 0 } catch { Start-Sleep -Seconds 1 }
   }
-  Write-Error "tally didn't answer on port $port within 30 seconds. The end of $log says why."
+  Fail "tally didn't answer on port $port within 30 seconds. The end of $log says why."
   exit 1
 }
 
 if ($Restart) {
-  if (-not (Get-ScheduledTask -TaskPath $TaskPath -TaskName "tally" -ErrorAction SilentlyContinue)) { Write-Error "tally isn't installed yet. Run this without -Restart first."; exit 1 }
+  if (-not (Get-ScheduledTask -TaskPath $TaskPath -TaskName "tally" -ErrorAction SilentlyContinue)) { Fail "tally isn't installed yet. Run this without -Restart first." }
   Stop-Tally
   Start-ScheduledTask -TaskPath $TaskPath -TaskName "tally"
   $p = (Get-Content (Join-Path $Dir "tally.env") | Where-Object { $_ -like "TALLY_PORT=*" }) -replace "TALLY_PORT=", ""
@@ -51,10 +54,10 @@ if ($Remove) {
 }
 
 $node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) { Write-Error "node not found. Install Node 24 or newer first."; exit 1 }
+if (-not $node) { Fail "node not found. Install Node 24 or newer first." 1 }
 $major = [int](& $node.Source -p "process.versions.node.split('.')[0]")
-if ($major -lt 24) { Write-Error "tally needs Node 24 or newer; this is $(& $node.Source -v)."; exit 1 }
-if ($At -notmatch '^([01][0-9]|2[0-3]):[0-5][0-9]$') { Write-Error "-At needs a 24-hour time, like 07:00."; exit 2 }
+if ($major -lt 24) { Fail "tally needs Node 24 or newer; this is $(& $node.Source -v)." 1 }
+if ($At -notmatch '^([01][0-9]|2[0-3]):[0-5][0-9]$') { Fail "-At needs a 24-hour time, like 07:00." 2 }
 # Windows doesn't use the file modes tally sets on Mac and Linux. Your user folder is private to you; most other
 # places, like C:\tally, are readable by every account on the PC.
 if (-not $Dir.StartsWith($HOME + "\", [StringComparison]::OrdinalIgnoreCase)) {
@@ -90,8 +93,7 @@ try {
   Register-ScheduledTask -TaskPath $TaskPath -TaskName "tally-daily" -InputObject $daily -Force | Out-Null
 } catch [Microsoft.Management.Infrastructure.CimException] {
   # Tasks made from an admin PowerShell can only be replaced from one.
-  Write-Error "Windows refused to replace the tally tasks: $($_.Exception.Message) If you installed tally from an admin PowerShell before, run this from one again."
-  exit 1
+  Fail "Windows refused to replace the tally tasks: $($_.Exception.Message) If you installed tally from an admin PowerShell before, run this from one again."
 }
 Start-ScheduledTask -TaskPath $TaskPath -TaskName "tally"
 Wait-Tally $Port "tally is running at http://localhost:$Port, with the daily sync at $At. Logs: $log and $dailyLog"
