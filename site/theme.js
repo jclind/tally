@@ -29,10 +29,16 @@
     apply();
     document.querySelector(".theme")?.addEventListener("click", () => {
       const next = root.dataset.theme === "dark" ? "light" : "dark";
-      // Picking what the device already uses clears the choice, so the page follows the device again.
-      choice = next === (device.matches ? "dark" : "light") ? null : next;
-      try { if (choice) localStorage.setItem("theme", choice); else localStorage.removeItem("theme"); } catch {}
-      apply();
+      const flip = () => {
+        // Picking what the device already uses clears the choice, so the page follows the device again.
+        choice = next === (device.matches ? "dark" : "light") ? null : next;
+        try { if (choice) localStorage.setItem("theme", choice); else localStorage.removeItem("theme"); } catch {}
+        apply();
+      };
+      // The page cross-fades to the new mode while the icon swaps (style.css). Browsers without view transitions, and
+      // readers who asked for reduced motion, get the swap with no fade.
+      if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return flip();
+      document.startViewTransition(flip);
     });
   });
 })();

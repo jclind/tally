@@ -102,12 +102,16 @@ A design council (Opus and Codex reviewing, Muse for four rounds, Fable judging 
 - The band is a deep teal (#136564, #104F4E in dark) on both pages. A light/dark button in the header overrides the
   device; `site/theme.js` sets `data-theme` on the root before the page draws, and the stylesheet's dark tokens hang
   off `[data-theme="dark"]`, never off a `prefers-color-scheme` query. The script also points each screenshot's
-  dark-twin `<source>` at the mode in use, so a new screenshot needs only the usual `<picture>` markup.
+  dark-twin `<source>` at the mode in use, so a new screenshot needs only the usual `<picture>` markup. Switching
+  modes cross-fades the page with a view transition while the moon shrinks and turns away and the sun's rays grow out
+  (the owner's reference video, 2026-11-16); reduced motion and browsers without view transitions just switch.
 - Setup goes straight to production keys in three steps (get keys, install, link your banks). Plaid's test bank is an
   optional section after the steps, since a connection only counts once a bank links, and wrong keys fail before
   Plaid's window opens.
-- The guide opens, under Before you start, with a copyable prompt for a coding agent. It keeps the Plaid keys out of
-  the chat and asks before anything that runs at login; keep both if the prompt changes.
+- Before you start is the owner's pick from a design-variants run on 2026-11-16 (design E): the system switch on the
+  heading's line, two lines with mint checks (Node and git with each system's install command, a US bank), and a
+  copyable prompt for a coding agent folded under "Setting up with a coding agent?". The prompt keeps the Plaid keys
+  out of the chat and asks before anything that runs at login; keep both if the prompt changes.
 
 A second council on 2026-11-13 (4 rounds, Opus and Codex, Muse for one) measured the install guide against ten
 published install guides (Obsidian, Homebrew, Ghost, Next.js, Tailwind, Resend, Sentry, GitBook, Immich, Actual
@@ -118,8 +122,8 @@ Budget). Its record and corrected benchmark are in `.council/site-ref/` (`STANDA
 - Only code that isn't a terminal command gets a label (`data-label`): a file's path, or "Service environment".
   Terminal blocks stay unlabeled.
 - Wherever Mac and Linux split, the platform comes first: an "On a Mac" / "On Linux" h3, or a bold lead-in.
-- Since 2026-11-15 the guide also covers Windows. A "Show commands for" switch in Before you start shows one
-  system's commands; anything tagged `data-os="mac"`, `"windows"`, `"linux"`, or a mix like `"mac linux"` hides
+- Since 2026-11-15 the guide also covers Windows. The Mac / Windows / Linux switch beside the Before you start heading
+  (its group label is "Show commands for") shows one system's commands; anything tagged `data-os="mac"`, `"windows"`, `"linux"`, or a mix like `"mac linux"` hides
   for the others. The head script picks the reader's own system until they choose, and with no script every system
   shows, so the platform lead-ins stay.
 - The outline has sub-entries for keys, start, and update, and tracks the current place by scroll position.

@@ -85,16 +85,17 @@
 
   <article id="main">
     <section id="before">
-      <h2>Before you start</h2>
-      <div class="os"><span id="os-label">Show commands for</span><span class="seg" role="group" aria-labelledby="os-label"><button type="button" data-pick="mac">Mac</button><button type="button" data-pick="windows">Windows</button><button type="button" data-pick="linux">Linux</button></span></div>
-      <ul>
-        <li><b>A Mac, Windows, or Linux computer.</b><span data-os="windows"> Windows 10 or 11.</span></li>
-        <li><b>Node 24 or newer, and git.</b> Check Node with <code>node -v</code>. Get it from <a href="https://nodejs.org">nodejs.org</a><span data-os="mac"> or, on a Mac, <code>brew install node</code></span>.<span data-os="windows"> On Windows, you can install both from PowerShell, then open a new PowerShell window so it finds them:</span>
+      <div class="before-head"><h2>Before you start</h2><span class="os" role="group" aria-label="Show commands for"><button type="button" data-pick="mac">Mac</button><button type="button" data-pick="windows">Windows</button><button type="button" data-pick="linux">Linux</button></span></div>
+      <ul class="need">
+        <li><b>Node 24 or newer, and git.</b> <span data-os="mac">Install both with Homebrew, or get Node from <a href="https://nodejs.org">nodejs.org</a>.</span><span data-os="windows">Install both from PowerShell, then open a new PowerShell window.</span><span data-os="linux">Get Node from <a href="https://nodejs.org">nodejs.org</a> or your package manager.</span>
+          <div class="code" data-os="mac"><pre><code>brew install node git</code></pre></div>
           <div class="code" data-os="windows"><pre><code>winget install OpenJS.NodeJS.LTS Git.Git</code></pre></div></li>
         <li><b>A US bank.</b> tally only links US banks for now.</li>
       </ul>
-      <p>Using a coding agent? Open it in an empty folder and paste this:</p>
-      <div class="code prompt" data-label="Prompt for your agent"><pre><code>Help me install tally (https://github.com/jclind/tally) on this computer by following https://tally.jesselind.com/docs/ step by step. If you can't open that page, the same guide is site/docs/index.html in the repo. Never ask me to paste my Plaid keys into this chat: tell me which file to put them in, and I'll do it. Ask me before installing anything that runs at login.</code></pre></div>
+      <details class="agent"><summary>Setting up with a coding agent?</summary>
+        <p>Open it in an empty folder and paste this:</p>
+        <div class="code prompt"><pre><code>Help me install tally (https://github.com/jclind/tally) on this computer by following https://tally.jesselind.com/docs/ step by step. If you can't open that page, the same guide is site/docs/index.html in the repo. Never ask me to paste my Plaid keys into this chat: tell me which file to put them in, and I'll do it. Ask me before installing anything that runs at login.</code></pre></div>
+      </details>
     </section>
 
     <div class="steps">
