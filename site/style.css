@@ -103,7 +103,9 @@ p, li, dd { text-wrap: pretty; }
 /* Four app cards two by two, each with one caption naming what the card can't show. */
 .feats { background: var(--app); padding: 120px 0 128px; }
 .feats .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 72px 64px; }
-.feats figcaption { padding: 18px 4px 0; font-size: 18px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; color: var(--ink); }
+/* Cards in a row can differ in height; the captions still line up across it. */
+.feats figure { display: flex; flex-direction: column; }
+.feats figcaption { margin-top: auto; padding: 18px 4px 0; font-size: 18px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; color: var(--ink); }
 /* Setup is one commented block: what you need sits in the comments, in the order you need it. */
 .setup { max-width: 728px; padding-top: 120px; padding-bottom: 112px; }
 .setup h2 { font-size: clamp(30px, 3vw, 40px); letter-spacing: -.03em; line-height: 1.1; font-weight: 700; margin: 0 0 28px; text-align: center; }

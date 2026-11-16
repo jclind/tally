@@ -7,7 +7,7 @@
 // What to shoot is in shots.json next to this file: [name, hash, width, height, how]. how is one of
 // {card: "<h2 text>"} or {sel: "<selector>"} for one card, {until: "<selector>", below: px} for the top of a page
 // down to an element, or {clip: [x, y, w, h]}; js runs in the page first (to trim rows, say), and union grows a card crop
-// to take in a popup the js opened.
+// to take in a popup the js opened, with unionPad px below it for its shadow (16 if not given).
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -62,7 +62,7 @@ try {
         if (how.union) {
           // Grow the crop to take in a popup the js opened (the category picker, say), plus a margin.
           const u = await evalJs(`(() => { const e = document.querySelector(${JSON.stringify(how.union)}); if (!e) return null; const b = e.getBoundingClientRect(); return [b.x, b.y + scrollY, b.right, b.bottom + scrollY]; })()`);
-          if (u) { const bottom = Math.max(clip.y + clip.height, u[3] + 16); clip.height = bottom - clip.y; }
+          if (u) { const bottom = Math.max(clip.y + clip.height, u[3] + (how.unionPad ?? 16)); clip.height = bottom - clip.y; }
         }
       }
       const shot = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip });
