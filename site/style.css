@@ -238,7 +238,7 @@ dl.faq dd { margin: 6px 0 0; color: var(--body); }
   .lift { padding: 8px; }
   .lift img { border-radius: 20px; }
   /* The phone hero ends on the Budgets card, so the Budgets card is left out of the four below it. */
-  .f-budgets { display: none; }
+  .feats .f-budgets { display: none; }
   .setup h2 { text-align: left; }
   .setup pre { font-size: 12px; line-height: 22px; padding: 16px; }
   .code.one { align-items: center; }
