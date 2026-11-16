@@ -36,7 +36,10 @@ All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's 
   Income is `INCOME` on depository accounts.
 - A recurring stream is a transfer, not a bill, when its name says payment, pmt, transfer, xfer, or autopay.
   Plaid's category alone isn't trusted there (it has called a hosting bill a transfer).
-- A subscription is any repeating charge except housing, utilities, loans, insurance, fees, and transfers. Edit on
+- A subscription is a repeating charge on a regular schedule Plaid is sure of (not `UNKNOWN`, not early detection),
+  except bills: housing, metered utilities, loans and card payments, insurance, and bank fees, by detailed
+  category. Phone, internet, and cable count. Transfers are left out by name only, since Plaid calls some bills
+  account transfers (a hosting bill, 2026-11-16). Edit on
   the Bills card moves one either way, saved per merchant in `stream_kinds` (keyed with SQLite's `lower()`). A
   subscription counts at its latest price in every total; other bills at their average.
 - A price increase: the two or three charges before the latest are one price (to the cent) and the latest is at
