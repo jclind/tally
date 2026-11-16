@@ -40,8 +40,11 @@ All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's 
   except bills: housing, metered utilities, loans and card payments, insurance, and bank fees, by detailed
   category. Phone, internet, and cable count. Transfers are left out by name only, since Plaid calls some bills
   account transfers (a hosting bill, 2026-11-16). Edit on
-  the Bills card moves one either way, saved per merchant in `stream_kinds` (keyed with SQLite's `lower()`). A
-  subscription counts at its latest price in every total; other bills at their average.
+  the Bills card moves one either way, saved per merchant in `stream_kinds` (keyed with SQLite's `lower()`).
+- Every repeating amount and total uses the expected next charge (`expected`): a subscription's latest price; for
+  other bills and income, the latest charge when the last two match to the cent, else the average of the last
+  three. Plaid's `average_amount` spans the whole history and lags a price change by months, so it's only the
+  fallback when none of the stream's charges are stored.
 - A price increase: the two or three charges before the latest are one price (to the cent) and the latest is at
   least 50 cents more, compared in integer cents. A stream mixing prices never counts. The note lasts one charge,
   and the daily alert (setting `priceAlerts`, on by default) fires once per increase within 45 days.
