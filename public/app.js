@@ -249,14 +249,18 @@ const catDot = (c) => `<span class="cav" style="background:${catColor(c)}24"><sp
 const short = (name) => String(name ?? "").replace(/ Visa Signature Card \d+$/, " Visa");
 // Privacy.com card charges arrive as "PWP*Merchant 2026-11-08". Show the merchant.
 const nice = (who) => String(who ?? "").replace(/^PWP\*/i, "").replace(/ \d{4}-\d\d-\d\d$/, "");
-const activityRow = (t) => `<div class="row${t.pending ? " pending" : ""}">${catDot(t.cat)}<span class="w"><b>${esc(nice(t.who))}${t.pending ? '<span class="tag">pending</span>' : ""}</b><small>${shortDate(t.date)}, ${esc(label(t.cat))}</small></span>
+// A merchant's logo when tally has a copy of it (see logos in lib/report.mjs). Without one, a transaction shows its
+// category dot and a bill its first letter.
+const logoImg = (src) => `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">`;
+const txMark = (t) => t.logo ? `<span class="cav lg">${logoImg(t.logo)}</span>` : catDot(t.cat);
+const activityRow = (t) => `<div class="row${t.pending ? " pending" : ""}">${txMark(t)}<span class="w"><b>${esc(nice(t.who))}${t.pending ? '<span class="tag">pending</span>' : ""}</b><small>${shortDate(t.date)}, ${esc(label(t.cat))}</small></span>
   <span class="amt">${amt(t.amount)}<small class="acct">${esc(short(t.account_name))}</small></span></div>`;
 
 const FREQ = { WEEKLY: "Weekly", BIWEEKLY: "Every 2 weeks", SEMI_MONTHLY: "Twice a month", MONTHLY: "Monthly", ANNUALLY: "Yearly", UNKNOWN: "Irregular" };
 // Plaid predicts the next date from past charges, so it's "expected", not a due date. Most bills are monthly,
 // so only other frequencies are named.
 // Summary cards (Coming up) show whole dollars; record lists (the Bills page) show cents.
-const billRow = (r, cents = true, bare = false) => `<div class="row${r.is_active ? "" : " off"}"><span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>
+const billRow = (r, cents = true, bare = false) => `<div class="row${r.is_active ? "" : " off"}">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
   <span class="w"><b>${esc(nice(r.who))}</b><small>${r.is_active && r.predicted_next_date ? `${bare ? "" : "Expected "}${shortDate(r.predicted_next_date)}` : r.last_date ? `Last charged ${shortDate(r.last_date)}` : ""}</small></span>
   <span class="amt num">${money(Math.abs(r.average_amount), cents)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
 const byNextDue = (a, b) => (a.predicted_next_date ?? "9999") < (b.predicted_next_date ?? "9999") ? -1 : 1;
@@ -396,7 +400,7 @@ PAGES.transactions = async (q) => {
     return p;
   };
   const rowHtml = (t) => `${t.date !== lastDay ? `<tr class="day"><th colspan="4" scope="rowgroup">${dayName((lastDay = t.date))}</th></tr>` : ""}<tr class="${t.pending ? "pending" : ""}" data-id="${esc(t.transaction_id)}">
-      <td><div class="nm"><span title="${esc(nice(t.who))}">${esc(nice(t.who))}</span>${t.pending ? '<span class="tag">pending</span>' : ""}</div><div class="who-sub">${catBtn(t)}</div></td>
+      <td><div class="nmw">${txMark(t)}<div class="nm"><span title="${esc(nice(t.who))}">${esc(nice(t.who))}</span>${t.pending ? '<span class="tag">pending</span>' : ""}</div></div><div class="who-sub">${catBtn(t)}</div></td>
       <td class="cat-col">${catBtn(t)}</td>
       <td class="acct-col muted"><span class="clip">${esc(short(t.account_name))}</span></td>
       <td class="amt">${amt(t.amount)}<small class="acct-sub">${esc(short(t.account_name))}</small></td></tr>`;

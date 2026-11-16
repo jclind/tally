@@ -233,6 +233,11 @@ h2 + .erow { margin-top: 6px; }
 .cav { width: 36px; height: 36px; border-radius: 50%; display: grid; place-content: center; flex: none; }
 .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-content: center; font-weight: 700; flex: none; font-size: 15px; background: var(--tint); color: var(--deep); }
 .row.off .av { background: var(--track); color: var(--ink2); }
+/* A logo fills its circle. The ring keeps a white logo's edge visible on a white card. */
+.cav.lg, .av.lg { position: relative; overflow: hidden; background: #fff; }
+.lg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lg::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line); }
+.row.off .av.lg img { opacity: .6; }
 .row.closed .w b { color: var(--ink2); }
 .tag { font-size: 12px; font-weight: 600; color: var(--ink2); background: var(--track); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
 
@@ -280,7 +285,9 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; table-layout
 .card:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
 .tx th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 13px; padding: 4px 10px 10px; }
 .tx tr.day th { font-size: 14px; font-weight: 700; color: var(--ink); padding: 22px 0 8px; border-top: 0; }
-.tx .nm { font-weight: 500; }
+.tx .nm { font-weight: 500; min-width: 0; }
+.tx .nmw { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tx .nmw .cav { width: 32px; height: 32px; }
 .tx .acct-sub { display: none; }
 .tx tbody tr.day:first-child th { padding-top: 8px; }
 .tx tr.day + tr td { border-top: 0; }
@@ -418,14 +425,15 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; table-layout
   .tx td:first-child { padding-left: 0; } .tx td:last-child { padding-right: 0; }
   /* Each phone row is a two-by-two grid: merchant and amount, then category and account. The account no longer sizes
      the amount's column, so the merchant gets the width. */
-  .tx tbody tr:not(.day):not(.msg) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name amt" "cat cat";
+  .tx tbody tr:not(.day):not(.msg) { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "mk name amt" "mk cat cat";
     column-gap: 12px; row-gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); }
   .tx tbody tr.day + tr { border-top: 0; }
   .tx tbody tr:not(.day):not(.msg) > td { display: contents; }
+  .tx .nmw { display: contents; } .tx .nmw > .cav { grid-area: mk; align-self: center; }
   .tx .nm { grid-area: name; } .tx .who-sub { grid-area: cat; }
   .tx td.amt > .num { grid-area: amt; text-align: right; align-self: center; }
   /* The account spans the row's second line from the right, so only the amount sizes the right column. */
-  .tx tr .acct-sub { grid-column: 1 / -1; grid-row: 2; justify-self: end; align-self: center; max-width: 48%; text-align: right; font-size: 14px; line-height: 20px; }
+  .tx tr .acct-sub { grid-column: 2 / -1; grid-row: 2; justify-self: end; align-self: center; max-width: 48%; text-align: right; font-size: 14px; line-height: 20px; }
   .tx tbody tr:not(.day):not(.msg) > td.cat-col, .tx tbody tr:not(.day):not(.msg) > td.acct-col { display: none; }
   .tx tbody tr.day { display: block; } .tx tbody tr.day th { display: block; }
   .tx .nm { display: flex; align-items: center; min-width: 0; }

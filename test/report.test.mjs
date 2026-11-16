@@ -202,3 +202,16 @@ test("a large charge that arrives days late still alerts, and a $0 budget can be
   assert.ok(a.some((x) => x.key === "big:t7"), "the Nov 8 charge, six days back");
   assert.ok(a.some((x) => x.key === "budget:GAS:2026-11"));
 });
+
+test("a bill takes the logo from its merchant's transactions, once tally has a copy", () => {
+  const db = fixture();
+  const url = "https://plaid-merchant-logos.plaid.com/streamco.png";
+  db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, raw) VALUES ('s1', 'i1', 'chk', '2026-10-20', 'STREAMCO 123', 'StreamCo', 9.99, 0, 'ENTERTAINMENT', ?)").run(JSON.stringify({ logo_url: url }));
+  db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, frequency, average_amount, is_active) VALUES ('st1', 'i1', 'outflow', 'STREAMCO', 'StreamCo', 'MONTHLY', 9.99, 1)").run();
+  assert.equal(r.recurring(db)[0].logo, null, "no copy yet");
+  r.logos.set(r.logoId(url), `${r.logoId(url)}.png`);
+  try {
+    assert.equal(r.recurring(db)[0].logo, `/logo/${r.logoId(url)}`);
+    assert.equal(r.transactions(db, {}).rows.find((t) => t.transaction_id === "s1").logo, `/logo/${r.logoId(url)}`);
+  } finally { r.logos.clear(); }
+});

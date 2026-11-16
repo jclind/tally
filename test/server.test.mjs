@@ -16,6 +16,8 @@ let fake, app, base;
 const acct = { account_id: "acc1", name: "Checking", mask: "1234", type: "depository", subtype: "checking", balances: { current: 100, available: 90, iso_currency_code: "USD" } };
 const tx = (id, amount, date = "2026-11-01") => ({ transaction_id: id, account_id: "acc1", date, name: `Store ${id}`, merchant_name: null, amount, pending: false, iso_currency_code: "USD", personal_finance_category: { primary: "FOOD_AND_DRINK", detailed: "FOOD_AND_DRINK_GROCERIES" } });
 
+const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000000", "hex");
+
 const plaidReplies = {
   "/link/token/create": () => ({ link_token: "link-test" }),
   "/item/public_token/exchange": () => ({ item_id: "item1", access_token: "access-test" }),
@@ -33,6 +35,12 @@ const plaidReplies = {
 
 before(async () => {
   fake = http.createServer((req, res) => {
+    // Logo images for the logo test: a PNG, and a page that claims to be one but isn't an image.
+    if (req.method === "GET") {
+      calls.push({ path: req.url });
+      if (req.url === "/logo.png") { res.writeHead(200, { "content-type": "image/png" }); return res.end(PNG); }
+      res.writeHead(200, { "content-type": "text/html" }); return res.end("<script>alert(1)</script>");
+    }
     let s = ""; req.on("data", (c) => (s += c)); req.on("end", () => {
       const body = JSON.parse(s); calls.push({ path: req.url, body });
       const out = plaidReplies[req.url]?.(body) ?? { status: 404, error_code: "NOPE" };
@@ -44,7 +52,7 @@ before(async () => {
   writeFileSync(join(dir, "plaid.env"), `PLAID_CLIENT_ID=cid\nPLAID_SECRET=sec\nPLAID_HOST=http://127.0.0.1:${fake.address().port}\n`);
   const port = 34000 + Math.floor(Math.random() * 1000);
   base = `http://localhost:${port}`;
-  app = spawn(process.execPath, [join(root, "server.mjs")], { env: { ...process.env, TALLY_PORT: String(port), TALLY_KEYS: join(dir, "plaid.env"), TALLY_DATA: join(dir, "data"), TALLY_DISCORD: join(dir, "discord.env"), TALLY_PAYOUTS: join(dir, "payouts.mjs") }, stdio: "pipe" });
+  app = spawn(process.execPath, [join(root, "server.mjs")], { env: { ...process.env, TALLY_PORT: String(port), TALLY_KEYS: join(dir, "plaid.env"), TALLY_DATA: join(dir, "data"), TALLY_DISCORD: join(dir, "discord.env"), TALLY_PAYOUTS: join(dir, "payouts.mjs"), TALLY_LOGO_HOSTS: `127.0.0.1:${fake.address().port}` }, stdio: "pipe" });
   for (let i = 0; i < 50; i++) {
     if (await fetch(base + "/api/status").then(() => true, () => false)) return;
     await new Promise((r) => setTimeout(r, 100));
@@ -134,6 +142,26 @@ test("a category set on a pending charge follows it when it posts", async () => 
   const rows = (await fetch(base + "/api/transactions?q=post1").then((r) => r.json())).rows;
   assert.equal(rows.length, 1);
   assert.equal(rows[0].cat, "TRAVEL");
+});
+
+test("a sync copies merchant logos once, and the page loads only the copy", async () => {
+  const host = `http://127.0.0.1:${fake.address().port}`;
+  const withLogo = { ...tx("lg1", 7), merchant_name: "Logo Shop", logo_url: `${host}/logo.png` };
+  const notImage = { ...tx("lg2", 8), merchant_name: "Odd Shop", logo_url: `${host}/page.png` };
+  const offList = { ...tx("lg3", 9), merchant_name: "Far Shop", logo_url: "https://example.com/logo.png" };
+  await withReplies({ "/transactions/sync": () => ({ added: [withLogo, notImage, offList], modified: [], removed: [], next_cursor: "c7", has_more: false }) }, () => post("/api/sync", {}));
+  const row = async (id) => (await fetch(base + `/api/transactions?q=${id}`).then((r) => r.json())).rows[0];
+  const logo = (await row("lg1")).logo;
+  assert.match(logo, /^\/logo\/[0-9a-f]{20}$/);
+  const img = await fetch(base + logo);
+  assert.equal(img.headers.get("content-type"), "image/png");
+  assert.deepEqual(Buffer.from(await img.arrayBuffer()), PNG);
+  assert.equal((await row("lg2")).logo, null, "a reply that isn't an image is never saved");
+  assert.equal((await row("lg3")).logo, null, "only Plaid's logo hosts are fetched");
+  assert.equal((await fetch(base + "/logo/0123456789abcdef0123")).status, 404);
+  const fetched = calls.filter((c) => c.path === "/logo.png").length;
+  await withReplies({ "/transactions/sync": () => ({ added: [], modified: [], removed: [], next_cursor: "c8", has_more: false }) }, () => post("/api/sync", {}));
+  assert.equal(calls.filter((c) => c.path === "/logo.png").length, fetched, "a saved logo isn't downloaded again");
 });
 
 test("an account Plaid stops listing is closed: kept, but out of net worth", async () => {

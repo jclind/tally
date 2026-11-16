@@ -1,7 +1,7 @@
 // tally: links your bank, card, and brokerage accounts through Plaid and keeps their data in SQLite on your machine.
 // Node built-ins only. Listens on 127.0.0.1; reach it from other devices through tailscale serve or an ssh tunnel.
 import http from "node:http";
-import { readFileSync, mkdirSync, chmodSync, existsSync, rmSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, chmodSync, existsSync, rmSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -262,7 +262,41 @@ async function syncAll() {
   const results = [];
   for (const { item_id } of db.prepare("SELECT item_id FROM items").all()) results.push(await syncItem(item_id));
   try { snapshot(); } catch (e) { console.error(now(), "snapshot", e.message); }
+  try { await cacheLogos(); } catch (e) { console.error(now(), "logos", e.message); }
   return results;
+}
+
+// Merchant logos, copied once from Plaid's two logo hosts into data/logos (see logos in lib/report.mjs): images only,
+// 256 KB at most, no redirects. TALLY_LOGO_HOSTS names extra hosts for the tests' fake server.
+const LOGOS = join(DATA, "logos");
+const LOGO_HOSTS = new Set(["plaid-merchant-logos.plaid.com", "plaid-counterparty-logos.plaid.com"]);
+const TEST_LOGO_HOSTS = new Set((process.env.TALLY_LOGO_HOSTS ?? "").split(",").map((h) => h.trim()).filter(Boolean));
+const LOGO_EXT = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
+const LOGO_TYPE = Object.fromEntries(Object.entries(LOGO_EXT).map(([type, ext]) => [ext, type]));
+mkdirSync(LOGOS, { recursive: true, mode: 0o700 });
+for (const f of readdirSync(LOGOS)) { const m = /^([0-9a-f]{20})\.(png|jpg|webp|gif)$/.exec(f); if (m) report.logos.set(m[1], f); }
+
+async function cacheLogos() {
+  const urls = db.prepare(`SELECT DISTINCT ${report.LOGO_URL("t")} u FROM transactions t`).all().map((r) => r.u).filter(Boolean);
+  let saved = 0;
+  for (const url of urls) {
+    const id = report.logoId(url);
+    if (report.logos.has(id)) continue;
+    try {
+      const u = new URL(url);
+      if (!(u.protocol === "https:" && LOGO_HOSTS.has(u.host)) && !TEST_LOGO_HOSTS.has(u.host)) continue;
+      const r = await fetch(u, { signal: AbortSignal.timeout(10_000), redirect: "error" });
+      const ext = LOGO_EXT[(r.headers.get("content-type") ?? "").split(";")[0].trim()];
+      if (!r.ok || !ext || Number(r.headers.get("content-length") ?? 0) > 256 * 1024) continue;
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length > 256 * 1024) continue;
+      writeFileSync(join(LOGOS, `${id}.${ext}`), buf, { mode: 0o600 });
+      report.logos.set(id, `${id}.${ext}`);
+      saved++;
+    } catch { /* tried again after the next sync */ }
+  }
+  if (saved) console.log(now(), `saved ${saved} merchant logo${saved === 1 ? "" : "s"}`);
+  return saved;
 }
 
 // One full sync at a time: the daily job, the Sync button, and an automatic sync all share the one running.
@@ -413,6 +447,13 @@ const server = http.createServer(async (req, res) => {
     const [file, type] = STATIC[url.pathname];
     return send(res, 200, readFileSync(join(ROOT, "public", file)), type);
   }
+  const lg = req.method === "GET" && /^\/logo\/([0-9a-f]{20})$/.exec(url.pathname);
+  if (lg) {
+    const f = report.logos.get(lg[1]);
+    if (!f) return send(res, 404, { error: "not found" });
+    res.writeHead(200, { "content-type": LOGO_TYPE[f.split(".").pop()], "cache-control": "max-age=604800", "x-content-type-options": "nosniff" });
+    return res.end(readFileSync(join(LOGOS, f)));
+  }
   const route = routes[`${req.method} ${url.pathname}`];
   if (!route) return send(res, 404, { error: "not found" });
   try {
@@ -426,6 +467,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => console.log(`${now()} tally on http://localhost:${PORT} (keys ${loadKeys() ? "found" : "missing"})`));
+// Logos for transactions synced before this ran, or whose download failed last time.
+cacheLogos().catch((e) => console.error(now(), "logos", e.message));
 // A computer that was off overnight catches up once it starts. The wait gives a laptop's network time to come up.
 const STARTUP_SYNC_MS = Number(process.env.TALLY_STARTUP_SYNC_MS ?? 30_000);
 if (loadKeys()) setTimeout(() => autoSync("startup").catch((e) => console.error(now(), "auto sync", e.message)), STARTUP_SYNC_MS).unref();
