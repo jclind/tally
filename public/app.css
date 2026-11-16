@@ -117,10 +117,18 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
 .card h2 .aside.tot { color: var(--ink); font-weight: 600; font-size: 15px; }
 .card h2 a:hover { text-decoration: underline; }
 .card h2 a { display: inline-flex; align-items: center; min-height: 44px; margin: -10px 0; }
+/* A button in a card's heading looks like the heading links beside it. */
+.card h2 .hbtn { font: inherit; font-size: 15px; font-weight: 600; color: var(--deep); background: none; border: 0; padding: 0 0 0 12px; cursor: pointer;
+  display: inline-flex; align-items: center; min-height: 44px; margin: -10px 0; }
+.card h2 .hbtn:hover { text-decoration: underline; }
+.row small .up { color: var(--danger); font-weight: 600; }
+.row.pick { cursor: pointer; }
+.row.pick input { width: 20px; height: 20px; margin: 0; accent-color: var(--teal); flex: none; }
 .sub { color: var(--ink2); margin: 2px 0 16px; font-size: 15px; }
 .sub:has(+ .row) { margin-bottom: 6px; }
 .sub b { color: var(--ink); }
 .sub b.over { color: var(--danger); }
+.sub .nowrap { white-space: nowrap; }
 .more { display: inline-flex; align-items: center; gap: 4px; color: var(--deep); font-weight: 600; font-size: 15px; margin-top: 12px; background: none; border: 0; padding: 0; cursor: pointer; }
 .more:hover { text-decoration: underline; }
 .empty { color: var(--ink2); padding: 4px 0; }
@@ -371,6 +379,10 @@ table.tx { width: 100%; border-collapse: collapse; font-size: 16px; table-layout
   .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "cash where" "budgets budgets" "activity activity" "nw coming"; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  /* Bills in one column: Subscriptions first, above the long list of expected charges. */
+  .layout.bills { display: flex; flex-direction: column; align-items: stretch; }
+  .layout.bills > .side { display: contents; }
+  .layout.bills .c-subs { order: -1; }
 }
 @media (max-width: 860px) {
   /* Keyboard focus never lands behind the fixed tab bar. */

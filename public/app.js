@@ -76,6 +76,7 @@ function route() {
   const [path, qs] = (location.hash.slice(1) || "/").split("?");
   let page = path.replace(/^\//, "") || "overview";
   if (page === "recurring") page = "bills";
+  if (page !== "bills") subsEditing = false;
   return { page, q: new URLSearchParams(qs ?? "") };
 }
 const go = (page, params) => { location.hash = `${href(page)}${params && [...params].length ? "?" + params : ""}`; };
@@ -260,9 +261,12 @@ const FREQ = { WEEKLY: "Weekly", BIWEEKLY: "Every 2 weeks", SEMI_MONTHLY: "Twice
 // Plaid predicts the next date from past charges, so it's "expected", not a due date. Most bills are monthly,
 // so only other frequencies are named.
 // Summary cards (Coming up) show whole dollars; record lists (the Bills page) show cents.
+// What a charge costs: a subscription's latest price, so a price increase shows at once; a bill's average, since
+// utilities vary.
+const cost = (r) => r.subscription ? r.price : Math.abs(r.average_amount);
 const billRow = (r, cents = true, bare = false) => `<div class="row${r.is_active ? "" : " off"}">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
   <span class="w"><b>${esc(nice(r.who))}</b><small>${r.is_active && r.predicted_next_date ? `${bare ? "" : "Expected "}${shortDate(r.predicted_next_date)}` : r.last_date ? `Last charged ${shortDate(r.last_date)}` : ""}</small></span>
-  <span class="amt num">${money(Math.abs(r.average_amount), cents)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
+  <span class="amt num">${money(cost(r), cents)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
 const byNextDue = (a, b) => (a.predicted_next_date ?? "9999") < (b.predicted_next_date ?? "9999") ? -1 : 1;
 
 function netWorthCard(nw, hist) {
@@ -295,11 +299,17 @@ function incomeCard(s, streams) {
     <div class="kv total"><span>${left >= 0 ? "Left to budget" : "Budgeted past income"}</span><b class="num">${money(Math.abs(left))}</b></div></div></div>`;
 }
 const GROUPS = [["depository", "Cash"], ["investment", "Investments"], ["credit", "Credit cards"], ["loan", "Loans"]];
+// "4 subscriptions, $43 a month", and how many cost more than they did, linking to the Bills page's card.
+function subsLine(bills) {
+  const subs = bills.filter((r) => r.subscription), up = subs.filter((r) => r.price_up).length;
+  if (!subs.length) return "";
+  return `<br><a href="#/bills">${plural(subs.length, "subscription")}</a>, <b class="num">${money(subs.reduce((t, r) => t + r.price_monthly, 0))}</b> a month${up ? `, <b class="over nowrap">${up} went up</b>` : ""}`;
+}
 function comingUpCard(bills) {
   const list = bills.slice().sort(byNextDue).slice(0, 6);
   const perMonth = bills.reduce((t, r) => t + r.monthly, 0);
   return `<div class="card c-coming"><h2>Coming up <a href="#/bills">All bills</a></h2>
-    ${list.length ? `<div class="sub">${plural(bills.length, "bill")}, <b class="num">${money(perMonth)}</b> a month</div>${list.map((r) => billRow(r, false, true)).join("")}` : `<div class="empty" style="margin-top:8px">No repeating bills found yet.</div>`}</div>`;
+    ${list.length ? `<div class="sub">${plural(bills.length, "bill")}, <b class="num">${money(perMonth)}</b> a month${subsLine(bills)}</div>${list.map((r) => billRow(r, false, true)).join("")}` : `<div class="empty" style="margin-top:8px">No repeating bills found yet.</div>`}</div>`;
 }
 
 // ---------- overview ----------
@@ -618,6 +628,26 @@ PAGES.budgets = async (q, saved, pre) => {
 };
 
 // ---------- bills ----------
+// Subscriptions: what each costs now, most expensive first. Edit lists every repeating charge with a checkbox, since
+// tally's guess (lib/report.mjs) can be wrong either way.
+let subsEditing = false;
+const PER = { MONTHLY: "a month", ANNUALLY: "a year", WEEKLY: "a week", BIWEEKLY: "every 2 weeks", SEMI_MONTHLY: "twice a month" };
+const subRow = (r) => `<div class="row">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
+  <span class="w"><b>${esc(nice(r.who))}</b><small>${r.price_up ? `<span class="up">Went up from ${money(r.price_up.from, true)}</span>` : r.predicted_next_date ? `Next ${shortDate(r.predicted_next_date)}` : ""}</small></span>
+  <span class="amt num">${money(r.price, true)}<small>${PER[r.frequency] ?? esc(FREQ[r.frequency] ?? "")}</small></span></div>`;
+function subsCard(bills) {
+  const subs = bills.filter((r) => r.subscription).sort((a, b) => b.price_monthly - a.price_monthly);
+  const month = subs.reduce((t, r) => t + r.price_monthly, 0);
+  if (subsEditing) {
+    const all = bills.slice().sort((a, b) => nice(a.who).localeCompare(nice(b.who)));
+    return `<div class="card c-subs"><h2>Subscriptions <button class="hbtn" id="subsedit">Done</button></h2>
+      <div class="sub">Check the ones that are subscriptions.</div>
+      ${all.map((r) => `<label class="row pick"><input type="checkbox" data-who="${esc(r.who)}"${r.subscription ? " checked" : ""}><span class="w"><b>${esc(nice(r.who))}</b></span><span class="amt num">${money(cost(r), true)}</span></label>`).join("") || `<div class="empty">None found yet.</div>`}</div>`;
+  }
+  return `<div class="card c-subs"><h2>Subscriptions ${bills.length ? `<button class="hbtn" id="subsedit">Edit</button>` : ""}</h2>
+    ${subs.length ? `<div class="sub"><b class="num">${money(month)}</b> a month, <b class="num">${money(month * 12)}</b> a year</div>${subs.map(subRow).join("")}`
+      : `<div class="empty" style="margin-top:8px">None found yet.</div>`}</div>`;
+}
 PAGES.bills = async () => {
   const g = GEN;
   const all = await api("/api/recurring");
@@ -633,9 +663,9 @@ PAGES.bills = async () => {
   const dueMonth = (r) => { const m = (r.predicted_next_date ?? "").slice(0, 7); return !m ? "later" : m < thisMonth() ? thisMonth() : m; };
   const restOfMonth = (r) => {
     let n = 0, d = new Date(r.predicted_next_date + "T12:00:00");
-    if (d.toLocaleDateString("en-CA").slice(0, 7) < thisMonth()) return Math.abs(r.average_amount);
+    if (d.toLocaleDateString("en-CA").slice(0, 7) < thisMonth()) return cost(r);
     while (d.toLocaleDateString("en-CA").slice(0, 7) === thisMonth() && n < (MAX[r.frequency] ?? 6)) { n++; if (!STEP[r.frequency]) break; d = new Date(d.getTime() + STEP[r.frequency] * 864e5); }
-    return n * Math.abs(r.average_amount);
+    return n * cost(r);
   };
   const groups = [];
   for (const r of bills) {
@@ -644,14 +674,30 @@ PAGES.bills = async () => {
   }
   $hero.innerHTML = `<div class="k">Bills and subscriptions</div>
     <div class="big num">${money(perMonth)} <span>a month</span></div>
-    <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(Math.abs(next.average_amount))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
+    <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(cost(next))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
   const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(Math.abs(r.average_amount), true)}<small>average</small></span></div>`;
-  $page.innerHTML = `<div class="layout"><div class="stack">
+  $page.innerHTML = `<div class="layout bills"><div class="stack">
       <div class="card"><h2>Expected charges</h2>${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : `Next in ${monthYear(m).replace(` ${new Date().getFullYear()}`, "")}`}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + restOfMonth(r), 0))}</span>` : ""}</div>
         ${list.map((r) => billRow(r, true, true)).join("")}</div>`).join("") || `<div class="empty">None found yet.</div>`}</div>
       ${ended.length ? `<div class="card"><h2>Stopped charging</h2><div style="margin-top:8px">${ended.map((r) => billRow(r)).join("")}</div></div>` : ""}
-    </div><aside class="side stack"><div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
+    </div><aside class="side stack">${subsCard(bills)}<div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
+  wireSubs(g);
 };
+function wireSubs(g) {
+  document.getElementById("subsedit")?.addEventListener("click", async () => {
+    subsEditing = !subsEditing;
+    await PAGES.bills();
+    document.getElementById("subsedit")?.focus({ preventScroll: true });
+  });
+  for (const box of $page.querySelectorAll(".c-subs input[type=checkbox]")) box.addEventListener("change", async () => {
+    const who = box.dataset.who;
+    try { await api("/api/stream-kind", { who, kind: box.checked ? "sub" : "bill" }); }
+    catch { box.checked = !box.checked; return; }
+    if (stale(g)) return;
+    await PAGES.bills();
+    $page.querySelector(`.c-subs input[data-who="${CSS.escape(who)}"]`)?.focus({ preventScroll: true });
+  });
+}
 
 // ---------- first run: nothing linked yet ----------
 // Home before the first link is one card: the link buttons, or where the keys go when tally can't find them.
@@ -748,7 +794,7 @@ PAGES.settings = async () => {
       <div class="ok" data-for="itemCap" role="status"></div></div>
     <div class="card sets"><h2>Discord alerts</h2>
       <div class="setrow plain"><div><label for="alerts">Post alerts to Discord</label>
-        <div class="hint">With the daily sync: a big charge, a budget that goes over, or a bank that stops syncing.</div></div>
+        <div class="hint">With the daily sync: a big charge, a budget that goes over, a subscription that costs more, or a bank that stops syncing.</div></div>
         <input type="checkbox" role="switch" class="switch" id="alerts" data-key="alerts" ${on ? "checked" : ""}></div>
       <div class="ok" data-for="alerts" role="status"></div>
       <div class="alertopts" ${on ? "" : "hidden"}>
@@ -759,6 +805,10 @@ PAGES.settings = async () => {
         <div class="setrow"><label for="bigcharge">Alert for one charge of</label>
           <span class="amtin"><span class="fld"><span class="cur">$</span><input id="bigcharge" data-key="bigCharge" inputmode="numeric" value="${esc(set.bigCharge)}"></span></span></div>
         <div class="ok" data-for="bigCharge" role="status"></div>
+        <div class="setrow"><div><label for="pricealerts">Alert when a subscription costs more</label>
+          <div class="hint">Once per increase, with the old and new price.</div></div>
+          <input type="checkbox" role="switch" class="switch" id="pricealerts" data-key="priceAlerts" ${set.priceAlerts === "on" ? "checked" : ""}></div>
+        <div class="ok" data-for="priceAlerts" role="status"></div>
         ${on && !set.webhook ? `<div class="notice bad" style="margin:8px 0 0">Alerts are on, but there's no webhook yet.</div>` : ""}
       </div></div>
     </div><aside class="side stack">

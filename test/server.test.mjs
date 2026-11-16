@@ -30,7 +30,8 @@ const plaidReplies = {
   },
   "/investments/holdings/get": () => ({ status: 400, error_code: "PRODUCTS_NOT_SUPPORTED", error_message: "not supported" }),
   "/transactions/recurring/get": () => ({ outflow_streams: [{ stream_id: "s1", account_id: "acc1", merchant_name: "Netflix", frequency: "MONTHLY",
-    average_amount: { amount: 15.49 }, predicted_next_date: "2026-11-20", is_active: true, personal_finance_category: { primary: "ENTERTAINMENT" } }], inflow_streams: [] }),
+    average_amount: { amount: 15.49 }, predicted_next_date: "2026-11-20", is_active: true, transaction_ids: ["t1"],
+    personal_finance_category: { primary: "ENTERTAINMENT", detailed: "ENTERTAINMENT_TV_AND_MOVIES" } }], inflow_streams: [] }),
 };
 
 before(async () => {
@@ -165,6 +166,16 @@ test("a sync copies merchant logos once, and the page loads only the copy", asyn
   assert.equal(calls.filter((c) => c.path === "/logo.png").length, fetched, "a saved logo isn't downloaded again");
 });
 
+test("a repeating charge is a subscription until the owner says otherwise", async () => {
+  const net = async () => (await fetch(base + "/api/recurring").then((r) => r.json())).find((x) => x.stream_id === "s1");
+  assert.equal((await net()).subscription, true);
+  assert.equal((await net()).category_detail, "ENTERTAINMENT_TV_AND_MOVIES");
+  assert.deepEqual(await post("/api/stream-kind", { who: "Netflix", kind: "bill" }), { ok: true });
+  assert.equal((await net()).subscription, false);
+  await post("/api/stream-kind", { who: "Netflix", kind: null });
+  assert.equal((await net()).subscription, true);
+});
+
 test("an account Plaid stops listing is closed: kept, but out of net worth", async () => {
   const acct2 = { ...acct, account_id: "acc2", name: "Old Savings", balances: { current: 2000 } };
   const quiet = () => ({ added: [], modified: [], removed: [], next_cursor: "c7", has_more: false });
@@ -193,6 +204,9 @@ test("settings save and check their values, and sync on open runs only when it's
   assert.equal(s0.webhook, null);
   assert.equal((await post("/api/settings", { bigCharge: "350" })).bigCharge, "350");
   assert.match((await post("/api/settings", { bigCharge: "-5" })).error, /bigCharge/);
+  assert.equal(s0.priceAlerts, "on", "price alerts default on");
+  assert.equal((await post("/api/settings", { priceAlerts: "off" })).priceAlerts, "off");
+  assert.match((await post("/api/settings", { priceAlerts: "maybe" })).error, /priceAlerts/);
   assert.match((await post("/api/settings", { autoSync: "3" })).error, /autoSync/);
   assert.match((await post("/api/settings", { nope: "1" })).error, /nope/);
 

@@ -226,3 +226,46 @@ test("a bill with a merchant name never takes another merchant's logo through a 
   db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, is_active) VALUES ('b1', 'i1', 'outflow', 'ACH DEBIT', 'UtilityCo', 1)").run();
   try { assert.equal(r.recurring(db)[0].logo, `/logo/${r.logoId(url("utility"))}`); } finally { r.logos.clear(); }
 });
+
+test("subscriptions: everything repeating except housing, utilities, loans, insurance, fees, and transfers; the owner can move one", () => {
+  const db = fixture();
+  const st = db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, category_detail, frequency, average_amount, last_amount, is_active) VALUES (?, 'i1', 'outflow', ?, ?, ?, ?, 'MONTHLY', ?, ?, 1)");
+  st.run("n", "NETFLIX", "Netflix", "ENTERTAINMENT", "ENTERTAINMENT_TV_AND_MOVIES", 15.49, 17.99);
+  st.run("rent", "OAK ST", "Oak Street", "RENT_AND_UTILITIES", "RENT_AND_UTILITIES_RENT", 1150, 1150);
+  st.run("ins", "GEICO", "Geico", "GENERAL_SERVICES", "GENERAL_SERVICES_INSURANCE", 118, 118);
+  st.run("gym", "GYM", "Gym", "PERSONAL_CARE", "PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS", 25, 25);
+  const subs = () => r.recurring(db).filter((x) => x.subscription).map((x) => x.stream_id).sort();
+  assert.deepEqual(subs(), ["gym", "n"]);
+  const n = r.recurring(db).find((x) => x.stream_id === "n");
+  assert.equal(n.price, 17.99, "the price is the latest charge");
+  assert.ok(!("transaction_ids" in n), "the charge list stays on the server");
+  r.setStreamKind(db, { who: "Gym", kind: "bill" });
+  r.setStreamKind(db, { who: "Geico", kind: "sub" });
+  assert.deepEqual(subs(), ["ins", "n"]);
+  r.setStreamKind(db, { who: "Gym", kind: null });
+  assert.deepEqual(subs(), ["gym", "ins", "n"], "null goes back to tally's guess");
+  assert.throws(() => r.setStreamKind(db, { who: "Gym", kind: "maybe" }));
+});
+
+test("a price increase: steady charges, then one at least 50 cents more, flagged for one charge and alerted once", () => {
+  const db = fixture();
+  const add = db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category) VALUES (?, 'i1', 'card', ?, 'NETFLIX', 'Netflix', ?, 0, 'ENTERTAINMENT')");
+  const stream = (id, ids) => db.prepare("INSERT OR REPLACE INTO recurring (stream_id, item_id, direction, description, merchant_name, category, frequency, average_amount, last_amount, is_active, transaction_ids) VALUES (?, 'i1', 'outflow', 'NETFLIX', ?, 'ENTERTAINMENT', 'MONTHLY', 16, 17.99, 1, ?)").run(id, id, JSON.stringify(ids));
+  add.run("p1", "2026-08-06", 15.49); add.run("p2", "2026-09-06", 15.49); add.run("p3", "2026-10-06", 15.49); add.run("p4", "2026-11-06", 17.99);
+  stream("Netflix", ["p1", "p2", "p3", "p4"]);
+  const up = () => r.recurring(db).find((x) => x.stream_id === "Netflix").price_up;
+  assert.deepEqual(up(), { from: 15.49, to: 17.99, date: "2026-11-06" });
+  const alerts = r.dailyAlerts(db, { today: "2026-11-16", bigCharge: 1000 }).filter((a) => a.key.startsWith("price:"));
+  assert.equal(alerts.length, 1);
+  assert.match(alerts[0].text, /Netflix went up from \$15\.49 to \$17\.99/);
+  assert.equal(r.dailyAlerts(db, { today: "2026-11-16", bigCharge: 1000, priceAlerts: false }).filter((a) => a.key.startsWith("price:")).length, 0, "the setting turns it off");
+  assert.equal(r.dailyAlerts(db, { today: "2027-01-10", bigCharge: 1000 }).filter((a) => a.key.startsWith("price:")).length, 0, "an old increase doesn't alert");
+  r.markSent(db, [alerts[0].key]);
+  assert.equal(r.dailyAlerts(db, { today: "2026-11-16", bigCharge: 1000 }).filter((a) => a.key.startsWith("price:")).length, 0, "once");
+  add.run("p5", "2026-12-06", 17.99); stream("Netflix", ["p1", "p2", "p3", "p4", "p5"]);
+  assert.equal(up(), null, "the note lasts one charge");
+  // One store's mixed subscriptions: the charges before the latest don't match, so nothing is flagged.
+  add.run("a1", "2026-09-01", 2.99); add.run("a2", "2026-10-01", 9.99); add.run("a3", "2026-11-01", 12.99);
+  stream("Apple", ["a1", "a2", "a3"]);
+  assert.equal(r.recurring(db).find((x) => x.stream_id === "Apple").price_up, null);
+});

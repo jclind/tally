@@ -209,11 +209,14 @@ async function syncRecurring(item) {
   db.exec("BEGIN");
   try {
     db.prepare("DELETE FROM recurring WHERE item_id = ?").run(item.item_id);
-    const st = db.prepare(`INSERT OR REPLACE INTO recurring VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const st = db.prepare(`INSERT OR REPLACE INTO recurring (stream_id, item_id, account_id, direction, description, merchant_name, category,
+      frequency, average_amount, last_amount, first_date, last_date, predicted_next_date, is_active, status, updated_at, category_detail, transaction_ids)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     for (const [dir, list] of [["outflow", r.outflow_streams ?? []], ["inflow", r.inflow_streams ?? []]]) {
       for (const x of list) st.run(x.stream_id, item.item_id, x.account_id ?? null, dir, x.description ?? null, x.merchant_name ?? null,
         x.personal_finance_category?.primary ?? null, x.frequency ?? null, x.average_amount?.amount ?? null, x.last_amount?.amount ?? null,
-        x.first_date ?? null, x.last_date ?? null, x.predicted_next_date ?? null, x.is_active ? 1 : 0, x.status ?? null, now());
+        x.first_date ?? null, x.last_date ?? null, x.predicted_next_date ?? null, x.is_active ? 1 : 0, x.status ?? null, now(),
+        x.personal_finance_category?.detailed ?? null, x.transaction_ids ? JSON.stringify(x.transaction_ids) : null);
     }
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
@@ -327,6 +330,8 @@ const SETTINGS = {
   bigCharge: { def: String(Number(process.env.TALLY_BIG_CHARGE || 200)), ok: (v) => /^[1-9]\d{0,6}$/.test(v) },
   // Discord alerts are opt-in. A setup from before the setting, with a webhook file, keeps posting.
   alerts: { def: existsSync(DISCORD) ? "on" : "off", ok: (v) => v === "on" || v === "off" },
+  // The daily alert when a subscription costs more than it did. Posts only while alerts are on.
+  priceAlerts: { def: "on", ok: (v) => v === "on" || v === "off" },
   // A webhook pasted on the Settings page wins over the file. Empty means none.
   discordWebhook: { def: "", ok: (v) => v === "" || /^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(v) },
 };
@@ -437,11 +442,12 @@ const routes = {
   "GET /api/payouts": () => report.payouts(db, payoutSources),
   "POST /api/category": (body) => report.setCategory(db, body),
   "POST /api/budget": (body) => report.setBudget(db, body),
+  "POST /api/stream-kind": (body) => report.setStreamKind(db, body),
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.
   "POST /api/daily": async () => {
     const results = await syncAllOnce();
     const set = settings(), on = set.alerts === "on";
-    return { alerts: on ? report.dailyAlerts(db, { bigCharge: Number(set.bigCharge) }) : [], webhook: on ? webhook() : null, errors: results.flatMap((r) => r.errors) };
+    return { alerts: on ? report.dailyAlerts(db, { bigCharge: Number(set.bigCharge), priceAlerts: set.priceAlerts === "on" }) : [], webhook: on ? webhook() : null, errors: results.flatMap((r) => r.errors) };
   },
   "POST /api/alerts-sent": (body) => { report.markSent(db, body.keys ?? []); return { ok: true }; },
   "POST /api/link-token": async (body) => ({ link_token: (await linkToken(body)).link_token }),
