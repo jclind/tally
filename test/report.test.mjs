@@ -215,3 +215,14 @@ test("a bill takes the logo from its merchant's transactions, once tally has a c
     assert.equal(r.transactions(db, {}).rows.find((t) => t.transaction_id === "s1").logo, `/logo/${r.logoId(url)}`);
   } finally { r.logos.clear(); }
 });
+
+test("a bill with a merchant name never takes another merchant's logo through a shared description", () => {
+  const db = fixture();
+  const add = db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, raw) VALUES (?, 'i1', 'chk', ?, 'ACH DEBIT', ?, 20, 0, 'RENT_AND_UTILITIES', ?)");
+  const url = (m) => `https://plaid-merchant-logos.plaid.com/${m}.png`;
+  add.run("u1", "2026-10-01", "UtilityCo", JSON.stringify({ logo_url: url("utility") }));
+  add.run("g1", "2026-11-01", "GymCo", JSON.stringify({ logo_url: url("gym") }));
+  for (const m of ["utility", "gym"]) r.logos.set(r.logoId(url(m)), "x.png");
+  db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, is_active) VALUES ('b1', 'i1', 'outflow', 'ACH DEBIT', 'UtilityCo', 1)").run();
+  try { assert.equal(r.recurring(db)[0].logo, `/logo/${r.logoId(url("utility"))}`); } finally { r.logos.clear(); }
+});

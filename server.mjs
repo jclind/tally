@@ -245,6 +245,7 @@ async function syncItem(itemId) {
     .run(now(), errors.join("\n") || null, out.transactions?.status ?? null, itemId);
   for (const e of errors) console.error(now(), "sync", item.institution_name, e);
   out.errors = errors;
+  if (out.transactions) warmLogos();
   return out;
 }
 
@@ -262,7 +263,6 @@ async function syncAll() {
   const results = [];
   for (const { item_id } of db.prepare("SELECT item_id FROM items").all()) results.push(await syncItem(item_id));
   try { snapshot(); } catch (e) { console.error(now(), "snapshot", e.message); }
-  try { await cacheLogos(); } catch (e) { console.error(now(), "logos", e.message); }
   return results;
 }
 
@@ -276,10 +276,23 @@ const LOGO_TYPE = Object.fromEntries(Object.entries(LOGO_EXT).map(([type, ext]) 
 mkdirSync(LOGOS, { recursive: true, mode: 0o700 });
 for (const f of readdirSync(LOGOS)) { const m = /^([0-9a-f]{20})\.(png|jpg|webp|gif)$/.exec(f); if (m) report.logos.set(m[1], f); }
 
+// Downloads run in the background after a sync, never inside it, so a slow logo host can't hold up the daily job.
+// One run at a time; a sync that ends during a run gets one more run after it.
+let warming = null, again = false;
+function warmLogos() {
+  if (warming) { again = true; return warming; }
+  warming = cacheLogos().catch((e) => console.error(now(), "logos", e.message)).finally(() => {
+    warming = null;
+    if (again) { again = false; warmLogos(); }
+  });
+  return warming;
+}
+
 async function cacheLogos() {
   const urls = db.prepare(`SELECT DISTINCT ${report.LOGO_URL("t")} u FROM transactions t`).all().map((r) => r.u).filter(Boolean);
-  let saved = 0;
+  let saved = 0, failed = 0;
   for (const url of urls) {
+    if (failed >= 3) break; // three network failures in a row: the host is down, so wait for the next sync
     const id = report.logoId(url);
     if (report.logos.has(id)) continue;
     try {
@@ -292,8 +305,8 @@ async function cacheLogos() {
       if (buf.length > 256 * 1024) continue;
       writeFileSync(join(LOGOS, `${id}.${ext}`), buf, { mode: 0o600 });
       report.logos.set(id, `${id}.${ext}`);
-      saved++;
-    } catch { /* tried again after the next sync */ }
+      saved++; failed = 0;
+    } catch { failed++; /* tried again after the next sync */ }
   }
   if (saved) console.log(now(), `saved ${saved} merchant logo${saved === 1 ? "" : "s"}`);
   return saved;
@@ -468,7 +481,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "127.0.0.1", () => console.log(`${now()} tally on http://localhost:${PORT} (keys ${loadKeys() ? "found" : "missing"})`));
 // Logos for transactions synced before this ran, or whose download failed last time.
-cacheLogos().catch((e) => console.error(now(), "logos", e.message));
+warmLogos();
 // A computer that was off overnight catches up once it starts. The wait gives a laptop's network time to come up.
 const STARTUP_SYNC_MS = Number(process.env.TALLY_STARTUP_SYNC_MS ?? 30_000);
 if (loadKeys()) setTimeout(() => autoSync("startup").catch((e) => console.error(now(), "auto sync", e.message)), STARTUP_SYNC_MS).unref();

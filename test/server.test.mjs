@@ -151,7 +151,8 @@ test("a sync copies merchant logos once, and the page loads only the copy", asyn
   const offList = { ...tx("lg3", 9), merchant_name: "Far Shop", logo_url: "https://example.com/logo.png" };
   await withReplies({ "/transactions/sync": () => ({ added: [withLogo, notImage, offList], modified: [], removed: [], next_cursor: "c7", has_more: false }) }, () => post("/api/sync", {}));
   const row = async (id) => (await fetch(base + `/api/transactions?q=${id}`).then((r) => r.json())).rows[0];
-  const logo = (await row("lg1")).logo;
+  let logo = null; // the download runs after the sync returns
+  for (let i = 0; i < 40 && !logo; i++) logo = (await row("lg1")).logo ?? await new Promise((r) => setTimeout(r, 50));
   assert.match(logo, /^\/logo\/[0-9a-f]{20}$/);
   const img = await fetch(base + logo);
   assert.equal(img.headers.get("content-type"), "image/png");
