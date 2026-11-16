@@ -15,6 +15,9 @@ The install guide is https://tally.jesselind.com. Its source is `site/`, publish
 - Keys live in `~/.config/tally/plaid.env` (mode 600), outside the repo. Never print `PLAID_SECRET` or an
   access token, in logs, the page, or chat. `/api/status` must never return an access token; a test checks it.
 - `data/` holds real account data and access tokens. It is gitignored. Never commit it or copy it off the machine.
+- Merchant logos come from the `logo_url` in each stored Plaid record. After any sync the server copies new ones into
+  `data/logos` in the background, only from Plaid's two logo hosts. The page loads only those copies, never Plaid's
+  addresses. Never send a merchant's name or domain to a favicon service to fill the gaps.
 - The server listens on 127.0.0.1 only. To reach it from other devices, `tailscale serve` (tailnet only) proxies to
   it, and `TALLY_HOSTS` names that host. Any other Host and any cross-origin POST is refused. Never expose tally to
   the public internet (no Tailscale Funnel, no port forward): it has no login.
