@@ -227,6 +227,22 @@ test("a bill with a merchant name never takes another merchant's logo through a 
   try { assert.equal(r.recurring(db)[0].logo, `/logo/${r.logoId(url("utility"))}`); } finally { r.logos.clear(); }
 });
 
+test("phone and internet are subscriptions, metered utilities aren't, and a stream Plaid calls a transfer still counts", () => {
+  const db = fixture();
+  const st = db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, category_detail, frequency, average_amount, is_active, status) VALUES (?, 'i1', 'outflow', ?, ?, ?, ?, ?, 10, 1, ?)");
+  st.run("phone", "T-MOBILE", "PhoneCo", "RENT_AND_UTILITIES", "RENT_AND_UTILITIES_TELEPHONE", "MONTHLY", "MATURE");
+  st.run("net", "NETCO", "NetCo", "RENT_AND_UTILITIES", "RENT_AND_UTILITIES_INTERNET_AND_CABLE", "MONTHLY", "MATURE");
+  st.run("power", "POWERCO", "PowerCo", "RENT_AND_UTILITIES", "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY", "MONTHLY", "MATURE");
+  st.run("host", "HOSTCO", "HostCo", "TRANSFER_OUT", "TRANSFER_OUT_ACCOUNT_TRANSFER", "MONTHLY", "MATURE");
+  st.run("card", "BANK ONLINE PMT", "", "LOAN_PAYMENTS", "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT", "MONTHLY", "MATURE");
+  st.run("odd", "PWP*SHOP", "", "HOME_IMPROVEMENT", "HOME_IMPROVEMENT_SECURITY", "UNKNOWN", "MATURE");
+  st.run("new", "NEWCO", "NewCo", "ENTERTAINMENT", "ENTERTAINMENT_MUSIC_AND_AUDIO", "MONTHLY", "EARLY_DETECTION");
+  const subs = r.recurring(db).filter((x) => x.subscription).map((x) => x.stream_id).sort();
+  assert.deepEqual(subs, ["host", "net", "phone"], "no schedule and early guesses stay out until the owner adds them");
+  r.setStreamKind(db, { who: "NewCo", kind: "sub" });
+  assert.ok(r.recurring(db).find((x) => x.stream_id === "new").subscription);
+});
+
 test("subscriptions: everything repeating except housing, utilities, loans, insurance, fees, and transfers; the owner can move one", () => {
   const db = fixture();
   const st = db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, category_detail, frequency, average_amount, last_amount, is_active) VALUES (?, 'i1', 'outflow', ?, ?, ?, ?, 'MONTHLY', ?, ?, 1)");

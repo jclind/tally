@@ -632,8 +632,13 @@ PAGES.budgets = async (q, saved, pre) => {
 // tally's guess (lib/report.mjs) can be wrong either way.
 let subsEditing = false;
 const PER = { MONTHLY: "a month", ANNUALLY: "a year", WEEKLY: "a week", BIWEEKLY: "every 2 weeks", SEMI_MONTHLY: "twice a month" };
+// When Plaid expects the next charge. A date already past means the charge is late or hasn't posted yet.
+const nextCharge = (r) => {
+  const d = r.predicted_next_date, today = new Date().toLocaleDateString("en-CA");
+  return !d ? "" : d === today ? "Charges today" : d < today ? `Expected ${shortDate(d)}` : `Next charge ${shortDate(d)}`;
+};
 const subRow = (r) => `<div class="row">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
-  <span class="w"><b>${esc(nice(r.who))}</b><small>${r.price_up ? `<span class="up">Went up from ${money(r.price_up.from, true)}</span>` : r.predicted_next_date ? `Next ${shortDate(r.predicted_next_date)}` : ""}</small></span>
+  <span class="w"><b>${esc(nice(r.who))}</b><small>${r.price_up ? `<span class="up">Went up from ${money(r.price_up.from, true)}</span>` : nextCharge(r)}</small></span>
   <span class="amt num">${money(r.price, true)}<small>${PER[r.frequency] ?? esc(FREQ[r.frequency] ?? "")}</small></span></div>`;
 function subsCard(bills) {
   const subs = bills.filter((r) => r.subscription).sort((a, b) => b.price_monthly - a.price_monthly);
