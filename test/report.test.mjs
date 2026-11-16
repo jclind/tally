@@ -300,3 +300,23 @@ test("a choice on a merchant with an accented capital sticks", () => {
   r.setStreamKind(db, { who: "CAFÉ", kind: "bill" });
   assert.equal(r.recurring(db)[0].subscription, false);
 });
+
+test("a bill's next charge follows its recent charges, not its whole history", () => {
+  const db = fixture();
+  const add = db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category) VALUES (?, 'i1', 'chk', ?, ?, ?, ?, 0, 'RENT_AND_UTILITIES')");
+  const stream = (id, who, detail, ids) => db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, category_detail, frequency, average_amount, last_amount, is_active, status, transaction_ids) VALUES (?, 'i1', 'outflow', ?, ?, 'RENT_AND_UTILITIES', ?, 'MONTHLY', 26.1, ?, 1, 'MATURE', ?)")
+    .run(id, who, who, detail, null, JSON.stringify(ids));
+  // A fixed price that changed: eight months at 25, then 32.80, then 31 twice.
+  const phone = ["2026-02-02", "2026-03-02", "2026-04-02", "2026-05-02", "2026-06-02", "2026-07-02", "2026-08-02"].map((d, i) => (add.run(`f${i}`, d, "POWER", "PowerCo", 25), `f${i}`));
+  add.run("f7", "2026-09-02", "POWER", "PowerCo", 32.8); add.run("f8", "2026-10-02", "POWER", "PowerCo", 31); add.run("f9", "2026-11-02", "POWER", "PowerCo", 31);
+  stream("fixed", "PowerCo", "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY", [...phone, "f7", "f8", "f9"]);
+  // A bill that varies: the average of the last three.
+  add.run("v1", "2026-08-09", "WATER", "WaterCo", 40); add.run("v2", "2026-09-09", "WATER", "WaterCo", 60); add.run("v3", "2026-10-09", "WATER", "WaterCo", 50); add.run("v4", "2026-11-09", "WATER", "WaterCo", 70);
+  stream("vary", "WaterCo", "RENT_AND_UTILITIES_WATER", ["v1", "v2", "v3", "v4"]);
+  stream("none", "GasCo", "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY", []);
+  const get = (id) => r.recurring(db).find((x) => x.stream_id === id);
+  assert.equal(get("fixed").expected, 31);
+  assert.equal(get("fixed").monthly, 31);
+  assert.equal(get("vary").expected, 60);
+  assert.equal(get("none").expected, 26.1, "no charges: Plaid's average");
+});

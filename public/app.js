@@ -261,9 +261,8 @@ const FREQ = { WEEKLY: "Weekly", BIWEEKLY: "Every 2 weeks", SEMI_MONTHLY: "Twice
 // Plaid predicts the next date from past charges, so it's "expected", not a due date. Most bills are monthly,
 // so only other frequencies are named.
 // Summary cards (Coming up) show whole dollars; record lists (the Bills page) show cents.
-// What a charge costs: a subscription's latest price, so a price increase shows at once; a bill's average, since
-// utilities vary.
-const cost = (r) => r.subscription ? r.price : Math.abs(r.average_amount);
+// What the next charge should be (expected in lib/report.mjs): a subscription's latest price, a bill's recent charges.
+const cost = (r) => r.expected;
 const billRow = (r, cents = true, bare = false) => `<div class="row${r.is_active ? "" : " off"}">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
   <span class="w"><b>${esc(nice(r.who))}</b><small>${r.is_active && r.predicted_next_date ? `${bare ? "" : "Expected "}${shortDate(r.predicted_next_date)}` : r.last_date ? `Last charged ${shortDate(r.last_date)}` : ""}</small></span>
   <span class="amt num">${money(cost(r), cents)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
@@ -680,7 +679,7 @@ PAGES.bills = async () => {
   $hero.innerHTML = `<div class="k">Bills and subscriptions</div>
     <div class="big num">${money(perMonth)} <span>a month</span></div>
     <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(cost(next))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
-  const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(Math.abs(r.average_amount), true)}<small>average</small></span></div>`;
+  const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(r.expected, true)}<small>expected</small></span></div>`;
   $page.innerHTML = `<div class="layout bills"><div class="stack">
       <div class="card"><h2>Expected charges</h2>${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : `Next in ${monthYear(m).replace(` ${new Date().getFullYear()}`, "")}`}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + restOfMonth(r), 0))}</span>` : ""}</div>
         ${list.map((r) => billRow(r, true, true)).join("")}</div>`).join("") || `<div class="empty">None found yet.</div>`}</div>
