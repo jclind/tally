@@ -91,8 +91,9 @@ A design council (Opus and Codex reviewing, Muse for four rounds, Fable judging 
   the phone hero ends on that card; guide steps use plain teal numerals hung in the gutter with one left edge for every
   heading; the guide's only boxes are pink warnings; Backups comes right after Keep it running.
 - The homepage is the owner's pick from a design-variants run on 2026-11-13 (design 5e), which replaced the judge's
-  hero and panel layout. The headline names open source: "Like Mint, but open source and on your computer", and the
-  description opens with "A budgeting app" so a reader who never used Mint knows what it is. The hero is centered in
+  hero and panel layout. The headline is "Like Mint, but it runs on your own computer" (the owner's pick, 2026-11-16), and the
+  description opens with "An open-source budgeting app", so it names open source and tells a reader who never used Mint
+  what tally is. The hero is centered in
   the band with "Read the install guide" and a "jclind/tally" button, then one fine-print line. The Home screenshot
   sits in a frame with a deep shadow, lifted off the band, and the band ends a third of the way down it, so the band's
   teal never meets the screenshot's own band edge to edge. The four panels are a two by two grid on the app's mint,
