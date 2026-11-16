@@ -435,7 +435,7 @@ const routes = {
     return { month, categories: report.byCategory(db, month, today), history: report.history(db, 12, report.monthOf(today), today) };
   },
   "GET /api/budgets": (_b, _res, q) => { const month = pickMonth(q); return { month, budgets: report.budgets(db, month, report.localDate()) }; },
-  "GET /api/recurring": () => report.recurring(db).map((r) => ({ ...r, monthly: report.monthlyCost(r) })),
+  "GET /api/recurring": () => report.recurring(db),
   "GET /api/meta": () => ({ labels: report.LABELS, notSpending: report.NOT_SPENDING,
     accounts: db.prepare("SELECT account_id, name, mask, type FROM accounts ORDER BY type, name").all() }),
   // Weekly gig payouts, for another app on the same machine. Empty without a payouts file.

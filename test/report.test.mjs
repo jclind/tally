@@ -268,4 +268,19 @@ test("a price increase: steady charges, then one at least 50 cents more, flagged
   add.run("a1", "2026-09-01", 2.99); add.run("a2", "2026-10-01", 9.99); add.run("a3", "2026-11-01", 12.99);
   stream("Apple", ["a1", "a2", "a3"]);
   assert.equal(r.recurring(db).find((x) => x.stream_id === "Apple").price_up, null);
+  // 50 cents exactly, where floating point says 0.4999999999999991.
+  add.run("c1", "2026-09-02", 7.7); add.run("c2", "2026-10-02", 7.7); add.run("c3", "2026-11-02", 8.2);
+  stream("Cloud", ["c1", "c2", "c3"]);
+  assert.deepEqual(r.recurring(db).find((x) => x.stream_id === "Cloud").price_up, { from: 7.7, to: 8.2, date: "2026-11-02" });
+  const cloud = r.recurring(db).find((x) => x.stream_id === "Cloud");
+  assert.equal(cloud.monthly, cloud.price_monthly, "totals use the latest price");
+  assert.notEqual(cloud.monthly, r.monthlyCost(cloud), "not the average");
+});
+
+test("a choice on a merchant with an accented capital sticks", () => {
+  const db = fixture();
+  db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, frequency, average_amount, is_active) VALUES ('c', 'i1', 'outflow', 'CAFÉ', 'CAFÉ', 'FOOD_AND_DRINK', 'MONTHLY', 9, 1)").run();
+  assert.equal(r.recurring(db)[0].subscription, true);
+  r.setStreamKind(db, { who: "CAFÉ", kind: "bill" });
+  assert.equal(r.recurring(db)[0].subscription, false);
 });
