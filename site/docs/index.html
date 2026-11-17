@@ -211,7 +211,7 @@ bin\install-windows.cmd -Restart</code></pre></div>
 
     <section id="alerts">
       <h2>Discord alerts<span class="opt">Optional</span></h2>
-      <p>The daily job can post to a Discord channel when a charge reaches your alert amount ($200 unless you change it in Settings), a budget goes over, or a bank stops syncing (weekly until it's fixed).</p>
+      <p>The daily job can post to a Discord channel when a charge reaches your alert amount ($200 unless you change it in Settings), a budget goes over, a goal is reached, or a bank stops syncing (weekly until it's fixed).</p>
       <ol>
         <li>In Discord, open a channel's settings, then <b>Integrations → Webhooks</b>, and copy a webhook URL.</li>
         <li>In tally, open Settings, turn on <b>Post alerts to Discord</b>, and paste the URL.</li>
@@ -223,7 +223,9 @@ bin\install-windows.cmd -Restart</code></pre></div>
       <h2>Using tally</h2>
       <dl class="faq">
         <dt>Budgets</dt>
-        <dd>On <b>Budgets</b>, type a monthly amount next to any category. With no budgets yet, <b>Fill them in</b> sets every category from your last three months. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</dd>
+        <dd>On <b>Budgets</b>, type a monthly amount next to any category you want to track; the faint number in the field is what you've spent there lately. <b>Edit</b> lets a budget repeat every few months (insurance, say) or roll what's left into next month, and <b>Everything else</b> can hold one amount for the categories you didn't budget. The tick on each bar is today, so a bar past its tick is spending ahead of the month.</dd>
+        <dt>Goals</dt>
+        <dd>Beside your budgets, <b>Goals</b> tracks one account toward an amount: savings up to $5,000, say, or a card paid down to $0. Pick a month and it shows what each month needs to get there.</dd>
         <dt>Fix a category</dt>
         <dd>On <b>Activity</b>, click a transaction's category and pick another. Tick <b>Every … transaction</b> to apply it to that merchant from now on.</dd>
         <dt>Search</dt>

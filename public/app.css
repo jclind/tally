@@ -236,6 +236,39 @@ h2 + .erow { margin-top: 6px; }
 .amtin.bad input { border-color: var(--danger); }
 @keyframes saved { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
 .erow .bar { margin: 6px 0; }
+/* Budgets: the repeat or rollover line under "spent", Edit mode's options, and the budgets not due this month. */
+.brow .l2 .bnote { display: block; font-size: 13px; line-height: 18px; color: var(--ink2); font-weight: 500; }
+.erow > .bopts { grid-column: 1 / -1; }
+.bopts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 4px 0 6px; font-size: 15px; color: var(--ink2); }
+.bopts .more, .gbtns .more { margin-top: 0; min-height: 40px; }
+.bopts select, .gform select { appearance: none; -webkit-appearance: none; border: 1px solid var(--field); border-radius: 8px; min-height: 40px; padding: 7px 40px 7px 12px; cursor: pointer;
+  background: var(--field-bg) var(--chev) no-repeat right 12px center / 16px; color: var(--ink); font-size: 15px; }
+.bopts select:hover, .gform select:hover { background-color: var(--field-hover); }
+.bopts .roll { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); cursor: pointer; min-height: 40px; }
+.more.danger { color: var(--danger); }
+.bopts .danger { margin-left: auto; }
+.later { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink2); }
+.later + .erow { border-top: 0; }
+/* Goals */
+.goal { padding: 12px 0 6px; border-top: 1px solid var(--line); }
+.card h2 + .goal { border-top: 0; padding-top: 8px; }
+.goal .l1 { display: flex; justify-content: space-between; gap: 10px; }
+.goal .name { font-weight: 600; }
+.goal .l1 .num { font-size: 15px; color: var(--ink2); white-space: nowrap; }
+.goal .l1 b { color: var(--ink); font-weight: 600; }
+.goal .l2 { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; color: var(--ink2); }
+.goal .l2 .more { margin-top: 0; font-size: 14px; min-height: 32px; flex: none; }
+.gform { display: grid; gap: 12px; padding: 12px 0 4px; border-top: 1px solid var(--line); }
+.card h2 + .gform { border-top: 0; padding-top: 8px; }
+.gform label { display: grid; gap: 4px; font-size: 14px; font-weight: 600; color: var(--ink2); min-width: 0; }
+.gform .text { width: 100%; min-height: 40px; border: 1px solid var(--field); border-radius: 8px; padding: 8px 12px; background: var(--field-bg); color: var(--ink); font-size: 15px; font-weight: 400; }
+.gform .text::placeholder { color: var(--placeholder); }
+.gform select { width: 100%; }
+.gform .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.gform .amtin { justify-content: flex-start; }
+.gform .amtin .fld, .gform .amtin input { width: 100%; }
+.gbtns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.gbtns .btn { min-height: 40px; }
 .amtin input:focus { border-color: var(--teal); outline: 2px solid var(--ring); outline-offset: 0; }
 
 /* ---------- rows: activity, bills, accounts ---------- */

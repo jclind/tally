@@ -145,17 +145,25 @@ function wireMonthMenu() {
 document.addEventListener("click", (e) => { if (menuOpen && !menuOpen.contains(e.target)) closeMenu(); });
 
 // ---------- the budget hero (overview and budgets) ----------
-// Share of a budget used. A $0 budget is fully used only once something is spent against it.
-const used = (b) => b.budget > 0 ? b.spent / b.budget : b.spent > 0 ? Infinity : 0;
+// A budget's limit this month is its amount plus what rolled over (lib/report.mjs). Share of it used: a limit at or
+// below $0 is fully used once something is spent against it.
+const used = (b) => b.limit > 0 ? b.spent / b.limit : b.spent > 0 || b.limit < 0 ? Infinity : 0;
+const EE = "EVERYTHING_ELSE";
+// Whole dollars per budget row: each category's, plus Everything else, the categories no due budget covers.
+function budgetDollars(s) {
+  const d = dollarsByCat(s.categories), covered = new Set(s.budgets.map((b) => b.category));
+  d.set(EE, [...d].filter(([c]) => !covered.has(c)).reduce((t, [, v]) => t + v, 0));
+  return d;
+}
 // Budget totals from the same whole-dollar figures the rows show, so the band always equals the rows' sum.
 function plan(s) {
-  const d = dollarsByCat(s.categories), all = [...d.values()].reduce((t, v) => t + v, 0);
-  const limit = s.budgets.reduce((t, b) => t + Math.round(b.budget), 0), spent = s.budgets.reduce((t, b) => t + (d.get(b.category) ?? 0), 0);
+  const all = [...dollarsByCat(s.categories).values()].reduce((t, v) => t + v, 0), d = budgetDollars(s);
+  const limit = s.budgets.reduce((t, b) => t + Math.round(b.limit), 0), spent = s.budgets.reduce((t, b) => t + (d.get(b.category) ?? 0), 0);
   return { limit, spent, left: limit - spent, outside: all - spent };
 }
 // Over is decided in cents, like the daily alert; under a dollar over reads "<$1".
-const overBy = (b, d) => b.spent - b.budget < 1 ? "<$1" : money(Math.max(1, (d.get(b.category) ?? Math.round(b.spent)) - Math.round(b.budget)));
-const leftBy = (b, d) => money(Math.max(0, Math.round(b.budget) - (d.get(b.category) ?? Math.round(b.spent))));
+const overBy = (b, d) => b.spent - b.limit < 1 ? "<$1" : money(Math.max(1, (d.get(b.category) ?? Math.round(b.spent)) - Math.round(b.limit)));
+const leftBy = (b, d) => money(Math.max(0, Math.round(b.limit) - (d.get(b.category) ?? Math.round(b.spent))));
 // The Not budgeted subline: what was spent (or refunded), and the recent average unless the suggestion was raised past it.
 function notBudgetedLine(b, d) {
   if (d <= -1) return `${money(-d)} refunded`;
@@ -168,7 +176,6 @@ const suggest = (b) => b.suggested ? Math.max(b.suggested, Math.ceil(b.spent / 5
 function budgetHero(s, page) {
   const pm = monthName(shiftMonth(s.month, -1)), daysLeft = s.days - s.day;
   const todayMark = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
-  const canFill = s.unset.some((b) => b.suggested);
   if (!s.hasData) return `${monthMenu(s.month, s.history, page, "budget")}<div class="big">No data</div><p>tally has no transactions from ${monthYear(s.month)}.</p>`;
   if (s.budgets.length) {
     const p = plan(s), outside = p.outside;
@@ -190,16 +197,7 @@ function budgetHero(s, page) {
   return `${monthMenu(s.month, s.history, page, "spending")}
     <div class="big num">${money(s.spent)} <span>spent</span></div>
     ${line ? `<p>${line}</p>` : ""}
-    ${s.spentLastMonth > 0 ? `<div class="track"><i style="width:${Math.min(100, (s.spent / s.spentLastMonth) * 100)}%"></i>${todayMark}</div>` : ""}
-    ${canFill ? `<p><button class="hbtn" data-fill>Set budgets from the last 3 months</button></p>` : ""}`;
-}
-function wireFill(s, rerender) {
-  for (const b of document.querySelectorAll("[data-fill]")) b.onclick = async () => {
-    b.disabled = true;
-    const g = GEN;
-    try { for (const u of s.unset.filter((x) => x.suggested)) await api("/api/budget", { category: u.category, monthly: suggest(u) }); if (!stale(g)) await rerender(); }
-    catch (e) { if (!stale(g)) { notice(e.message); b.disabled = false; } }
-  };
+    ${s.spentLastMonth > 0 ? `<div class="track"><i style="width:${Math.min(100, (s.spent / s.spentLastMonth) * 100)}%"></i>${todayMark}</div>` : ""}`;
 }
 
 // ---------- pieces ----------
@@ -287,8 +285,10 @@ function netWorthCard(nw, hist) {
 // Budgets against a month of income. Income so far would compare half a month of pay with a whole month of budgets,
 // so this month uses expected income: Plaid's repeating deposits, else last month's income. "Over" stays a budget word.
 function incomeCard(s, streams) {
-  if (!s.budgets.length) return "";
-  const p = plan(s);
+  if (!s.budgets.length && !s.later.length) return "";
+  // Per month: a budget every few months counts its share each month, a one-month budget counts in its month, and
+  // rollover doesn't count, since it's last month's plan.
+  const p = { limit: Math.round([...s.budgets, ...s.later].reduce((t, b) => t + (b.every === 0 ? (b.due ? b.budget : 0) : b.budget / b.every), 0)) };
   const expected = streams.filter((r) => r.direction === "inflow" && r.is_active && !r.is_transfer).reduce((t, r) => t + r.monthly, 0);
   const last = s.history.find((h) => h.month === shiftMonth(s.month, -1));
   const [name, income] = !s.current ? [`Income in ${monthName(s.month)}`, s.income]
@@ -345,17 +345,18 @@ PAGES.overview = async (q) => {
       <a class="more" href="#/spending${s.current ? "" : `?month=${s.month}`}">All categories</a></div>`
       : `<div class="empty" style="margin-top:8px">No spending in ${m} yet.</div>`}</div>`;
 
-  const over = s.budgets.filter((b) => b.spent > b.budget).sort((a, b) => used(b) - used(a));
-  const ok = s.budgets.filter((b) => b.spent <= b.budget);
+  const over = s.budgets.filter((b) => b.spent > b.limit).sort((a, b) => used(b) - used(a));
+  const ok = s.budgets.filter((b) => b.spent <= b.limit);
+  const bd = budgetDollars(s), bLink = (b) => b.category === EE ? `#/budgets${s.current ? "" : `?month=${s.month}`}` : txLink({ cat: b.category, month: s.month });
   // "Within budget" is all the code knows: spent is at or under the limit. It doesn't judge pace.
   const budgetsCard = `<div class="card span2 c-budgets"><h2>Budgets <a href="#/budgets${s.current ? "" : `?month=${s.month}`}">All budgets</a></h2>
     ${s.budgets.length ? `<div class="sub">${over.length ? `<b class="over">${over.length} over</b>, ${ok.length} within budget` : `All ${ok.length} within budget`}</div>
-      ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${overBy(b, dollars)}</b> over</span></div>
-        <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>`
+      ${over.length ? `<div class="need">${over.map((b) => `<a class="brow" href="${bLink(b)}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num over"><b>${overBy(b, bd)}</b> over</span></div>
+        <div class="bar over"><i style="width:100%"></i></div><div class="l2"><span class="num"><b>${money(bd.get(b.category) ?? b.spent)}</b> of ${money(b.limit)}</span></div></a>`).join("")}</div>`
         // With nothing over, the card shows the budgets closest to their limits, so it still says how the month goes:
         // four fill the desktop's two columns, and a phone hides the fourth.
-        : `<div class="need top">${ok.slice().sort((a, b) => used(b) - used(a)).slice(0, 4).map((b) => `<a class="brow" href="${txLink({ cat: b.category, month: s.month })}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num"><b>${leftBy(b, dollars)}</b> left</span></div>
-        <div class="bar"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : ""}</div><div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> of ${money(b.budget)}</span></div></a>`).join("")}</div>`}
+        : `<div class="need top">${ok.slice().sort((a, b) => used(b) - used(a)).slice(0, 4).map((b) => `<a class="brow" href="${bLink(b)}"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num"><b>${leftBy(b, bd)}</b> left</span></div>
+        <div class="bar"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : ""}</div><div class="l2"><span class="num"><b>${money(bd.get(b.category) ?? b.spent)}</b> of ${money(b.limit)}</span></div></a>`).join("")}</div>`}
       `
       : `<div class="empty" style="margin-top:8px">No budgets yet.</div>`}</div>`;
 
@@ -364,7 +365,7 @@ PAGES.overview = async (q) => {
 
   // The markup is in the phone's reading order; the desktop grid places the same cards by area.
   $page.innerHTML = `<div class="home">${budgetsCard}${where}${activity}${comingUpCard(s.bills)}${netWorthCard(s.netWorth, s.netWorthHistory)}${cash}</div>`;
-  wireMonthMenu(); wireTips($page); wireFill(s, () => PAGES.overview(q));
+  wireMonthMenu(); wireTips($page);
 };
 
 // ---------- transactions ----------
@@ -571,34 +572,116 @@ PAGES.spending = async (q) => {
 let keepRow = null;
 
 // ---------- budgets ----------
-let budgetRev = 0, budgetOrder = null;
-const budgetData = (month) => Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/recurring")]);
+// Budgets are added one category at a time: type an amount next to a category under Not budgeted, where the field's
+// hint is the usual month. Edit shows each budget's repeat and rollover. Goals sit beside them.
+let budgetRev = 0, budgetOrder = null, budgetEditing = false, goalEdit = null;
+const budgetData = (month) => Promise.all([api(`/api/summary${month ? `?month=${month}` : ""}`), api("/api/recurring"), api("/api/goals")]);
+const REPEAT = [[1, "Every month"], [2, "Every 2 months"], [3, "Every 3 months"], [6, "Every 6 months"], [12, "Every year"], [0, "One month only"]];
+const monthOpts = (from, to, on) => { const out = []; for (let i = from; i <= to; i++) out.push(shiftMonth(thisMonth(), i)); if (on && !out.includes(on)) out.push(on); return out.sort().map((m) => `<option value="${m}"${m === on ? " selected" : ""}>${monthName(m, "short")} ${m.slice(0, 4)}</option>`).join(""); };
+// The line under a budget's bar: how it repeats, and what rolled over into this month.
+function budgetNote(b) {
+  if (b.every === 0) return "This month only";
+  if (b.every > 1) return REPEAT.find(([n]) => n === b.every)[1];
+  if (!b.rollover) return "";
+  const c = Math.round(b.carry);
+  return c >= 1 ? `Rolls over: ${money(c)} left from before` : c <= -1 ? `Rolls over: ${money(-c)} over from before` : "Rolls over";
+}
+// Edit mode: how the budget repeats, and rollover for a monthly one. Everything else is monthly, so it only has Remove.
+function budgetOpts(b) {
+  const cat = `data-cat="${b.category}"`;
+  if (b.category === EE) return `<div class="bopts"><button class="more danger" ${cat} data-k="remove">Remove</button></div>`;
+  return `<div class="bopts">
+    <select ${cat} data-k="every" aria-label="How often the ${esc(b.label)} budget repeats">${REPEAT.map(([n, t]) => `<option value="${n}"${n === b.every ? " selected" : ""}>${t}</option>`).join("")}</select>
+    ${b.every !== 1 ? `<span>${b.every === 0 ? "in" : "starting"}</span><select ${cat} data-k="start" aria-label="${b.every === 0 ? "Month" : "First month"} of the ${esc(b.label)} budget">${monthOpts(-11, 12, b.start)}</select>`
+      : `<label class="roll"><input type="checkbox" class="switch" ${cat} data-k="rollover"${b.rollover ? " checked" : ""}> Roll over</label>`}
+    ${b.rollover && Math.abs(b.carry) >= 1 ? `<button class="more" ${cat} data-k="reset">Start over this month</button>` : ""}
+    <button class="more danger" ${cat} data-k="remove">Remove</button></div>`;
+}
+// One goal: how far along, and what it takes to finish by its month.
+function goalRow(g) {
+  const acct = `${esc(short(g.account_name ?? "Account"))}${g.account_mask ? ` ${esc(g.account_mask)}` : ""}`;
+  const pct = g.total > 0 ? Math.min(100, (g.done / g.total) * 100) : g.reached ? 100 : 0;
+  const by = g.by_month ? monthYear(g.by_month) : "";
+  const line = g.balance == null ? `${acct} is closed`
+    : g.reached ? `${acct}, reached`
+    : g.late ? `${acct}, ${money(g.left)} to go, planned for ${by}`
+    : g.per_month != null ? `${acct}, ${money(g.per_month)} a month reaches it by ${by}`
+    : `${acct}, ${money(g.left)} to go`;
+  return `<div class="goal"><div class="l1"><span class="name">${esc(g.name)}</span><span class="num">${g.balance == null ? "" : `<b>${money(g.done)}</b> of ${money(g.total)}${g.debt ? " paid" : ""}`}</span></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="l2"><span>${line}</span><button class="more" data-goal="${g.id}">Edit</button></div></div>`;
+}
+function goalForm(g, accounts) {
+  // Accounts to save in first, then cards and loans to pay down; a new goal starts on the first.
+  const debt = (id) => ["credit", "loan"].includes(accounts.find((a) => a.account_id === id)?.type);
+  const pick = accounts.filter((a) => !a.goal || a.goal === g?.id), groups = [["Save in", pick.filter((a) => !debt(a.account_id))], ["Pay down", pick.filter((a) => debt(a.account_id))]];
+  const on = g?.account_id ?? (groups[0][1][0] ?? groups[1][1][0])?.account_id;
+  return `<form class="gform" data-id="${g?.id ?? ""}">
+    <label><span>Name</span><input class="text" name="name" maxlength="40" required value="${esc(g?.name ?? "")}" placeholder="Emergency fund" autocomplete="off"></label>
+    <label><span>Account</span><select name="account_id">${groups.filter(([, list]) => list.length).map(([name, list]) => `<optgroup label="${name}">${list.map((a) => `<option value="${esc(a.account_id)}" data-debt="${debt(a.account_id) ? 1 : ""}"${a.account_id === on ? " selected" : ""}>${esc(short(a.name))}${a.mask ? ` ${esc(a.mask)}` : ""}</option>`).join("")}</optgroup>`).join("")}</select></label>
+    <div class="two"><label><span class="tl">${debt(on) ? "Pay down to" : "Amount"}</span><span class="amtin"><span class="fld"><span class="cur">$</span><input name="target" inputmode="decimal" value="${g ? g.target.toLocaleString("en-US") : ""}" placeholder="${debt(on) ? "0" : "5,000"}"></span></span></label>
+    <label><span>By</span><select name="by_month"><option value="">No date</option>${monthOpts(0, 60, g?.by_month)}</select></label></div>
+    <div class="gbtns"><button class="btn primary">Save goal</button><button type="button" class="more" data-cancel>Cancel</button>${g ? `<button type="button" class="more danger" data-remove>Remove</button>` : ""}</div></form>`;
+}
+function goalsCard({ goals, accounts }) {
+  const free = accounts.filter((a) => !a.goal);
+  const add = goalEdit !== "new" && free.length ? `<button class="hbtn" data-goal="new">Add</button>` : "";
+  const body = goals.map((g) => goalEdit === g.id ? goalForm(g, accounts) : goalRow(g)).join("") + (goalEdit === "new" ? goalForm(null, accounts) : "");
+  return `<div class="card c-goals"><h2>Goals ${add}</h2>${body || `<div class="empty" style="margin-top:8px">${accounts.length ? "Pick an account and an amount for it to reach." : "Link an account to set a goal."}</div>`}</div>`;
+}
 PAGES.budgets = async (q, saved, pre) => {
   const month = q.get("month") ?? "", g = GEN;
-  const [s, streams] = pre ?? await budgetData(month);
+  const [s, streams, G] = pre ?? await budgetData(month);
   if (stale(g)) return;
   $hero.innerHTML = budgetHero(s, "budgets");
-  const dollars = dollarsByCat(s.categories);
+  const dollars = budgetDollars(s);
   const tick = s.current ? `<span class="today" style="left:${(s.day / s.days) * 100}%"></span>` : "";
-  const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value != null ? value.toLocaleString("en-US") : ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} monthly budget"></span></label>`;
-  // Most used first on a fresh visit. A redraw after a save keeps that order, so the row just edited stays put.
-  const set = s.budgets.slice().sort((a, b) => used(b) - used(a));
+  const field = (b, value, ph) => `<label class="amtin${b.category === saved ? " saved" : ""}"><span class="ok" role="status">${b.category === saved ? "Saved" : ""}</span><span class="fld"><span class="cur">$</span><input inputmode="decimal" data-cat="${b.category}" value="${value != null ? value.toLocaleString("en-US") : ""}" placeholder="${ph ? Math.round(ph) : ""}" aria-label="${esc(b.label)} ${b.every > 1 ? "" : "monthly "}budget"></span></label>`;
+  // Most used first on a fresh visit, with Everything else last. A redraw after a save keeps that order, so the row
+  // just edited stays put.
+  const set = s.budgets.slice().sort((a, b) => (a.category === EE) - (b.category === EE) || used(b) - used(a));
   if (saved && budgetOrder) { const at = (c) => { const i = budgetOrder.indexOf(c); return i < 0 ? Infinity : i; }; set.sort((a, b) => at(a.category) - at(b.category)); }
   budgetOrder = set.map((b) => b.category);
   const unset = s.unset.slice().sort((a, b) => b.spent - a.spent || (b.suggested ?? 0) - (a.suggested ?? 0));
+  const any = set.length || s.later.length;
+  if (!any) budgetEditing = false;
+  const opts = (b) => budgetEditing ? budgetOpts(b) : "";
+  // Everything else without an amount: a row to give it one, once some category has a budget and something's left over.
+  const eeD = dollars.get(EE), eeRow = any && s.everythingElse.budget == null && Math.abs(eeD) >= 1
+    ? `<div class="erow"><div><div class="name" style="font-weight:600">Everything else</div><div class="muted num" style="font-size:14px">${eeD >= 0 ? `${money(eeD)} spent` : `${money(-eeD)} refunded`} outside your budgets</div></div>${field(s.everythingElse, null)}</div>` : "";
+  const laterRows = s.later.map((b) => {
+    const d = Math.round(b.spent);
+    return `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${b.next ? `Next in ${monthYear(b.next)}` : `Was for ${monthYear(b.start)}`}${d >= 1 ? `, ${money(d)} this month in Everything else` : ""}</div></div>${field(b, b.budget)}${opts(b)}</div>`;
+  }).join("");
   $page.innerHTML = `<div class="layout"><div class="stack">
-    <div class="card"><h2>Budgets</h2>
-      ${set.length ? set.map((b) => {
-        const over = b.spent > b.budget;
+    <div class="card c-blist"><h2>Budgets ${any ? `<button class="hbtn" id="budgetedit">${budgetEditing ? "Done" : "Edit"}</button>` : ""}</h2>
+      ${set.map((b) => {
+        const over = b.spent > b.limit, note = budgetNote(b);
         return `<div class="erow"><div class="brow"><div class="l1"><span class="name">${esc(b.label)}</span><span class="num ${over ? "over" : ""}"><b>${over ? overBy(b, dollars) : leftBy(b, dollars)}</b> ${over ? "over" : "left"}</span></div>
           <div class="bar ${over ? "over" : ""}"><i style="width:${Math.max(0, Math.min(100, used(b) * 100))}%"></i>${over ? "" : tick}</div>
-          <div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> spent</span>${field(b, b.budget)}</div></div></div>`;
-      }).join("") : `<div class="empty" style="margin-top:8px">No budgets yet. Set one below, or fill them all from your last 3 months.${s.unset.some((b) => b.suggested) ? ` <button class="more" data-fill>Fill them in</button>` : ""}</div>`}
+          <div class="l2"><span class="num"><b>${money(dollars.get(b.category) ?? b.spent)}</b> spent${note ? `<small class="bnote">${note}</small>` : ""}</span>${field(b, b.budget)}</div></div>${opts(b)}</div>`;
+      }).join("")}${eeRow}
+      ${laterRows ? `<div class="later">Not due this month</div>${laterRows}` : ""}
+      ${any ? "" : `<div class="empty" style="margin-top:8px">No budgets yet. Type an amount next to a category below.</div>`}
     </div>
     ${unset.length ? `<div class="card"><h2>Not budgeted</h2>
       ${unset.map((b) => `<div class="erow"><div><div class="name" style="font-weight:600">${esc(b.label)}</div><div class="muted num" style="font-size:14px">${notBudgetedLine(b, dollars.get(b.category) ?? Math.round(b.spent))}</div></div>${field(b, null, suggest(b))}</div>`).join("")}</div>` : ""}
-    </div><aside class="side stack">${incomeCard(s, streams)}</aside></div>`;
-  for (const inp of $page.querySelectorAll(".amtin input")) {
+    </div><aside class="side stack">${incomeCard(s, streams)}${goalsCard(G)}</aside></div>`;
+  // Redraw with fresh numbers, keeping whatever field the owner moved on to, unless they've left the page.
+  const redraw = async (g, rev, cat) => {
+    const pre = await budgetData(month).catch(() => null);
+    if (stale(g) || (rev != null && rev !== budgetRev)) return false; // another page, or a newer save that will redraw
+    if (!pre) return false;
+    const act = document.activeElement?.matches?.(".amtin input[data-cat]") ? document.activeElement : null;
+    const keep = act && { cat: act.dataset.cat, value: act.value, from: act.selectionStart, to: act.selectionEnd };
+    await PAGES.budgets(q, cat, pre);
+    if (keep) {
+      const el = $page.querySelector(`.amtin input[data-cat="${keep.cat}"]`);
+      if (el) { el.value = keep.value; el.focus(); el.setSelectionRange(keep.from, keep.to); }
+    }
+    return true;
+  };
+  for (const inp of $page.querySelectorAll(".amtin input[data-cat]")) {
     const box = inp.closest(".amtin"), status = box.querySelector(".ok");
     const save = async () => {
       const rev = ++budgetRev;
@@ -609,23 +692,57 @@ PAGES.budgets = async (q, saved, pre) => {
       box.classList.remove("bad", "saved"); box.classList.add("saving"); status.textContent = "Saving";
       try { await api("/api/budget", { category: inp.dataset.cat, monthly: v === "" ? null : Number(v) }); }
       catch { if (!stale(g)) { box.classList.replace("saving", "bad"); status.textContent = "Couldn't save"; } return; }
-      // Fetch the new totals first, then snapshot whatever field the owner moved on to and redraw with no wait in
-      // between, so nothing typed during the requests is lost. Skip the redraw if they've left the page.
-      const pre = await budgetData(month).catch(() => null);
-      if (stale(g) || rev !== budgetRev) return; // another page, or a newer save that will redraw
-      if (!pre) { box.classList.replace("saving", "saved"); status.textContent = "Saved"; return; }
-      const act = document.activeElement?.matches?.(".amtin input") ? document.activeElement : null;
-      const keep = act && { cat: act.dataset.cat, value: act.value, from: act.selectionStart, to: act.selectionEnd };
-      await PAGES.budgets(q, inp.dataset.cat, pre);
-      if (keep) {
-        const el = $page.querySelector(`.amtin input[data-cat="${keep.cat}"]`);
-        if (el) { el.value = keep.value; el.focus(); el.setSelectionRange(keep.from, keep.to); }
-      }
+      if (!await redraw(g, rev, inp.dataset.cat) && !stale(g) && rev === budgetRev) { box.classList.replace("saving", "saved"); status.textContent = "Saved"; }
     };
     inp.addEventListener("change", save);
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
   }
-  wireMonthMenu(); wireFill(s, () => PAGES.budgets(q));
+  document.getElementById("budgetedit")?.addEventListener("click", async () => { budgetEditing = !budgetEditing; await PAGES.budgets(q, null, [s, streams, G]); });
+  // Edit mode's options save as soon as they change.
+  for (const el of $page.querySelectorAll(".bopts [data-k]")) {
+    const k = el.dataset.k, ev = el.tagName === "BUTTON" ? "click" : "change";
+    el.addEventListener(ev, async () => {
+      const g = GEN, cat = el.dataset.cat, body = { category: cat };
+      if (k === "every") body.every = Number(el.value);
+      else if (k === "start") body.start = el.value;
+      else if (k === "rollover") body.rollover = el.checked;
+      else if (k === "reset") body.reset = true;
+      else body.monthly = null;
+      el.disabled = true;
+      try { await api("/api/budget", body); } catch (e) { if (!stale(g)) { notice(e.message); el.disabled = false; } return; }
+      await redraw(g, ++budgetRev, null);
+      $page.querySelector(`.bopts [data-cat="${cat}"][data-k="${k}"]`)?.focus({ preventScroll: true });
+    });
+  }
+  // Goals: Add and Edit open the form in place; one form at a time.
+  for (const b of $page.querySelectorAll("[data-goal]")) b.addEventListener("click", async () => {
+    goalEdit = b.dataset.goal === "new" ? "new" : Number(b.dataset.goal);
+    await PAGES.budgets(q, null, [s, streams, G]);
+    $page.querySelector(".gform input[name=name]")?.focus();
+  });
+  const form = $page.querySelector(".gform");
+  if (form) {
+    const acct = form.elements.account_id, tl = form.querySelector(".tl"), target = form.elements.target;
+    acct.addEventListener("change", () => { const debt = !!acct.selectedOptions[0]?.dataset.debt; tl.textContent = debt ? "Pay down to" : "Amount"; target.placeholder = debt ? "0" : "5,000"; });
+    const done = async (body) => {
+      const g = GEN;
+      for (const b of form.querySelectorAll("button")) b.disabled = true;
+      try { if (body) await api("/api/goal", body); } catch (e) { if (!stale(g)) { notice(e.message); for (const b of form.querySelectorAll("button")) b.disabled = false; } return; }
+      goalEdit = null;
+      if (body) await redraw(g, null, null); else await PAGES.budgets(q, null, [s, streams, G]);
+    };
+    const id = form.dataset.id ? Number(form.dataset.id) : undefined;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      // A card or loan with no amount pays down to $0.
+      const f = form.elements, v = f.target.value.replace(/[$,\s]/g, "") || (f.account_id.selectedOptions[0]?.dataset.debt ? "0" : "");
+      if (!(v !== "" && Number(v) >= 0)) return notice(`"${f.target.value}" isn't an amount. Type a number like 5000.`);
+      done({ id, name: f.name.value, account_id: f.account_id.value, target: Number(v), by_month: f.by_month.value });
+    });
+    form.querySelector("[data-cancel]").addEventListener("click", () => done(null));
+    form.querySelector("[data-remove]")?.addEventListener("click", () => done({ id, remove: true }));
+  }
+  wireMonthMenu();
 };
 
 // ---------- bills ----------
@@ -826,7 +943,7 @@ PAGES.settings = async () => {
       <div class="ok" data-for="itemCap" role="status"></div></div>
     <div class="card sets"><h2>Discord alerts</h2>
       <div class="setrow plain"><div><label for="alerts">Post alerts to Discord</label>
-        <div class="hint">With the daily sync: a big charge, a budget that goes over, a subscription that costs more, or a bank that stops syncing.</div></div>
+        <div class="hint">With the daily sync: a big charge, a budget that goes over, a subscription that costs more, a goal reached, or a bank that stops syncing.</div></div>
         <input type="checkbox" role="switch" class="switch" id="alerts" data-key="alerts" ${on ? "checked" : ""}></div>
       <div class="ok" data-for="alerts" role="status"></div>
       <div class="alertopts" ${on ? "" : "hidden"}>

@@ -338,3 +338,87 @@ test("a repeating charge can be renamed, one stream at a time", () => {
   assert.throws(() => r.setStreamName(db, { stream_id: "a", name: "x".repeat(61) }), /60/);
   assert.throws(() => r.setStreamName(db, { stream_id: "nope", name: "X" }), /No such charge/);
 });
+
+test("a budget can repeat every few months or fall in one month, and counts only when it's due", () => {
+  const db = fixture();
+  r.setBudget(db, { category: "GAS", monthly: 120, every: 6, start: "2026-05" }, "2026-11-09");
+  r.setBudget(db, { category: "GROCERIES", monthly: 80, every: 0, start: "2026-12" }, "2026-11-09");
+  const get = (m, c) => r.budgets(db, m, "2026-11-09").find((b) => b.category === c);
+  assert.equal(get("2026-11", "GAS").due, true, "May plus six months");
+  assert.equal(get("2026-12", "GAS").due, false);
+  assert.equal(get("2026-12", "GAS").next, "2027-05");
+  assert.equal(get("2026-04", "GAS").due, false, "nothing before the start");
+  assert.equal(get("2026-11", "GROCERIES").due, false);
+  assert.equal(get("2026-11", "GROCERIES").next, "2026-12");
+  assert.equal(get("2027-01", "GROCERIES").next, null, "a one-month budget that's past has no next month");
+  const s = r.summary(db, "2026-11-09");
+  assert.deepEqual(s.budgets.map((b) => b.category), ["GAS"]);
+  assert.deepEqual(s.later.map((b) => b.category), ["GROCERIES"]);
+  assert.equal(s.everythingElse.spent, 60 + 230, "groceries' spending isn't covered this month, so it's Everything else");
+  // Changing the amount keeps the repeat.
+  r.setBudget(db, { category: "GAS", monthly: 150 }, "2026-11-09");
+  assert.equal(get("2026-11", "GAS").every, 6);
+  assert.throws(() => r.setBudget(db, { category: "GAS", every: 5 }), /every 1, 2, 3, 6, or 12/);
+  assert.throws(() => r.setBudget(db, { category: "GAS", start: "2026-13" }), /month/);
+  assert.throws(() => r.setBudget(db, { category: "MEDICAL", every: 2 }), /amount/, "options need an amount first");
+});
+
+test("rollover carries what's left, or what went over, into the next month, and reset starts it again", () => {
+  const db = fixture();
+  const add = db.prepare("INSERT INTO transactions (transaction_id, item_id, account_id, date, name, merchant_name, amount, pending, category, category_detail) VALUES (?, 'i1', 'card', ?, 'SHELL', 'Shell', ?, 0, 'TRANSPORTATION', 'TRANSPORTATION_GAS')");
+  add.run("g9", "2026-09-12", 70); add.run("g12", "2026-12-02", 10);
+  r.setBudget(db, { category: "GAS", monthly: 50, rollover: true }, "2026-09-20");
+  const gas = (m, upTo = "2026-12-31") => r.budgets(db, m, upTo).find((b) => b.category === "GAS");
+  assert.equal(gas("2026-09").carry, 0, "nothing carries into the first month");
+  assert.equal(gas("2026-10").carry, -20, "September went $20 over");
+  assert.equal(gas("2026-11").carry, 0, "October was $20 under, which pays back September");
+  assert.equal(gas("2026-12").carry, 10, "November spent $40 of $50");
+  assert.equal(gas("2026-12").limit, 60);
+  assert.equal(gas("2026-08").carry, 0, "a month before rollover started carries nothing");
+  r.setBudget(db, { category: "GAS", reset: true }, "2026-12-05");
+  assert.equal(gas("2026-12").carry, 0);
+  r.setBudget(db, { category: "GAS", every: 3 }, "2026-12-05");
+  assert.equal(gas("2026-12").rollover, false, "only a monthly budget rolls over");
+});
+
+test("Everything else covers the categories without a budget, and alerts when it goes over", () => {
+  const db = fixture();
+  r.setBudget(db, { category: "GROCERIES", monthly: 100 });
+  r.setBudget(db, { category: r.EVERYTHING_ELSE, monthly: 200, every: 6, rollover: true });
+  const s = r.summary(db, "2026-11-09");
+  const other = s.budgets.at(-1);
+  assert.equal(other.category, r.EVERYTHING_ELSE);
+  assert.equal(other.spent, 40 + 230, "gas and shopping");
+  assert.equal(other.every, 1, "Everything else is monthly");
+  assert.ok(r.dailyAlerts(db, { today: "2026-11-09" }).some((a) => a.key === "budget:EVERYTHING_ELSE:2026-11" && /Everything else is over budget: \$270 of \$200/.test(a.text)));
+  assert.equal(r.summary(db, "2026-11-09", "2026-10").budgets.at(-1).spent, 30);
+  r.setBudget(db, { category: r.EVERYTHING_ELSE, monthly: null });
+  assert.equal(r.summary(db, "2026-11-09").budgets.length, 1);
+});
+
+test("goals track an account's balance toward a target, one goal per account", () => {
+  const db = fixture();
+  r.setGoal(db, { name: "  Rainy   day ", account_id: "chk", target: 4000, by_month: "2027-02" });
+  r.setGoal(db, { name: "Card to zero", account_id: "card", target: 0 });
+  let [save, debt] = r.goals(db, "2026-11-09");
+  assert.equal(save.name, "Rainy day");
+  assert.deepEqual([save.done, save.total, save.left, save.reached], [1000, 4000, 3000, false]);
+  assert.equal(save.per_month, 750, "$3,000 over November through February");
+  assert.deepEqual([debt.done, debt.total, debt.left], [0, 250, 250], "measured from what the card owed when the goal was set");
+  db.exec("UPDATE accounts SET current = 100 WHERE account_id = 'card'");
+  [, debt] = r.goals(db, "2026-11-09");
+  assert.deepEqual([debt.done, debt.left], [150, 100]);
+  assert.throws(() => r.setGoal(db, { name: "Two", account_id: "chk", target: 10 }), /already has a goal, Rainy day/);
+  assert.throws(() => r.setGoal(db, { name: "Zero", account_id: "brk", target: 0 }), /above \$0/);
+  assert.throws(() => r.setGoal(db, { name: "", account_id: "brk", target: 5 }), /name/);
+  assert.throws(() => r.setGoal(db, { name: "X", account_id: "nope", target: 5 }), /open account/);
+  // Editing keeps the goal on its account; reaching it alerts once.
+  r.setGoal(db, { id: save.id, name: "Rainy day", account_id: "chk", target: 900, by_month: "" });
+  [save] = r.goals(db, "2026-11-09");
+  assert.deepEqual([save.reached, save.by_month, save.per_month], [true, null, null]);
+  const a = r.dailyAlerts(db, { today: "2026-11-09" }).filter((x) => x.key.startsWith("goal:"));
+  assert.deepEqual(a.map((x) => x.text), ["Goal reached: Rainy day. Checking has $1000."]);
+  r.setGoal(db, { id: save.id, remove: true });
+  assert.equal(r.goals(db).length, 1);
+  assert.equal(r.goals(db, "2027-04-01")[0].late, false, "a goal with no date is never late");
+});

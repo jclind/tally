@@ -455,6 +455,10 @@ const routes = {
   "GET /api/payouts": () => report.payouts(db, payoutSources),
   "POST /api/category": (body) => report.setCategory(db, body),
   "POST /api/budget": (body) => report.setBudget(db, body),
+  // Goals, and the open accounts a goal can use, with the goal each one already holds.
+  "GET /api/goals": () => ({ goals: report.goals(db),
+    accounts: db.prepare("SELECT a.account_id, a.name, a.mask, a.type, g.id goal FROM accounts a LEFT JOIN goals g ON g.account_id = a.account_id WHERE a.closed_at IS NULL ORDER BY a.type, a.name").all() }),
+  "POST /api/goal": (body) => report.setGoal(db, body),
   "POST /api/stream-kind": (body) => report.setStreamKind(db, body),
   "POST /api/stream-name": (body) => report.setStreamName(db, body),
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.

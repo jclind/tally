@@ -64,6 +64,17 @@ All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's 
   least 50 cents more, compared in integer cents. A stream mixing prices never counts. The note lasts one charge,
   and the daily alert (setting `priceAlerts`, on by default) fires once per increase within 45 days.
 - Plaid sends some merchant names as empty strings. Treat `''` as missing (`nullif`).
+- Budgets are the owner's, added one category at a time; tally never fills them in. The Not budgeted field's hint is
+  the 3-month average rounded up to $10 (a one-click fill for every category was removed 2026-11-17).
+- A budget repeats every month, every 2, 3, 6, or 12 months from its `start` month, or falls in one month only
+  (`every` 0), and counts only in months it's due. A monthly budget can roll over from `rollover_from`: each month
+  carries what was left, or what went over, into the next, and reset moves `rollover_from` to this month. tally keeps
+  no budget history, so a past month shows today's budgets.
+- Everything else (`EVERYTHING_ELSE` in `budgets`) is an optional monthly budget for all spending in categories with
+  no budget due that month, including categories whose budget falls in another month. It never rolls over.
+- Goals (`goals`) are an amount for one account to reach, read from its balance: a cash or investment account saves
+  up to it, a card or loan pays down to it from what it owed when the goal was set (`start_balance`). One goal per
+  account, so two goals never count the same money. Reaching one alerts once.
 - Nothing dated after today counts yet: every month figure takes `upTo` (today), so "so far" numbers agree.
 - An account Plaid's `/accounts/get` stops listing is closed (`closed_at`): kept for its transactions, left out of
   net worth and balances. It reopens if Plaid lists it again.
@@ -192,7 +203,7 @@ Windows 11 PC:
 ## Daily job
 
 `bin/daily.mjs`, run at 7:00 by the agent `bin/install-mac.sh` installs, or the task `bin/install-windows.ps1` makes: syncs everything through `POST /api/daily` and posts new alerts (broken connection weekly, a charge at or over the alert amount
-dated in the last 10 days, a budget gone over) to Discord when alerts are on in Settings. The webhook comes from
+dated in the last 10 days, a budget gone over, a goal reached) to Discord when alerts are on in Settings. The webhook comes from
 Settings, or `DISCORD_WEBHOOK_URL` in `~/.config/tally/discord.env` from before the setting. Long posts are split into several messages, and each message's alerts are marked
 sent only after Discord accepts that message.
 

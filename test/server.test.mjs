@@ -194,6 +194,21 @@ test("an account Plaid stops listing is closed: kept, but out of net worth", asy
   assert.equal(nw1 - nw2, 2000);
 });
 
+test("budgets take their options over the API, and goals list only open accounts", async () => {
+  assert.deepEqual(await post("/api/budget", { category: "GROCERIES", monthly: 90, every: 3, start: "2026-11" }), { ok: true });
+  assert.match((await post("/api/budget", { category: "GROCERIES", every: 4 })).error, /every 1, 2, 3, 6, or 12/);
+  const b = (await fetch(base + "/api/budgets").then((r) => r.json())).budgets.find((x) => x.category === "GROCERIES");
+  assert.deepEqual([b.budget, b.every, b.start], [90, 3, "2026-11"]);
+  await post("/api/budget", { category: "GROCERIES", monthly: null });
+  assert.deepEqual(await post("/api/goal", { name: "Trip", account_id: "acc1", target: 500 }), { ok: true });
+  const g = await fetch(base + "/api/goals").then((r) => r.json());
+  assert.equal(g.goals[0].name, "Trip");
+  assert.ok(!g.accounts.some((a) => a.account_id === "acc2"), "a closed account can't take a goal");
+  assert.equal(g.accounts.find((a) => a.account_id === "acc1").goal, g.goals[0].id);
+  assert.match((await post("/api/goal", { name: "Old", account_id: "acc2", target: 5 })).error, /open account/);
+  await post("/api/goal", { id: g.goals[0].id, remove: true });
+});
+
 test("POST from another origin is refused", async () => {
   const r = await fetch(base + "/api/sync", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: "{}" });
   assert.equal(r.status, 403);
