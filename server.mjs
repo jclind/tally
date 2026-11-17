@@ -6,9 +6,21 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { homedir } from "node:os";
+import { execFileSync } from "node:child_process";
 import * as report from "./lib/report.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+// The running code: the version in package.json, and the commit it was started from when tally runs from a git
+// clone (null otherwise, or without git). Read once, so after a git pull it changes with the restart that loads it.
+const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
+const BUILD = (() => {
+  if (!existsSync(join(ROOT, ".git"))) return null;
+  const git = (...args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim();
+  try {
+    const [commit, date] = git("log", "-1", "--format=%h %cs").split(" ");
+    return { commit, date, changed: git("status", "--porcelain", "--untracked-files=no") !== "" };
+  } catch { return null; }
+})();
 const PORT = Number(process.env.TALLY_PORT || 3400);
 const KEYS = process.env.TALLY_KEYS || join(homedir(), ".config/tally/plaid.env");
 // A Discord webhook from before the Settings page could hold one. Read by webhook() below.
@@ -350,7 +362,8 @@ function webhook() {
 function publicSettings() {
   const { discordWebhook, ...rest } = settings();
   const k = loadKeys();
-  return { ...rest, webhook: discordWebhook ? "settings" : webhook() ? "file" : null, plaidEnv: k?.env ?? null, keysPath: KEYS, dataPath: dbPath };
+  return { ...rest, webhook: discordWebhook ? "settings" : webhook() ? "file" : null, plaidEnv: k?.env ?? null, keysPath: KEYS, dataPath: dbPath,
+    version: VERSION, build: BUILD };
 }
 function saveSettings(body) {
   const set = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value");
@@ -485,7 +498,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, "127.0.0.1", () => console.log(`${now()} tally on http://localhost:${PORT} (keys ${loadKeys() ? "found" : "missing"})`));
+server.listen(PORT, "127.0.0.1", () => console.log(`${now()} tally ${VERSION}${BUILD ? ` (${BUILD.commit})` : ""} on http://localhost:${PORT} (keys ${loadKeys() ? "found" : "missing"})`));
 // Logos for transactions synced before this ran, or whose download failed last time.
 warmLogos();
 // A computer that was off overnight catches up once it starts. The wait gives a laptop's network time to come up.

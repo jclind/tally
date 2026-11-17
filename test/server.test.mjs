@@ -202,6 +202,9 @@ test("settings save and check their values, and sync on open runs only when it's
   assert.equal(s0.bigCharge, "200");
   assert.equal(s0.alerts, "off", "Discord alerts are opt-in");
   assert.equal(s0.webhook, null);
+  const { readFileSync } = await import("node:fs"), { execFileSync } = await import("node:child_process");
+  assert.equal(s0.version, JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version);
+  assert.equal(s0.build.commit, execFileSync("git", ["log", "-1", "--format=%h"], { cwd: root, encoding: "utf8" }).trim(), "the commit tally started from");
   assert.equal((await post("/api/settings", { bigCharge: "350" })).bigCharge, "350");
   assert.match((await post("/api/settings", { bigCharge: "-5" })).error, /bigCharge/);
   assert.equal(s0.priceAlerts, "on", "price alerts default on");

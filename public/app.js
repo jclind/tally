@@ -820,6 +820,7 @@ PAGES.settings = async () => {
       <div class="row"><span class="w"><b>Plaid</b><small>${set.plaidEnv ? (set.plaidEnv === "sandbox" ? "Sandbox, Plaid's test banks" : "Production, your real banks") : "No keys yet"}</small></span></div>
       <div class="row"><span class="w"><b>Keys</b><small class="path">${path(set.keysPath)}</small></span></div>
       <div class="row"><span class="w"><b>Data</b><small class="path">${path(set.dataPath)}</small></span></div>
+      <div class="row"><span class="w"><b>Version</b><small>${esc(set.version)}${set.build ? `, build ${esc(set.build.commit)} from ${shortDate(set.build.date)}${set.build.changed ? ", with local changes" : ""}` : ""}</small></span></div>
     </div></div></aside></div>`;
   // Appearance lives in this browser, not the database, so a phone and a laptop can differ.
   document.getElementById("look").addEventListener("change", (e) => {
