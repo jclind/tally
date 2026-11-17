@@ -618,7 +618,7 @@ function goalForm(g, accounts) {
   const on = g?.account_id ?? (groups[0][1][0] ?? groups[1][1][0])?.account_id;
   return `<form class="gform" data-id="${g?.id ?? ""}">
     <label><span>Name</span><input class="text" name="name" maxlength="40" required value="${esc(g?.name ?? "")}" placeholder="Emergency fund" autocomplete="off"></label>
-    <label><span>Account</span><select name="account_id">${groups.filter(([, list]) => list.length).map(([name, list]) => `<optgroup label="${name}">${list.map((a) => `<option value="${esc(a.account_id)}" data-debt="${debt(a.account_id) ? 1 : ""}"${a.account_id === on ? " selected" : ""}>${esc(short(a.name))}${a.mask ? ` ${esc(a.mask)}` : ""}</option>`).join("")}</optgroup>`).join("")}</select></label>
+    <label><span>Account</span><select name="account_id">${groups.filter(([, list]) => list.length).map(([name, list]) => `<optgroup label="${name}">${list.map((a) => `<option value="${esc(a.account_id)}" data-debt="${debt(a.account_id) ? 1 : ""}"${a.account_id === on ? " selected" : ""}>${esc(short(a.name))}${a.mask ? ` ${esc(a.mask)}` : ""}${a.closed ? " (closed)" : ""}</option>`).join("")}</optgroup>`).join("")}</select></label>
     <div class="two"><label><span class="tl">${debt(on) ? "Pay down to" : "Amount"}</span><span class="amtin"><span class="fld"><span class="cur">$</span><input name="target" inputmode="decimal" value="${g ? g.target.toLocaleString("en-US") : ""}" placeholder="${debt(on) ? "0" : "5,000"}"></span></span></label>
     <label><span>By</span><select name="by_month"><option value="">No date</option>${monthOpts(0, 60, g?.by_month)}</select></label></div>
     <div class="gbtns"><button class="btn primary">Save goal</button><button type="button" class="more" data-cancel>Cancel</button>${g ? `<button type="button" class="more danger" data-remove>Remove</button>` : ""}</div></form>`;
@@ -674,10 +674,19 @@ PAGES.budgets = async (q, saved, pre) => {
     if (!pre) return false;
     const act = document.activeElement?.matches?.(".amtin input[data-cat]") ? document.activeElement : null;
     const keep = act && { cat: act.dataset.cat, value: act.value, from: act.selectionStart, to: act.selectionEnd };
+    // An open goal form keeps what's typed in it, unless the goal was just saved (goalEdit is null then).
+    const gf = goalEdit != null ? $page.querySelector(".gform") : null, draft = gf && [...gf.elements].filter((e) => e.name).map((e) => [e.name, e.value]);
+    const gfocus = gf?.contains(document.activeElement) ? document.activeElement.name : null;
     await PAGES.budgets(q, cat, pre);
     if (keep) {
       const el = $page.querySelector(`.amtin input[data-cat="${keep.cat}"]`);
       if (el) { el.value = keep.value; el.focus(); el.setSelectionRange(keep.from, keep.to); }
+    }
+    const nf = draft && $page.querySelector(".gform");
+    if (nf) {
+      for (const [n, v] of draft) if (nf.elements[n] && [...(nf.elements[n].options ?? [{ value: v }])].some((o) => o.value === v)) nf.elements[n].value = v;
+      nf.elements.account_id.dispatchEvent(new Event("change"));
+      if (gfocus) nf.elements[gfocus]?.focus();
     }
     return true;
   };

@@ -420,5 +420,9 @@ test("goals track an account's balance toward a target, one goal per account", (
   assert.deepEqual(a.map((x) => x.text), ["Goal reached: Rainy day. Checking has $1000."]);
   r.setGoal(db, { id: save.id, remove: true });
   assert.equal(r.goals(db).length, 1);
+  r.markSent(db, a.map((x) => x.key));
+  r.setGoal(db, { name: "Second try", account_id: "brk", target: 100 });
+  const again = r.dailyAlerts(db, { today: "2026-11-09" }).filter((x) => x.key.startsWith("goal:"));
+  assert.deepEqual(again.map((x) => x.text), ["Goal reached: Second try. Brokerage has $5000."], "a new goal that reuses a removed goal's id still alerts");
   assert.equal(r.goals(db, "2027-04-01")[0].late, false, "a goal with no date is never late");
 });

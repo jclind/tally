@@ -206,6 +206,14 @@ test("budgets take their options over the API, and goals list only open accounts
   assert.ok(!g.accounts.some((a) => a.account_id === "acc2"), "a closed account can't take a goal");
   assert.equal(g.accounts.find((a) => a.account_id === "acc1").goal, g.goals[0].id);
   assert.match((await post("/api/goal", { name: "Old", account_id: "acc2", target: 5 })).error, /open account/);
+  // A goal on an account that later closes keeps that account in the list, for editing.
+  await withReplies({ "/accounts/get": () => ({ accounts: [acct, { ...acct, account_id: "acc3", name: "Trip Savings", balances: { current: 50 } }] }), "/transactions/sync": () => ({ added: [], modified: [], removed: [], next_cursor: "c8", has_more: false }) }, () => post("/api/sync", {}));
+  assert.deepEqual(await post("/api/goal", { name: "Trip fund", account_id: "acc3", target: 300 }), { ok: true });
+  await withReplies({ "/transactions/sync": () => ({ added: [], modified: [], removed: [], next_cursor: "c9", has_more: false }) }, () => post("/api/sync", {}));
+  const g2 = await fetch(base + "/api/goals").then((r) => r.json()), trip = g2.goals.find((x) => x.name === "Trip fund");
+  assert.equal(g2.accounts.find((a) => a.account_id === "acc3")?.closed, 1);
+  assert.deepEqual(await post("/api/goal", { id: trip.id, name: "Trip", account_id: "acc3", target: 300 }), { ok: true }, "editing keeps the closed account");
+  await post("/api/goal", { id: trip.id, remove: true });
   await post("/api/goal", { id: g.goals[0].id, remove: true });
 });
 
