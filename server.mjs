@@ -456,6 +456,7 @@ const routes = {
   "POST /api/category": (body) => report.setCategory(db, body),
   "POST /api/budget": (body) => report.setBudget(db, body),
   "POST /api/stream-kind": (body) => report.setStreamKind(db, body),
+  "POST /api/stream-name": (body) => report.setStreamName(db, body),
   // The daily job: sync everything, write the backup snapshot, and return alerts not sent yet.
   "POST /api/daily": async () => {
     const results = await syncAllOnce();

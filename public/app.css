@@ -122,8 +122,17 @@ main.wrap { margin-top: -84px; padding-bottom: 64px; }
   display: inline-flex; align-items: center; min-height: 44px; margin: -10px 0; }
 .card h2 .hbtn:hover { text-decoration: underline; }
 .row small .up { color: var(--danger); font-weight: 600; }
-.row.pick { cursor: pointer; }
-.row.pick input { width: 20px; height: 20px; margin: 0; accent-color: var(--teal); flex: none; }
+/* Edit mode: a 44px tap target around each checkbox, and a name field that reads as the row's name until focused. */
+.row.pick .tick { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -12px -10px -12px -12px; flex: none; cursor: pointer; }
+.row.pick .tick input { width: 20px; height: 20px; margin: 0; accent-color: var(--teal); cursor: pointer; }
+.row.pick .rename { font: inherit; font-weight: 600; color: var(--ink); background: transparent; width: 100%; min-width: 0;
+  border: 0; border-bottom: 1px dashed var(--field); border-radius: 0; padding: 6px 0; text-overflow: ellipsis; }
+/* Room for $1,000.00, so every name field ends at the same place. */
+.row.pick .amt { min-width: 5.2em; }
+.row.pick .rename:hover { border-bottom-style: solid; }
+.row.pick .rename:focus { outline: none; border-bottom: 2px solid var(--deep); padding-bottom: 5px; }
+.c-subs .ok { color: var(--deep); font-weight: 600; }
+.c-subs .ok.bad { color: var(--danger); }
 .sub { color: var(--ink2); margin: 2px 0 16px; font-size: 15px; }
 .sub:has(+ .row) { margin-bottom: 6px; }
 .sub b { color: var(--ink); }

@@ -274,6 +274,9 @@ test("a price increase: steady charges, then one at least 50 cents more, flagged
   const alerts = r.dailyAlerts(db, { today: "2026-11-16", bigCharge: 1000 }).filter((a) => a.key.startsWith("price:"));
   assert.equal(alerts.length, 1);
   assert.match(alerts[0].text, /Netflix went up from \$15\.49 to \$17\.99/);
+  r.setStreamName(db, { stream_id: "Netflix", name: "Movies" });
+  assert.match(r.dailyAlerts(db, { today: "2026-11-16", bigCharge: 1000 }).find((a) => a.key.startsWith("price:")).text, /^Movies went up/, "the owner's name");
+  r.setStreamName(db, { stream_id: "Netflix", name: "" });
   assert.equal(r.dailyAlerts(db, { today: "2026-11-16", bigCharge: 1000, priceAlerts: false }).filter((a) => a.key.startsWith("price:")).length, 0, "the setting turns it off");
   assert.equal(r.dailyAlerts(db, { today: "2027-01-10", bigCharge: 1000 }).filter((a) => a.key.startsWith("price:")).length, 0, "an old increase doesn't alert");
   r.markSent(db, [alerts[0].key]);
@@ -319,4 +322,19 @@ test("a bill's next charge follows its recent charges, not its whole history", (
   assert.equal(get("fixed").monthly, 31);
   assert.equal(get("vary").expected, 60);
   assert.equal(get("none").expected, 26.1, "no charges: Plaid's average");
+});
+
+test("a repeating charge can be renamed, one stream at a time", () => {
+  const db = fixture();
+  const st = db.prepare("INSERT INTO recurring (stream_id, item_id, direction, description, merchant_name, category, frequency, average_amount, last_amount, is_active, status) VALUES (?, 'i1', 'outflow', 'SHOP.COM/BILL', 'SHOP.COM/BILL', 'ENTERTAINMENT', 'MONTHLY', ?, ?, 1, 'MATURE')");
+  st.run("a", 2.13, 2.13); st.run("b", 13.9, 13.9);
+  const get = (id) => r.recurring(db).find((x) => x.stream_id === id);
+  assert.deepEqual(r.setStreamName(db, { stream_id: "a", name: "  Cloud   storage " }), { ok: true });
+  assert.equal(get("a").name, "Cloud storage");
+  assert.equal(get("b").name, null, "the other charge from the same store keeps Plaid's name");
+  assert.equal(get("a").who, "SHOP.COM/BILL", "the merchant stays, for the subscription choice");
+  r.setStreamName(db, { stream_id: "a", name: "" });
+  assert.equal(get("a").name, null);
+  assert.throws(() => r.setStreamName(db, { stream_id: "a", name: "x".repeat(61) }), /60/);
+  assert.throws(() => r.setStreamName(db, { stream_id: "nope", name: "X" }), /No such charge/);
 });

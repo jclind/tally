@@ -26,6 +26,18 @@ The install guide is https://tally.jesselind.com. Its source is `site/`, publish
 - Tests run against a fake Plaid server (`npm test`). They never use real keys.
 - Node built-ins only (`node:sqlite`, `node:http`, `fetch`). Add a dependency only with a reason.
 
+## Releases
+
+- The version is in `package.json`. Settings shows it with the commit tally started from (`BUILD` in `server.mjs`).
+- main is what people run: the guide's update step is `git pull` and a restart. Push only what passes `npm test`.
+- A release: bump the version (0.x: the minor number for a feature, the patch number for a fix), commit, tag
+  `vX.Y.Z` on that commit, push the tag, and `gh release create vX.Y.Z` with a few plain lines on what changed for
+  someone running tally. No real names, banks, or amounts in the notes.
+- Schema changes so far only add tables and columns, at startup in `setupViews()` and the server's table setup. The
+  first change that renames, drops, or rewrites data moves to numbered migrations on SQLite's `PRAGMA user_version`,
+  run in order at startup, since an install can skip several releases.
+- No update check: tally makes no outside calls the owner didn't ask for.
+
 ## Money rules
 
 All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's sign: positive is money out.
@@ -41,6 +53,9 @@ All of them live in `lib/report.mjs`, tested in `test/report.test.mjs`. Plaid's 
   category. Phone, internet, and cable count. Transfers are left out by name only, since Plaid calls some bills
   account transfers (a hosting bill, 2026-11-16). Edit on
   the Bills card moves one either way, saved per merchant in `stream_kinds` (keyed with SQLite's `lower()`).
+- A repeating charge can be renamed on the Bills card's Edit, saved per Plaid stream in `stream_names`, since one
+  store can bill two subscriptions under one name. Pages show `name ?? who`; `who` stays Plaid's merchant name,
+  because the subscription choice is keyed on it.
 - Every repeating amount and total uses the expected next charge (`expected`): a subscription's latest price; for
   other bills and income, the latest charge when the last two match to the cent, else the average of the last
   three. Plaid's `average_amount` spans the whole history and lags a price change by months, so it's only the

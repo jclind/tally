@@ -174,6 +174,11 @@ test("a repeating charge is a subscription until the owner says otherwise", asyn
   assert.equal((await net()).subscription, false);
   await post("/api/stream-kind", { who: "Netflix", kind: null });
   assert.equal((await net()).subscription, true);
+  assert.deepEqual(await post("/api/stream-name", { stream_id: "s1", name: "Movies" }), { ok: true });
+  assert.equal((await net()).name, "Movies");
+  assert.match((await post("/api/stream-name", { stream_id: "s9", name: "X" })).error, /No such charge/);
+  await post("/api/stream-name", { stream_id: "s1", name: "" });
+  assert.equal((await net()).name, null);
 });
 
 test("an account Plaid stops listing is closed: kept, but out of net worth", async () => {

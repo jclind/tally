@@ -263,8 +263,10 @@ const FREQ = { WEEKLY: "Weekly", BIWEEKLY: "Every 2 weeks", SEMI_MONTHLY: "Twice
 // Summary cards (Coming up) show whole dollars; record lists (the Bills page) show cents.
 // What the next charge should be (expected in lib/report.mjs): a subscription's latest price, a bill's recent charges.
 const cost = (r) => r.expected;
-const billRow = (r, cents = true, bare = false) => `<div class="row${r.is_active ? "" : " off"}">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
-  <span class="w"><b>${esc(nice(r.who))}</b><small>${r.is_active && r.predicted_next_date ? `${bare ? "" : "Expected "}${shortDate(r.predicted_next_date)}` : r.last_date ? `Last charged ${shortDate(r.last_date)}` : ""}</small></span>
+// A repeating charge's name: the owner's, else Plaid's (setStreamName in lib/report.mjs).
+const called = (r) => r.name || nice(r.who);
+const billRow = (r, cents = true, bare = false) => `<div class="row${r.is_active ? "" : " off"}">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((called(r) || "?").trim()[0].toUpperCase())}</span>`}
+  <span class="w"><b>${esc(called(r))}</b><small>${r.is_active && r.predicted_next_date ? `${bare ? "" : "Expected "}${shortDate(r.predicted_next_date)}` : r.last_date ? `Last charged ${shortDate(r.last_date)}` : ""}</small></span>
   <span class="amt num">${money(cost(r), cents)}${r.frequency !== "MONTHLY" ? `<small>${FREQ[r.frequency] ?? esc(r.frequency)}</small>` : ""}</span></div>`;
 const byNextDue = (a, b) => (a.predicted_next_date ?? "9999") < (b.predicted_next_date ?? "9999") ? -1 : 1;
 
@@ -636,17 +638,19 @@ const nextCharge = (r) => {
   const d = r.predicted_next_date, today = new Date().toLocaleDateString("en-CA");
   return !d ? "" : d === today ? "Charges today" : d < today ? `Expected ${shortDate(d)}` : `Next charge ${shortDate(d)}`;
 };
-const subRow = (r) => `<div class="row">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((nice(r.who) || "?").trim()[0].toUpperCase())}</span>`}
-  <span class="w"><b>${esc(nice(r.who))}</b><small>${r.price_up ? `<span class="up">Went up from ${money(r.price_up.from, true)}</span>` : nextCharge(r)}</small></span>
+const subRow = (r) => `<div class="row">${r.logo ? `<span class="av lg">${logoImg(r.logo)}</span>` : `<span class="av">${esc((called(r) || "?").trim()[0].toUpperCase())}</span>`}
+  <span class="w"><b>${esc(called(r))}</b><small>${r.price_up ? `<span class="up">Went up from ${money(r.price_up.from, true)}</span>` : nextCharge(r)}</small></span>
   <span class="amt num">${money(r.price, true)}<small>${PER[r.frequency] ?? esc(FREQ[r.frequency] ?? "")}</small></span></div>`;
 function subsCard(bills) {
   const subs = bills.filter((r) => r.subscription).sort((a, b) => b.price_monthly - a.price_monthly);
   const month = subs.reduce((t, r) => t + r.price_monthly, 0);
   if (subsEditing) {
-    const all = bills.slice().sort((a, b) => nice(a.who).localeCompare(nice(b.who)));
+    const all = bills.slice().sort((a, b) => called(a).localeCompare(called(b)));
     return `<div class="card c-subs"><h2>Subscriptions <button class="hbtn" id="subsedit">Done</button></h2>
-      <div class="sub">Check the ones that are subscriptions.</div>
-      ${all.map((r) => `<label class="row pick"><input type="checkbox" data-who="${esc(r.who)}"${r.subscription ? " checked" : ""}><span class="w"><b>${esc(nice(r.who))}</b></span><span class="amt num">${money(cost(r), true)}</span></label>`).join("") || `<div class="empty">None found yet.</div>`}</div>`;
+      <div class="sub">Check subscriptions and rename charges. <span class="ok" role="status"></span></div>
+      ${all.map((r) => `<div class="row pick"><label class="tick"><input type="checkbox" data-who="${esc(r.who)}" aria-label="${esc(called(r))}, ${money(cost(r), true)}, is a subscription"${r.subscription ? " checked" : ""}></label>
+        <span class="w"><input class="rename" data-stream="${esc(r.stream_id)}" data-plaid="${esc(nice(r.who))}" value="${esc(called(r))}" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Name for the ${money(cost(r), true)} charge from ${esc(nice(r.who))}"></span>
+        <span class="amt num">${money(cost(r), true)}</span></div>`).join("") || `<div class="empty">None found yet.</div>`}</div>`;
   }
   return `<div class="card c-subs"><h2>Subscriptions ${bills.length ? `<button class="hbtn" id="subsedit">Edit</button>` : ""}</h2>
     ${subs.length ? `<div class="sub"><b class="num">${money(month)}</b> a month, <b class="num">${money(month * 12)}</b> a year</div>${subs.map(subRow).join("")}`
@@ -678,8 +682,8 @@ PAGES.bills = async () => {
   }
   $hero.innerHTML = `<div class="k">Bills and subscriptions</div>
     <div class="big num">${money(perMonth)} <span>a month</span></div>
-    <p>${next ? `Next up: ${esc(nice(next.who))}, <b class="num">${money(cost(next))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
-  const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(nice(r.who))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(r.expected, true)}<small>expected</small></span></div>`;
+    <p>${next ? `Next up: ${esc(called(next))}, <b class="num">${money(cost(next))}</b> on ${shortDate(next.predicted_next_date)}.` : "Plaid hasn't found any repeating charges yet."}</p>`;
+  const incomeRow = (r) => `<div class="row"><span class="w"><b>${esc(called(r))}</b><small>${FREQ[r.frequency] ?? esc(r.frequency)}${r.last_date ? `, last ${shortDate(r.last_date)}` : ""}</small></span><span class="amt num in">+${money(r.expected, true)}<small>expected</small></span></div>`;
   $page.innerHTML = `<div class="layout bills"><div class="stack">
       <div class="card"><h2>Expected charges</h2>${groups.map(([m, list]) => `<div class="mgrp"><div class="mh"><span>${m === "later" ? "No date yet" : m === thisMonth() ? `Rest of ${monthName(m)}` : `Next in ${monthYear(m).replace(` ${new Date().getFullYear()}`, "")}`}</span>${m === thisMonth() ? `<span class="num">${money(list.reduce((t, r) => t + restOfMonth(r), 0))}</span>` : ""}</div>
         ${list.map((r) => billRow(r, true, true)).join("")}</div>`).join("") || `<div class="empty">None found yet.</div>`}</div>
@@ -687,15 +691,29 @@ PAGES.bills = async () => {
     </div><aside class="side stack">${subsCard(bills)}<div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
   wireSubs(g);
 };
+// Saves run one at a time, so a name typed just before a checkbox click or Done lands before the card redraws.
+let subsSaving = Promise.resolve();
+const subsSave = (fn) => (subsSaving = subsSaving.then(fn, fn));
 function wireSubs(g) {
   document.getElementById("subsedit")?.addEventListener("click", async () => {
+    await subsSaving;
     subsEditing = !subsEditing;
     await PAGES.bills();
     document.getElementById("subsedit")?.focus({ preventScroll: true });
   });
+  // A name saves when the field loses focus or on Enter. Plaid's name, or nothing, goes back to Plaid's.
+  for (const f of $page.querySelectorAll(".c-subs .rename")) f.addEventListener("change", async () => {
+    const ok = $page.querySelector(".c-subs .ok"), v = f.value.replace(/\s+/g, " ").trim(), plaid = f.dataset.plaid;
+    try {
+      await subsSave(() => api("/api/stream-name", { stream_id: f.dataset.stream, name: v === plaid ? "" : v }));
+      if (!v) f.value = plaid;
+      ok.textContent = !v || v === plaid ? "Back to Plaid's name." : "Saved."; ok.classList.remove("bad");
+    } catch (e) { ok.textContent = e.message || "Couldn't save that name."; ok.classList.add("bad"); }
+  });
+  for (const f of $page.querySelectorAll(".c-subs .rename")) f.addEventListener("keydown", (e) => { if (e.key === "Enter") f.blur(); });
   for (const box of $page.querySelectorAll(".c-subs input[type=checkbox]")) box.addEventListener("change", async () => {
     const who = box.dataset.who;
-    try { await api("/api/stream-kind", { who, kind: box.checked ? "sub" : "bill" }); }
+    try { await subsSave(() => api("/api/stream-kind", { who, kind: box.checked ? "sub" : "bill" })); }
     catch { box.checked = !box.checked; return; }
     if (stale(g)) return;
     await PAGES.bills();
