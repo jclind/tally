@@ -648,7 +648,7 @@ function subsCard(bills) {
     const all = bills.slice().sort((a, b) => called(a).localeCompare(called(b)));
     return `<div class="card c-subs"><h2>Subscriptions <button class="hbtn" id="subsedit">Done</button></h2>
       <div class="sub">Check subscriptions and rename charges. <span class="ok" role="status"></span></div>
-      ${all.map((r) => `<div class="row pick"><label class="tick"><input type="checkbox" data-who="${esc(r.who)}" aria-label="${esc(called(r))}, ${money(cost(r), true)}, is a subscription"${r.subscription ? " checked" : ""}></label>
+      ${all.map((r) => `<div class="row pick"><label class="tick"><input type="checkbox" data-who="${esc(r.who)}" data-stream="${esc(r.stream_id)}" aria-label="${esc(called(r))}, ${money(cost(r), true)}, is a subscription"${r.subscription ? " checked" : ""}></label>
         <span class="w"><input class="rename" data-stream="${esc(r.stream_id)}" data-plaid="${esc(nice(r.who))}" value="${esc(called(r))}" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Name for the ${money(cost(r), true)} charge from ${esc(nice(r.who))}"></span>
         <span class="amt num">${money(cost(r), true)}</span></div>`).join("") || `<div class="empty">None found yet.</div>`}</div>`;
   }
@@ -656,9 +656,10 @@ function subsCard(bills) {
     ${subs.length ? `<div class="sub"><b class="num">${money(month)}</b> a month, <b class="num">${money(month * 12)}</b> a year</div>${subs.map(subRow).join("")}`
       : `<div class="empty" style="margin-top:8px">None found yet.</div>`}</div>`;
 }
-PAGES.bills = async () => {
+// pre: the charges, already fetched, so a redraw can happen with no wait (see the checkbox in wireSubs).
+PAGES.bills = async (_q, pre) => {
   const g = GEN;
-  const all = await api("/api/recurring");
+  const all = pre ?? await api("/api/recurring");
   if (stale(g)) return;
   const bills = all.filter((r) => r.direction === "outflow" && r.is_active && !r.is_transfer).sort(byNextDue);
   const income = all.filter((r) => r.direction === "inflow" && r.is_active && !r.is_transfer);
@@ -691,12 +692,14 @@ PAGES.bills = async () => {
     </div><aside class="side stack">${subsCard(bills)}<div class="card"><h2>Money coming in</h2><div style="margin-top:8px">${income.map(incomeRow).join("") || `<div class="empty">None found yet.</div>`}</div></div></aside></div>`;
   wireSubs(g);
 };
-// Saves run one at a time, so a name typed just before a checkbox click or Done lands before the card redraws.
+// Saves run one at a time, so a name typed just before a checkbox click or Done lands before the card redraws. The
+// queue itself never rejects: each caller gets its own save's result, and a failed save doesn't block the next.
 let subsSaving = Promise.resolve();
-const subsSave = (fn) => (subsSaving = subsSaving.then(fn, fn));
+const subsSave = (fn) => { const p = subsSaving.then(fn); subsSaving = p.catch(() => {}); return p; };
 function wireSubs(g) {
   document.getElementById("subsedit")?.addEventListener("click", async () => {
     await subsSaving;
+    if (stale(g)) return;
     subsEditing = !subsEditing;
     await PAGES.bills();
     document.getElementById("subsedit")?.focus({ preventScroll: true });
@@ -715,9 +718,16 @@ function wireSubs(g) {
     const who = box.dataset.who;
     try { await subsSave(() => api("/api/stream-kind", { who, kind: box.checked ? "sub" : "bill" })); }
     catch { box.checked = !box.checked; return; }
-    if (stale(g)) return;
-    await PAGES.bills();
-    $page.querySelector(`.c-subs input[data-who="${CSS.escape(who)}"]`)?.focus({ preventScroll: true });
+    const all = await api("/api/recurring").catch(() => null);
+    if (stale(g) || !all) return;
+    // A name being typed hasn't saved yet (it saves on change), so it carries over the redraw: read it after the fetch,
+    // with nothing to wait on between here and the new card. Focus first, then the text, so leaving still saves it.
+    const act = document.activeElement?.matches?.(".c-subs .rename") ? document.activeElement : null;
+    const keep = act && { stream: act.dataset.stream, value: act.value, from: act.selectionStart, to: act.selectionEnd };
+    await PAGES.bills(null, all);
+    const field = keep && $page.querySelector(`.c-subs .rename[data-stream="${CSS.escape(keep.stream)}"]`);
+    if (field) { field.focus({ preventScroll: true }); field.value = keep.value; field.setSelectionRange(keep.from, keep.to); }
+    else $page.querySelector(`.c-subs input[type=checkbox][data-stream="${CSS.escape(box.dataset.stream)}"]`)?.focus({ preventScroll: true });
   });
 }
 
